@@ -1,14 +1,6 @@
-
-# coding: utf-8
-
-# In[ ]:
-
-
-#get_ipython().magic(u'matplotlib inline')
-
 import numpy as np
 import matplotlib
-matplotlib.use('PDF')
+#matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 from glob import glob
 import collections
@@ -20,25 +12,23 @@ import StringIO
 import scripts
 import ns
 import history_cmc_modified_bss as hbss
+import dynamics as dyn
 
 
-# In[ ]:
 
-
-data=np.genfromtxt('/Users/shiye/Documents/ClusterGroup/BSSproject/Modelgt12withpref.dat', dtype='str')
-path=data[:,0]; prefixstring=data[:,1]
+data=np.genfromtxt('/projects/b1011/syr904/projects/BSS/kickgrid_path.dat', dtype='str')
+path=data
+#path=['/projects/b1011/syr904/cmc/cmc-mpi-04/rundir/NGC3201/8e5w5rv1']
+#path=data[:,0]; prefixstring=data[:,1]
 #dataz=np.genfromtxt('/Users/shiye/Documents/ClusterGroup/BSSproject/Modelgt12_prop.dat')
-dataprop=np.genfromtxt('/Users/shiye/Documents/ClusterGroup/BSSproject/Modelgt12properties.dat')
-tlastcode=dataprop[:,0]; mturnoff=dataprop[:,2]; z=dataprop[:,3]
-
-
-# In[ ]:
+#dataprop=np.genfromtxt('/Users/shiye/Documents/ClusterGroup/BSSproject/Modelgt12properties.dat')
+#tlastcode=dataprop[:,0]; mturnoff=dataprop[:,2]; z=dataprop[:,3]
 
 
 ##Find Main Sequence Star
 def find_MS(filepath):
     #filepath=str(data[k])
-    snaps=np.sort(glob(filepath+'*.snap*.dat.gz'))
+    snaps=np.sort(glob(filepath+'/'+'*.snap*.dat.gz'))
     firstsnap=snaps[0]
     lastsnap=snaps[-1]
     
@@ -49,8 +39,6 @@ def find_MS(filepath):
     #Find time
     t_conv=ns.conv('t',filepath+prefix+'.conv.sh')
     time=ns.get_time(lastsnap)*t_conv
-    
-    
     
     #Find mass of MS
     #datalast=np.genfromtxt(lastsnap)
@@ -65,9 +53,6 @@ def find_MS(filepath):
     #        if k1[j]==0 or k1[j]==1: mms.append(m1[j])
     
     return time, prefix, lastsnap  #, mms
-
-
-# In[ ]:
 
 
 ##Find BSS
@@ -109,7 +94,7 @@ def find_BSS(lastsnap, mto):
         for line in f:
             #print line
             datalast=line.split()
-            if int(datalast[7])==0:
+            if int(datalast[7])!=1:
                 if int(datalast[14])==0 or int(datalast[14])==1:
                     if float(datalast[1])>=1.05*mto:
                         bif.append(0); m0bss.append(float(datalast[1])); m1bss.append(-100)
@@ -131,26 +116,58 @@ def find_BSS(lastsnap, mto):
         
     return bif, m0bss, m1bss, k0bss, k1bss, rbss, id0bss, id1bss
 
+##Find BH in the last timestep
+def find_NBH_NTOT(filestring):     
+    #datalast=np.genfromtxt()
+    #binflag=datalast[:,7]; kstar=datalast[:,14]; k0=datalast[:,17]; k1=datalast[:,18]
+    #nbh=0
+    #for j in range(len(binflag)):
+    #    if binflag[j]==0:
+    #        if kstar[j]==14: nbh+=1
+    #    if binflag[j]==1:
+    #        if k0[j]==14: nbh+=1
+    #        if k1[j]==14: nbh+=1
+    filebh=filestring+'.bh.dat'
+    filedyn=filestring+'.dyn.dat'
+    with open(filebh, 'r') as fbh:
+	for line in fbh:pass
+	lastbh=line
+    databh=lastbh.split()
+    nbh=float(databh[2])
 
-# In[ ]:
+    with open(filedyn, 'r') as fdyn:
+	for line in fdyn:pass
+	lastdyn=line
+    datadyn=lastdyn.split()
+    ntot=float(datadyn[3])
+	   
+    return nbh, ntot
 
 
-##Find BH
-def find_BH(lastsnap):
-    datalast=np.genfromtxt(lastsnap)
-    binflag=datalast[:,7]; kstar=datalast[:,14]; k0=datalast[:,17]; k1=datalast[:,18]
-    nbh=0
-    for j in range(len(binflag)):
-        if binflag[j]==0:
-            if kstar[j]==14: nbh+=1
-        if binflag[j]==1:
-            if k0[j]==14: nbh+=1
-            if k1[j]==14: nbh+=1
-        
-    return nbh
+##Find Nbss
+def find_NBSS(filestring):
+    bssfile=filestring+'.BSS.dat'
+    classfile=filestring+'.BSSclass.dat'
+    n_sin=0; n_bin=0; n_coll=0; n_mtb=0; n_se=0
+    n_bin_si=0; n_bin_bi=0; n_coll_si=0; n_coll_bi=0; n_se_si=0; n_se_bi=0
+    with open(bssfile, 'r') as fbss:
+        next(fbss)
+        for line in fbss:
+            databss=line.split()
+            if int(databss[0])==0: n_sin+=1.; binflag=0
+            if int(databss[0])==1: n_bin+=1.; binflag=1
+    
+    with open(classfile, 'r') as fclass:
+        next(fclass)
+        for line in fclass:
+            dataclass=line.split()
+            if int(dataclass[1])==1: n_coll+=1.
+            if int(dataclass[9])==1: n_mtb+=1.
+            if int(dataclass[5])==1: n_se+=1.
 
 
-# In[ ]:
+    return n_sin, n_bin, n_coll, n_mtb, n_se
+
 
 
 def find_z(filepath):
@@ -186,8 +203,6 @@ def find_z(filepath):
     return meta
 
 
-# In[ ]:
-
 
 ##Plot Mass Distribution
 def plot_massdist():
@@ -209,11 +224,8 @@ def plot_massdist():
         plt.show()
 
 
-# In[ ]:
-
 
 ##Printout Nbss-Nbh-Ntot of All Models
-
 def printout_Nbss_Nbh():
     #handle=StringIO.StringIO()
     #sys.stdout=handle
@@ -248,22 +260,33 @@ def printout_Nbss_Nbh():
         
 
 
-# In[ ]:
-
-
 ##Plot Nbh-Nbss
-def plot_Nbh_Nbss():
-    datan=np.genfromtxt('/Users/shiye/Documents/ClusterGroup/BSSproject/Num.dat')
-    Nbss=np.array(datan[:,0])
-    NBSS=Nbss.astype(float)
-    Nbh=np.array(datan[:,1])
-    NBH=Nbh.astype(float)
-    Ntot=np.array(datan[:,2])
-    NTOT=Ntot.astype(float)
+def plot_Nbh_Nbss(start, end):
+    #datan=np.genfromtxt('/Users/shiye/Documents/ClusterGroup/BSSproject/Num.dat')
+    #Nbss=np.array(datan[:,0])
+    #NBSS=Nbss.astype(float)
+    #Nbh=np.array(datan[:,1])
+    #NBH=Nbh.astype(float)
+    #Ntot=np.array(datan[:,2])
+    #NTOT=Ntot.astype(float)
     #print np.log(NBSS/NTOT), np.log(NBH/NTOT)
+
+    NBH=[]; NTOT=[]; NSIN=[]; NBIN=[]; NCOLL=[]; NMTB=[]; NSE=[]; NBSS=[]
+    for i in range(start, end):
+        filepath=path[i]
+        filestr=filepath+'/'+'initial'
+        Nbh, Ntot=find_NBH_NTOT(filestr) 
+        NBH.append(Nbh); NTOT.append(Ntot)
+        Nsin, Nbin, Ncoll, Nmtb, Nse=find_NBSS(filestr)
+        NSIN.append(Nsin); NBIN.append(Nbin); NCOLL.append(Ncoll); NMTB.append(Nmtb); NSE.append(Nse)
+        NBSS.append(Nsin+Nbin)
     
-    rho, p=ss.spearmanr(np.log(NBH/NTOT), np.log(NBSS/NTOT))
-    print rho, p    
+    print NBSS    
+    #rho, p=ss.spearmanr(np.log(NBH/NTOT), np.log(NBSS/NTOT))
+    #print rho, p
+
+    NBH=np.array(NBH); NTOT=np.array(NTOT); NSIN=np.array(NSIN); NBIN=np.array(NBIN); NCOLL=np.array(NCOLL); NMTB=np.array(NMTB)
+    print NSIN, NBIN, NCOLL, NMTB, NSE	
 
     plt.figure()
     plt.scatter(np.log(NBH/NTOT), np.log(NBSS/NTOT), marker='.')
@@ -271,39 +294,43 @@ def plot_Nbh_Nbss():
     #plt.ylim(-10., -1.)
     #plt.xscale('symlog')
     #plt.yscale('symlog')
-    plt.xlabel('Nbh/Ntot')
-    plt.ylabel('Nbss/Ntot')
+    plt.xlabel('log(Nbh/Ntot)')
+    plt.ylabel('log(Nbss/Ntot)')
     #plt.show()
-    plt.savefig('/Users/shiye/Documents/ClusterGroup/BSSproject/nbhnbss_log.png')
+    #plt.savefig('/projects/b1011/syr904/projects/TotalBSS.pdf')
 
+    plt.figure()
+    #plt.scatter(-20, -20, color='purple', s=10, label='single')
+    #plt.scatter(-20, -20, color='orange', s=10, label='binary')
+    #plt.scatter(-20, -20, marker='*', s=10, label='single')
+    #plt.scatter(-20, -20, marker='^', s=10, label='binary')	
+    #for k in range(0, 16):
+    	#plt.scatter(np.log(NBH[k]/NTOT[k]), np.log(NSIN[k]/NTOT[k]), color='purple', s=10)
+    	#plt.scatter(np.log(NBH[k]/NTOT[k]), np.log(NBIN[k]/NTOT[k]), color='orange', s=10, alpha=0.7)
+    #for k1 in range(16, 32):
+	#plt.scatter(np.log(NBH[k]/NTOT[k]), np.log(NSIN[k]/NTOT[k]), s=10, marker='*')
+        #plt.scatter(np.log(NBH[k]/NTOT[k]), np.log(NBIN[k]/NTOT[k]), s=10, alpha=0.7, marker='^')
+    plt.scatter(np.log(NBH/NTOT), np.log(NSIN/NTOT), color='purple', s=10, label='single')
+    plt.scatter(np.log(NBH/NTOT), np.log(NBIN/NTOT), color='orange', s=10, alpha=0.7, label='binary')
+    plt.xlabel('log(Nbh/Ntot)')
+    plt.ylabel('log(Nbss/Ntot)')
+    plt.legend(loc='upper right')
+    #plt.ylim(ymin=-15)
+    #plt.xlim(xmin=-14)
+    #plt.show()
+    #plt.savefig('/projects/b1011/syr904/projects/SinBinBSS.pdf', dpi=300)
 
-# In[ ]:
+    plt.figure()
+    plt.scatter(np.log(NBH/NTOT), np.log(NCOLL/NTOT), color='blue', s=8, label='coll')
+    plt.scatter(np.log(NBH/NTOT), np.log(NMTB/NTOT), color='red', alpha=0.7, s=8, label='mtb')
+    plt.scatter(np.log(NBH/NTOT), np.log(NSE/NTOT), color='orange', alpha=0.7, s=8, label='se')
+    plt.legend(loc='upper right')
+    plt.xlabel('log(Nbh/Ntot)')
+    plt.ylabel('log(Nbss/Ntot)')
+    #plt.show()
+    #plt.savefig('/projects/b1011/syr904/projects/CollMtbBSS.pdf', dpi=300)
 
-
-##Printout Nbss-single-binary
-def printout_Nbss_sinbin():
-    NBSS_sin=[]; NBSS_bin=[]
-    bssfile=np.sort(glob('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_mcut1.05_lastsnap/BSS*.dat'))
-    for k in range(len(bssfile)):
-        nbss_sin=0; nbss_bin=0
-        with open(bssfile[k], 'r') as fi:
-            for _ in xrange(2):
-                next(fi)
-            for line in fi:
-                databss=line.split()
-                if int(databss[0])==0:
-                    nbss_sin+=1
-                if int(databss[0])==1:
-                    nbss_bin+=1
-        
-        NBSS_sin.append(nbss_sin)
-        NBSS_bin.append(nbss_bin)
-        
-    np.savetxt('/Users/shiye/Documents/ClusterGroup/BSSproject/Num_sin_bin.dat', np.c_[NBSS_sin, NBSS_bin], fmt='%d %d', delimiter=' ', header='1.Nbss_single, 2. Nbss_binary', comments='#')
-
-
-# In[ ]:
-
+    
 
 ##Plot Nbh-Nbss-single-binary
 def plot__Nbss_sinbin():
@@ -341,52 +368,55 @@ def plot__Nbss_sinbin():
     
 
 
-# In[ ]:
-
 
 ##Find hrdiag_L_T
-def hrdiag_LT():
-    filestring='/Volumes/homes/sourav/CMC_results/BH_variations/kickoutputtest_variations/rundir/wind1/z0.001/normalkick/initial'
-    snapno='0096'
-    scripts.hrdiag_L_T(filestring, snapno)
+def hrdiag_LT(sourcedir):
+    pref='initial'
+    filepath=sourcedir
+    filestr=filepath+'/'+pref
+    snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
+    lastno=len(snaps)-1
+    snapno=str(lastno).zfill(4)
+    print snapno
+    scripts.hrdiag_L_T(filestr, snapno)
 
 
-# In[ ]:
 
 
 ##Plot hrdiag
-def plot_hrdiag(filepath):
-    t, pref, ls=find_MS(filepath)
+def plot_hrdiag(sourcedir):
+    t, pref, ls=find_MS(sourcedir)
     mtoguess=scripts.find_MS_turnoff(t)
-    z=dataz[48]
+    z=0.001
     mtotrue=scripts.find_MS_TO(t, z, mtoguess)
+    mcut=1.05*mtotrue
+    print mcut
     
-    datahrd=np.genfromtxt(filepath+pref+'.snap0096.hrdiag.dat')
+    hrdiags=np.sort(glob(sourcedir+'/'+pref+'*.hrdiag.dat'))
+    print hrdiags
+    datahrd=np.genfromtxt(hrdiags[-1])
     binflag=datahrd[:,0]; k0=datahrd[:,1]; k1=datahrd[:,2]; m0=datahrd[:,6]; m1=datahrd[:,7]; Teff=datahrd[:,15]; Leff=datahrd[:,16]
     si_bssL=[]; bi_bssL=[]; starL=[]; si_bssT=[]; bi_bssT=[]; starT=[]
     for k in range(len(binflag)):
         if binflag[k]==1:
-            if k0[k]==0 or k0[k]==1:
-                if m0[k]>=1.05*mtotrue:
-                    bi_bssT.append(Teff[k]); bi_bssL.append(Leff[k])
-                else:
-                    starT.append(Teff[k]); starL.append(Leff[k])
+            if ((k0[k]==0 or k0[k]==1) and m0[k]>=1.05*mtotrue) or ((k1[k]==0 or k1[k]==1) and m1[k]>=1.05*mtotrue):
+            	bi_bssT.append(Teff[k]); bi_bssL.append(Leff[k])
+		print datahrd[:,4][k], datahrd[:,5][k]
+            else:
+                starT.append(Teff[k]); starL.append(Leff[k])
                     
-            elif k1[k]==0 or k1[k]==1:
-                if m1[k]>=1.05*mtotrue:
-                    bi_bssT.append(Teff[k]); bi_bssL.append(Leff[k])
-                else:
-                    starT.append(Teff[k]); starL.append(Leff[k])
-            else:
-                starT.append(Teff[k]); starL.append(Leff[k])
-        else:
-            if k0[k]==0 or k0[k]==1:
-                if m0[k]>=1.05*mtotrue:
+            #if k1[k]==0 or k1[k]==1 and flag==0:
+                #if m1[k]>=1.05*mtotrue:
+                    #bi_bssT.append(Teff[k]); bi_bssL.append(Leff[k])
+                #else:
+                    #starT.append(Teff[k]); starL.append(Leff[k])
+
+        if binflag[k]!=1:
+            if (k0[k]==0 or k0[k]==1) and m0[k]>=1.05*mtotrue:
                     si_bssT.append(Teff[k]); si_bssL.append(Leff[k])
-                else:
-                    starT.append(Teff[k]); starL.append(Leff[k])
             else:
                 starT.append(Teff[k]); starL.append(Leff[k])
+    print bi_bssT, bi_bssL
     
     plt.figure()
     plt.xlabel(r'$log(T_{eff}/K)$')
@@ -394,37 +424,37 @@ def plot_hrdiag(filepath):
     plt.xlim(3.3, 4.2)
     plt.ylim(-3.5, 4)
     plt.scatter(starT, starL, marker='.', s=3, edgecolors='none', facecolor='k')
-    plt.scatter(si_bssT, si_bssL, marker='o', s=5, facecolors='none', edgecolors='r', label='single')
-    plt.scatter(bi_bssT, bi_bssL, marker='^', s=5, facecolors='none', edgecolors='b', label='binary')
+    plt.scatter(si_bssT, si_bssL, marker='o', s=10, facecolors='none', edgecolors='r', label='single')
+    plt.scatter(bi_bssT, bi_bssL, marker='^', s=10, facecolors='none', edgecolors='b', label='binary')
     plt.gca().invert_xaxis()
     plt.legend()
-    #plt.show()
-    plt.savefig('/Users/shiye/Documents/ClusterGroup/BSSproject/hrd.png', dpi = 300)
+    plt.show()
+    #plt.savefig('/Users/shiye/Documents/ClusterGroup/BSSproject/hrd.png', dpi = 300)
 
-
-# In[ ]:
 
 
 ##Print out BSS of all models
 def printout_BSS(start, end):
     for k in range(start, end):
-        filepath=str(data[k])
+        #filepath=path[k]
+	filepath='/projects/b1011/kyle/cmc/newruns/rundir/N8e5rv1fb5w5_kickgrid/kickscale_0.17'
+        print filepath
         t, pref, ls=find_MS(filepath)
-        l_conv=ns.conv('l',filepath+pref+'.conv.sh')
+        l_conv=ns.conv('l',filepath+'/'+pref+'.conv.sh')
         mtoguess=scripts.find_MS_turnoff(t)
-        z=dataz[k]
+        #z=dataz[k]
+        z=0.001
         mtotrue=scripts.find_MS_TO(t, z, mtoguess)
         strnum=str(k).zfill(4)
-        fhandle=open('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_mcut1.05_lastsnap/'+'BSS'+strnum+'.dat', 'a+', 0)
+        #fhandle=open('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_mcut1.05_lastsnap/'+'BSS'+strnum+'.dat', 'a+', 0)
         bf, m0_bss, m1_bss, k0_bss, k1_bss, r_bss, id0_bss, id1_bss=find_BSS(ls, mtotrue)
         r_bsspc = [x * l_conv for x in r_bss]
-        fhandle.write('#%s\n'%(filepath))
-        np.savetxt(fhandle, np.c_[bf, id0_bss, id1_bss, m0_bss, m1_bss, k0_bss, k1_bss, r_bsspc], fmt ='%d %d %d %f %f %d %d %f', delimiter= ' ', header = '1.binflag, 2.id0, 3.id1, 4.m0[msun], 5.m1[msun], 6.k0, 7.k1, 8.r[pc]', comments = '#')
-        #print k
-        print strnum
+        #fhandle.write('#%s\n'%(filepath))
+        #np.savetxt(fhandle, np.c_[bf, id0_bss, id1_bss, m0_bss, m1_bss, k0_bss, k1_bss, r_bsspc], fmt ='%d %d %d %f %f %d %d %f', delimiter= ' ', header = '1.binflag, 2.id0, 3.id1, 4.m0[msun], 5.m1[msun], 6.k0, 7.k1, 8.r[pc]', comments = '#')
+        np.savetxt(filepath+'/'+pref+'.BSS.dat', np.c_[bf, id0_bss, id1_bss, m0_bss, m1_bss, k0_bss, k1_bss, r_bsspc], fmt ='%d %d %d %f %f %d %d %f', delimiter= ' ', header = '1.binflag, 2.id0, 3.id1, 4.m0[msun], 5.m1[msun], 6.k0, 7.k1, 8.r[pc]', comments = '#')
+	#print k
+        #print strnum
 
-
-# In[ ]:
 
 
 ##Classify BSS
@@ -466,9 +496,6 @@ def class_bss(start, end):
         
         print k
         
-
-
-# In[ ]:
 
 
 ##Extract semimajor axis and eccentricity from history dictionary
@@ -538,31 +565,42 @@ def find_binint_ae(hdict, theid, comid, stringnum):
 
 
 
-
-# In[ ]:
-
-
 ##Classify BSS
 def printout_class_bss(start, end):
-    bssfile=np.sort(glob('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_mcut1.05_lastsnap/BSS*.dat'))
+    #bssfile=np.sort(glob('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_mcut1.05_lastsnap/BSS*.dat'))
     for k in range(start, end):
         filepath=path[k]
-        pref=prefixstring[k]
-        filestr=filepath+pref
-        mcut=1.05*mturnoff[k]; tnow=tlastcode[k]; zmodel=z[k]
+        #pref=prefixstring[k]
+	t, pref, ls=find_MS(filepath)
+	filestr=filepath+'/'+pref
+
+        mtoguess=scripts.find_MS_turnoff(t)
+        #z=dataz[k]
+        z=0.001
+        mtotrue=scripts.find_MS_TO(t, z, mtoguess)
+	
+	snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
+	lastsnap=snaps[-1]
+	tnow=ns.get_time(lastsnap)
+	zmodel=z; mcut=1.05*mtotrue
+
+        #mcut=1.05*mturnoff[k]; tnow=tlastcode[k]; zmodel=z[k]
         
         l_conv=ns.conv('l',filestr+'.conv.sh')
         
         strnum=str(k).zfill(4)
-        fhandle=open('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_class/'+'BSSclass'+strnum+'.dat', 'a+', 0)
-        fhandle.write('#1.star_id, 2.bss_coll, 3.bss_ss_coll, 4.bss_bs_coll, 5.bss_bb_coll, 6.bss_se, 7.bss_se_merger, 8.bss_se_disruption, 9.bss_had_binint, 10.bss_mtb, 11.bss_mtb_pure, 12.bss_se_binint, 13.bss_mtb_binint, 14.actual_t, 15.actual_position, 16.primordial_binary\n')
+        #fhandle=open('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_class/'+'BSSclass'+strnum+'.dat', 'a+', 0)
+        fhandle=open(filepath+'/'+'initial.BSSclass.dat', 'w+', 0)
+	fhandle.write('#1.star_id, 2.bss_coll, 3.bss_ss_coll, 4.bss_bs_coll, 5.bss_bb_coll, 6.bss_se, 7.bss_se_merger, 8.bss_se_disruption, 9.bss_had_binint, 10.bss_mtb, 11.bss_mtb_pure, 12.bss_se_binint, 13.bss_mtb_binint, 14.actual_t, 15.actual_position, 16.primordial_binary\n')
         binintstring=filestr+'.binint.log'
         binint=glob(binintstring)
         binary=1
         if len(binint)==0: binary=0
-            
-        with open(bssfile[k], 'r') as fi:
-            for _ in xrange(2):
+	
+	bssfile=filestr+'.BSS.dat'            
+
+        with open(bssfile, 'r') as fi:
+            for _ in xrange(1):
                 next(fi)
             for line in fi:
                 databss=line.split()
@@ -583,16 +621,14 @@ def printout_class_bss(start, end):
                                 if long(datasnap[10])==theid: pribin=1; compid=long(datasnap[11])
                                 if long(datasnap[11])==theid: pribin=1; compid=long(datasnap[10])
                 
-                if pribin==1 and bss_had_binint==1:
-                    find_binint_ae(hd, theid, compid, strnum)
+                #if pribin==1 and bss_had_binint==1:
+                #    find_binint_ae(hd, theid, compid, strnum)
                                       
                 fhandle.write('%d %d %d %d %d %d %d %d %d %d %d %d %d %f %f %d\n'%(star_id, bss_coll, bss_ss_coll, bss_bs_coll, bss_bb_coll, bss_se, bss_se_merger, bss_se_disruption, bss_had_binint, bss_mtb, bss_mtb_pure, bss_se_binint, bss_mtb_binint, actual_t, actual_position, pribin))
                 
         
         print k
 
-
-# In[ ]:
 
 
 ##Plot Nbh_Nbss class
@@ -626,8 +662,121 @@ def plot_Nbss_class():
     #plt.show()
 
 
-# In[ ]:
+##Plot rc_Nbss and Nbh_rc
+def plot_Nbss_rc(pathlist, start, end):
+    pref='initial'
+    sourcedir=np.genfromtxt(pathlist, dtype='|S')
+    RC=[]; NBH=[]; NBSS=[]; NSIN=[]; NBIN=[]; NCOLL=[]; NMTB=[]; NSE=[]
+    for i in range(start, end):
+    	filepath=sourcedir[i]
+        pref='initial'
+        filestr=filepath+'/'+pref
+        snapobs=np.sort(glob(filestr+'.snap*.obs_params.dat'))
+        lastsnapobs=snapobs[-1]
 
+        Rc, Rhl, T_Gyr, Nbh=dyn.find_rcrh(lastsnapobs)
+        RC.append(Rc); NBH.append(Nbh)
+
+	Nsin, Nbin, Ncoll, Nmtb, Nse=find_NBSS(filestr)
+	NBSS.append(Nsin+Nbin); NSIN.append(Nsin); NBIN.append(Nbin); NCOLL.append(Ncoll); NMTB.append(Nmtb); NSE.append(Nse)
+	
+	print i
+
+    RC=np.array(RC); NBH=np.array(NBH); NBSS=np.array(NBSS); NSIN=np.array(NSIN); NBIN=np.array(NBIN); NCOLL=np.array(NCOLL); NMTB=np.array(NMTB); NSE=np.array(NSE)
+
+
+    plt.figure()
+    plt.subplot(1,2,1)
+    plt.scatter(NBH[0], RC[0], color='k', label='rv=1')
+    plt.scatter(NBH[16], RC[16], color='gold', label='rv=2')
+    for j in range(1, 16):
+        plt.scatter(NBH[j], RC[j], color='k')
+    for j1 in range(17, 32):
+        plt.scatter(NBH[j1], RC[j1], color='gold')
+    plt.xlabel(r'$N_{bh}$', fontsize=15)
+    plt.ylabel(r'$r_c$', fontsize=15)
+    plt.xscale('log')
+    plt.legend(loc='upper left')
+    
+    plt.subplot(1,2,2)
+    plt.scatter(RC, NBSS)
+    plt.xlabel(r'$r_c$', fontsize=15)
+    plt.ylabel(r'$N_{bss}$', fontsize=15)
+    plt.yscale('log')
+    plt.title('All Models')
+    plt.legend(loc='upper right')
+
+    plt.tight_layout()
+    plt.show()
+
+
+    plt.figure()
+    plt.subplot(1,2,1)
+    plt.scatter(RC, NSIN, label='single', color='purple', s=12)
+    plt.scatter(RC, NBIN, label='binary', color='orange', s=12, alpha=0.7)
+    plt.xlabel(r'$r_c$', fontsize=15)
+    plt.ylabel(r'$N_{bss}$', fontsize=15)
+    plt.yscale('log')
+    plt.title('Single-Binary')
+    plt.legend(loc='upper right')
+   
+    plt.subplot(1,2,2)
+    plt.scatter(RC, NCOLL, label='coll', color='b', s=12)
+    plt.scatter(RC, NMTB, label='mtb', color='r', s=12)
+    plt.scatter(RC, NSE, label='se', color='orange', s=12, alpha=0.7)
+    plt.xlabel(r'$r_c$', fontsize=15)
+    plt.ylabel(r'$N_{bss}$', fontsize=15)
+    plt.ylim(ymin=0.5)
+    plt.yscale('log')
+    plt.title('Formation Channels')
+    plt.legend(loc='upper right')
+
+    plt.tight_layout()
+   
+    plt.show()
+
+
+    plt.figure()
+    plt.subplot(1,2,1)
+    plt.scatter(RC[0], NBSS[0], color='k', label='rv=1')
+    for j in range(1, 16):
+        plt.scatter(RC[j], NBSS[j], color='k')
+    plt.xlabel(r'$r_c$', fontsize=15)
+    plt.ylabel(r'$N_{bss}$', fontsize=15)
+    plt.yscale('log')
+    plt.legend(loc='upper right')
+
+    plt.subplot(1,2,2)
+    plt.scatter(RC[16], NBSS[16], color='gold', label='rv=2')
+    for j1 in range(17, 32):
+        plt.scatter(RC[j1], NBSS[j1], color='gold')
+    plt.xlabel(r'$r_c$', fontsize=15)
+    plt.ylabel(r'$N_{bss}$', fontsize=15)
+    plt.yscale('log')
+    plt.legend(loc='upper right')
+
+    plt.tight_layout()
+
+    plt.show()
+
+
+
+##print out Nbh, Ntot, Rc
+def printout_numbers(start, end):
+    pref='initial'
+    NBH=[]; NTOT=[]; RC=[]; RHL=[]; T=[]
+    for i in range(start, end):
+	filepath=path[i]
+	filestr=filepath+'/'+pref
+	snapobs=np.sort(glob(filestr+'.snap*.obs_params.dat'))
+	lastsnapobs=snapobs[-1]
+	Nbh, Ntot=find_NBH_NTOT(filestr)
+	Rc, Rhl, T_Gyr, Nbh=dyn.find_rcrh(lastsnapobs)
+	NBH.append(Nbh); NTOT.append(Ntot); RC.append(Rc); RHL.append(Rhl); T.append(T_Gyr)
+	
+	print i
+
+    np.savetxt('/projects/b1011/syr904/projects/BSS/kickgrid_property.dat', np.c_[T, NTOT, NBH, RC, RHL], fmt ='%f %d %d %f %f', delimiter= ' ', header = '1.t_Gyr, 2.Ntot, 3.Nbh, 4.rc[pc], 5.rhl[pc]', comments = '#')
 
 ##Find metallicity, turnoff mass and lastsnap time for Models
 #z=[]; mto=[]; tlast=[]; tlastcode=[]; prefix=[]
@@ -651,62 +800,25 @@ def plot_Nbss_class():
 #np.savetxt('/Users/shiye/Documents/ClusterGroup/Modelgt12_prop.dat', np.c_[z], fmt='%f')
 
 
-# In[ ]:
 
 
 #printout_Nbss_Nbh()
 
-
-# In[ ]:
-
-
-#plot_Nbh_Nbss()
-
-
-# In[ ]:
-
+#plot_Nbh_Nbss(0, 32)
 
 #hrdiag_LT()
 
-
-# In[ ]:
-
-
 #plot_hrdiag('/Volumes/homes/sourav/CMC_results/BH_variations/kickoutputtest_variations/rundir/wind1/z0.001/normalkick/')
-
-
-# In[ ]:
-
 
 #printout_BSS(100, 150)
 
-
-# In[ ]:
-
-
 #printout_Nbss_sinbin()
-
-
-# In[ ]:
-
 
 #class_bss(579,597)
 
-
-# In[ ]:
-
-
 #plot__Nbss_sinbin()
-
-
-# In[ ]:
-
 
 #plot_Nbss_class()
 
-
-# In[ ]:
-
-
-printout_class_bss(308, 350)
-
+#printout_BSS(16,32)
+#printout_class_bss(16, 32)

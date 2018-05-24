@@ -3,7 +3,7 @@ from glob import glob
 import blackhole as bh
 import extract_observed_prop as obs
 
-path=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kick_grid/kickgrid_path.dat', dtype='|S')
+#path=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/kickgrid_path.dat', dtype='|S')
 #path=['/projects/b1011/syr904/cmc/cmc-mpi-04/rundir/NGC3201/8e5w5rv1fb50']
 #path=['/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.01','/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.05','/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.1','/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.2']
 
@@ -51,27 +51,27 @@ def print_obspara(filestring, snapno, tc):
 
 
 
-for k in range(len(path)):
-    snaps=np.sort(glob(path[k]+'/'+'initial.snap*.dat.gz'))
-    snapno_max=len(snaps)-1
-    step=int(step_of_loop(snapno_max))
-    filestring = path[k]+'/initial'
-    units = obs.read_units(filestring)
-    for n in range(len(snaps)-1, 0, step):
-	t_conv=conv('t',path[k]+'/'+'initial.conv.sh')
-	tcode=get_time(snaps[n])
-    	time=tcode*t_conv
-    	#if time >= 10000.0 and time <=12000.0:
-    	snapno=str(n).zfill(4)
-	#obs.make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1))
-        #print_obspara(filestring, snapno, tcode)
-	if n >= 140:
-		bh.get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15)
-
-    #if n > 0:
-        #snapno=str(0).zfill(4)
-	#tcode=get_time(snaps[0])
-        #obs.make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1))
-        #print_obspara(filestring, snapno, tcode)
-	#print k
+#for k in range(len(path)):
+#    snaps=np.sort(glob(path[k]+'/'+'initial.snap*.dat.gz'))
+#    snapno_max=len(snaps)-1
+#    step=int(step_of_loop(snapno_max))
+#    filestring = path[k]+'/initial'
+#    units = obs.read_units(filestring)
+#    for n in range(len(snaps)-1, 0, step):
+#	t_conv=conv('t',path[k]+'/'+'initial.conv.sh')
+#	tcode=get_time(snaps[n])
+#    	time=tcode*t_conv
+#    	#if time >= 10000.0 and time <=12000.0:
+#    	snapno=str(n).zfill(4)
+#	#obs.make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1))
+#        #print_obspara(filestring, snapno, tcode)
+#	if n >= 140:
+#		bh.get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15)
+#
+#    #if n > 0:
+#        #snapno=str(0).zfill(4)
+#	#tcode=get_time(snaps[0])
+#        #obs.make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1))
+#        #print_obspara(filestring, snapno, tcode)
+#	#print k
 

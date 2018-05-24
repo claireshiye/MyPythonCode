@@ -1,0 +1,34 @@
+=>> PBS: job killed: walltime 255615 exceeded limit 255600
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "ns.py", line 1523, in get_id_allmodel_position_10Gyr
+    r_temp, b, s=get_id_position_BP(id0[i], snap[j+1])
+NameError: global name 'snap' is not defined
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "ns.py", line 1532, in get_id_allmodel_position_10Gyr
+    nbh, ntot=dyn.find_NBH_NTOT(filestr, t10)
+  File "dynamics.py", line 87, in find_NBH_NTOT
+    return nbh, ntot
+UnboundLocalError: local variable 'nbh' referenced before assignment
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "ns.py", line 1532, in get_id_allmodel_position_10Gyr
+    n_bh, n_tot=dyn.find_NBH_NTOT(filestr, t10)
+  File "dynamics.py", line 87, in find_NBH_NTOT
+    return nbh, ntot
+UnboundLocalError: local variable 'nbh' referenced before assignment
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "ns.py", line 1532, in get_id_allmodel_position_10Gyr
+    n_bh, n_tot=dyn.find_NBH_NTOT(filestr, t10)
+  File "dynamics.py", line 87, in find_NBH_NTOT
+    return nbh, ntot
+UnboundLocalError: local variable 'nbh' referenced before assignment
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "ns.py", line 1525, in get_id_allmodel_position_10Gyr
+    r_temp, b, s=get_id_position_BP(id0[i], snaps[j+1])
+  File "ns.py", line 1469, in get_id_position_BP
+    return r, bfield, spin
+UnboundLocalError: local variable 'r' referenced before assignment

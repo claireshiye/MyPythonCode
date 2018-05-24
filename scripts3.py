@@ -104,14 +104,15 @@ def read_segment(f,position):
 			raise StopIteration()
 		elif line.rfind('error')>-1:
 			raise StopIteration()
-		#elif line.rfind('NaN')>-1:     ##For new models
-			#raise StopIteration     
+		elif line.rfind('NaN')>-1:     ##For new models
+			raise StopIteration     
 
 		#print line+' look here %ld ' % position
 		pos1=line.rfind('nstar=')+6
 		pos2=line.rfind('nobj=')+5
 		pos3=line.rfind('(')
 		pos4=line.rfind(')')
+		
 		#print line[pos1]+'and here'
 		outcome={'nstar': int(line[pos1]),
 			'nobj': int(line[pos2]),
@@ -160,10 +161,10 @@ def read_segment(f,position):
 			e=[]
 			if no>1:
 				for j in range(no-1):
-						#a+=[float(values[-4* (no-1) +(no-2+j)])]  ##For new models
-						#e+=[float(values[-3*(no-1) +(no-2+j)])]
-						a+=[float(values[-2* (no-1) +j])]          ##For old models
-						e+=[float(values[-(no-1) +j])]
+						a+=[float(values[-4* (no-1) +(no-2+j)])]  ##For new models
+						e+=[float(values[-3*(no-1) +(no-2+j)])]
+						#a+=[float(values[-2* (no-1) +j])]          ##For old models
+						#e+=[float(values[-(no-1) +j])]
 					
 			output[i]={'type': values[0],
 				'no': no,

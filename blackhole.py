@@ -912,7 +912,7 @@ def make_2D_projection(filestring, snapno, seedy=100, proj=(0,1)):
 	writefile.close()
 
 
-def get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=20):
+def get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15):
 	filename = filestring+'.snap'+snapno+'.2Dproj.dat'
 	print filename
 	projfile = open(filename, 'r')
@@ -958,7 +958,7 @@ def get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=20):
 			snp, snperr = n2d/area, float(n2d)**0.5/area
 			writefile.write('%g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbp, sbperr, snp, snperr))
 			if n2dcut>2:
-				sbpcut, sbpcuterr = lsum/area, lsum/float(n2d)**0.5/area	
+				sbpcut, sbpcuterr = lsumcut/area, lsumcut/float(n2d)**0.5/area	
 				snpcut, snpcuterr = n2dcut/area, float(n2dcut)**0.5/area
 				writefile1.write('%g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbpcut, sbpcuterr, snpcut, snpcuterr))
 		

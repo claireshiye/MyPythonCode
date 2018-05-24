@@ -228,4 +228,4 @@ def get_obs_props(filestring, snapno, FAC=1.):
 		'dvsigmac_rv': dvsigmac
 		}
 
-	return props
+	return Mtot, props

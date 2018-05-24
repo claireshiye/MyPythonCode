@@ -15,7 +15,7 @@ def metallicity(m,s):
 		m1 = 0.02*10**m
 	return m1
 
-def find_rtidal(mc,vg=220.,rg=8500.):
+def find_rtidal(mc,vg=220.,rg=8000.):
 	"""takes 
 	the cluster mass (mc) in solar mass, 
 	the galactic circular velocity (vg) in km/s, 

@@ -6,11 +6,11 @@ import scripts
 import matplotlib.pyplot as plt
 import history_cmc
 
-def history_maker(id0, id1, path, snapno, time_i):
+def history_maker(id0, id1, path, snapno, time_i, savepath):
 	ID_FLAG = 0
 	MTflag = 1	
 	id0_str = str(id0)
-	f = open(path+'/'+'histories/NEW'+id0_str+'_history.dat','w')
+	f = open(savepath+'/'+id0_str+'_history.dat','w+')
 	sys.stdout = f
         units=scripts.read_units(path+'/'+'initial')
         km = units[0]['l_cgs']*1.0e-5

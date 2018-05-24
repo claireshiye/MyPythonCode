@@ -949,7 +949,7 @@ def hrdiag_L_T(filestring, snapno):
 	for binaries the temperature is a luminosity averaged temperature"""
 	print 'started' 
 	snapfile=filestring+'.snap'+snapno+'.dat.gz'
-	snap=loadtxt(snapfile)
+	snap=genfromtxt(snapfile)
 	print 'snap done'
 	writefile=filestring+'.snap'+snapno+'.hrdiag.dat'
 	fwrite=open(writefile,'w')
@@ -958,16 +958,16 @@ def hrdiag_L_T(filestring, snapno):
 	print 'header done'
 
 	for i in range(len(snap)):
-		if snap[i,7]==0:
+		if snap[i,7]!=1:
 			T0=find_T(snap[i,15],snap[i,16])
 			fwrite.write("%d %d %d %ld %ld %ld %g %g %g %g %g %g %g %g %d %g %g\n" % ( snap[i,7],snap[i,14],na,snap[i,0],na,na,snap[i,1],na,snap[i,2],snap[i,16],na,snap[i,15],na,T0,na,log10(T0),log10(snap[i,15])))
-			print (i,snap[i,7])
+			#print (i,snap[i,7])
 		if snap[i,7]==1:
 			T0=find_T(snap[i,19],snap[i,21])
 			T1=find_T(snap[i,20],snap[i,22])
 			Teff=(snap[i,19]*T0 + snap[i,20]*T1)/(snap[i,19]+snap[i,20])
 			fwrite.write("%d %d %d %ld %ld %ld %g %g %g %g %g %g %g %g %d %g %g\n" % ( snap[i,7],snap[i,17],snap[i,18],snap[i,0],snap[i,10],snap[i,11],snap[i,8],snap[i,9],snap[i,2],snap[i,21],snap[i,22],snap[i,19],snap[i,20],T0,T1,log10(Teff),log10(snap[i,19]+snap[i,20])))
-			print (i,snap[i,7])
+			#print (i,snap[i,7])
 	fwrite.close()
 
 
