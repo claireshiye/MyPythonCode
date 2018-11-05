@@ -16,7 +16,7 @@ import dynamics as dyn
 
 
 
-data=np.genfromtxt('/projects/b1011/syr904/projects/BSS/kickgrid_path.dat', dtype='str')
+data=np.genfromtxt('/projects/b1011/syr904/projects/BSS/rvgrid_path.dat', dtype='str')
 path=data
 #path=['/projects/b1011/syr904/cmc/cmc-mpi-04/rundir/NGC3201/8e5w5rv1']
 #path=data[:,0]; prefixstring=data[:,1]
@@ -25,8 +25,8 @@ path=data
 #tlastcode=dataprop[:,0]; mturnoff=dataprop[:,2]; z=dataprop[:,3]
 
 
-##Find Main Sequence Star
-def find_MS(filepath):
+##Find parameters needed for finding BSS
+def find_para(filepath):
     #filepath=str(data[k])
     snaps=np.sort(glob(filepath+'/'+'*.snap*.dat.gz'))
     firstsnap=snaps[0]
@@ -57,35 +57,7 @@ def find_MS(filepath):
 
 ##Find BSS
 def find_BSS(lastsnap, mto):
-    #datalast=np.genfromtxt(lastsnap)
-    #binflag=datalast[:,7]; m=datalast[:,1]; m0=datalast[:,8]; m1=datalast[:,9]
-    #kstar=datalast[:,14]; k0=datalast[:,17]; k1=datalast[:,18]
-    #sid=datalast[:,0]; id0=datalast[:,10]; id1=datalast[:,11]; rposition=datalast[:,2]
-    ##nbss=0
-    bif=[]; m0bss=[]; m1bss=[]; k0bss=[]; k1bss=[]; rbss=[]; id0bss=[]; id1bss=[]
-    #for j in range(len(binflag)):
-    #    if binflag[j]==0:
-    #        if kstar[j]==0 or kstar[j]==1:
-    #            if m[j]>=1.05*mto: 
-    #                #nbss+=1
-    #                bif.append(0); m0bss.append(m[j]); m1bss.append(-100)
-    #                k0bss.append(kstar[j]); k1bss.append(-100); rbss.append(rposition[j])
-    #                id0bss.append(sid[j]); id1bss.append(-100)
-    #    if binflag[j]==1:
-    #        if k0[j]==0 or k0[j]==1:
-    #            if m0[j]>=1.05*mto: 
-    #                #nbss+=1
-    #                bif.append(1); m0bss.append(m0[j]); m1bss.append(m1[j])
-    #                k0bss.append(k0[j]); k1bss.append(k1[j]); rbss.append(rposition[j])
-    #                id0bss.append(id0[j]); id1bss.append(id1[j])
-    #        if k1[j]==0 or k1[j]==1:
-    #            if m1[j]>=1.05*mto: 
-    #                #nbss+=1
-    #                bif.append(1); m0bss.append(m1[j]); m1bss.append(m0[j])
-    #                k0bss.append(k1[j]); k1bss.append(k0[j]); rbss.append(rposition[j])
-    #                id0bss.append(id1[j]); id1bss.append(id0[j])
-    #                
-    #return nbss
+    bif=[]; m0bss=[]; m1bss=[]; k0bss=[]; k1bss=[]; rbss=[]; id0bss=[]; id1bss=[]; abss=[]; ebss=[]
     
     ##Memory free version
     with gzip.open(lastsnap, 'r') as f:
@@ -99,22 +71,24 @@ def find_BSS(lastsnap, mto):
                     if float(datalast[1])>=1.05*mto:
                         bif.append(0); m0bss.append(float(datalast[1])); m1bss.append(-100)
                         k0bss.append(int(datalast[14])); k1bss.append(-100); rbss.append(float(datalast[2]))
-                        id0bss.append(int(datalast[0])); id1bss.append(-100)
+                        id0bss.append(int(datalast[0])); id1bss.append(-100); abss.append(-100); ebss.append(-100)
             if int(datalast[7])==1:
                 if int(datalast[17])==0 or int(datalast[17])==1:
                     if float(datalast[8])>=1.05*mto:
                         bif.append(1); m0bss.append(float(datalast[8])); m1bss.append(float(datalast[9]))
                         k0bss.append(int(datalast[17])); k1bss.append(int(datalast[18])); rbss.append(float(datalast[2]))
-                        id0bss.append(int(datalast[10])); id1bss.append(int(datalast[11]))
+                        id0bss.append(int(datalast[10])); id1bss.append(int(datalast[11])); abss.append(float(datalast[12])); ebss.append(float(datalast[13]))
                         
                 if int(datalast[18])==0 or int(datalast[18])==1:
                     if float(datalast[9])>=1.05*mto:
                         bif.append(1); m0bss.append(float(datalast[9])); m1bss.append(float(datalast[8]))
                         k0bss.append(int(datalast[18])); k1bss.append(int(datalast[17])); rbss.append(float(datalast[2]))
-                        id0bss.append(int(datalast[11])); id1bss.append(int(datalast[10]))
+                        id0bss.append(int(datalast[11])); id1bss.append(int(datalast[10])); abss.append(float(datalast[12])); ebss.append(float(datalast[13]))
                             
         
-    return bif, m0bss, m1bss, k0bss, k1bss, rbss, id0bss, id1bss
+    return bif, m0bss, m1bss, k0bss, k1bss, rbss, id0bss, id1bss, abss, ebss
+
+
 
 ##Find BH in the last timestep
 def find_NBH_NTOT(filestring):     
@@ -436,23 +410,18 @@ def plot_hrdiag(sourcedir):
 ##Print out BSS of all models
 def printout_BSS(start, end):
     for k in range(start, end):
-        #filepath=path[k]
-	filepath='/projects/b1011/kyle/cmc/newruns/rundir/N8e5rv1fb5w5_kickgrid/kickscale_0.17'
-        print filepath
-        t, pref, ls=find_MS(filepath)
+        filepath=path[k]
+        t, pref, ls=find_para(filepath)
         l_conv=ns.conv('l',filepath+'/'+pref+'.conv.sh')
         mtoguess=scripts.find_MS_turnoff(t)
         #z=dataz[k]
         z=0.001
         mtotrue=scripts.find_MS_TO(t, z, mtoguess)
         strnum=str(k).zfill(4)
-        #fhandle=open('/Users/shiye/Documents/ClusterGroup/BSSproject/BSS_mcut1.05_lastsnap/'+'BSS'+strnum+'.dat', 'a+', 0)
-        bf, m0_bss, m1_bss, k0_bss, k1_bss, r_bss, id0_bss, id1_bss=find_BSS(ls, mtotrue)
+        bf, m0_bss, m1_bss, k0_bss, k1_bss, r_bss, id0_bss, id1_bss, a_bss, e_bss=find_BSS(ls, mtotrue)
         r_bsspc = [x * l_conv for x in r_bss]
-        #fhandle.write('#%s\n'%(filepath))
-        #np.savetxt(fhandle, np.c_[bf, id0_bss, id1_bss, m0_bss, m1_bss, k0_bss, k1_bss, r_bsspc], fmt ='%d %d %d %f %f %d %d %f', delimiter= ' ', header = '1.binflag, 2.id0, 3.id1, 4.m0[msun], 5.m1[msun], 6.k0, 7.k1, 8.r[pc]', comments = '#')
-        np.savetxt(filepath+'/'+pref+'.BSS.dat', np.c_[bf, id0_bss, id1_bss, m0_bss, m1_bss, k0_bss, k1_bss, r_bsspc], fmt ='%d %d %d %f %f %d %d %f', delimiter= ' ', header = '1.binflag, 2.id0, 3.id1, 4.m0[msun], 5.m1[msun], 6.k0, 7.k1, 8.r[pc]', comments = '#')
-	#print k
+        np.savetxt(filepath+'/'+pref+'.BSS.dat', np.c_[bf, id0_bss, id1_bss, m0_bss, m1_bss, k0_bss, k1_bss, r_bsspc, a_bss, e_bss], fmt ='%d %d %d %f %f %d %d %f %f %f', delimiter= ' ', header = '1.binflag, 2.id0, 3.id1, 4.m0[msun], 5.m1[msun], 6.k0, 7.k1, 8.r[pc], 9.a[AU], 10.e', comments = '#')
+        print k
         #print strnum
 
 

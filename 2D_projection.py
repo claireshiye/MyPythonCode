@@ -3,9 +3,9 @@ from glob import glob
 import blackhole as bh
 import extract_observed_prop as obs
 
-path=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kick_grid/kickgrid_path.dat', dtype='|S')
-#path=['/projects/b1011/syr904/cmc/cmc-mpi-04/rundir/NGC3201/8e5w5rv1fb50']
-#path=['/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.01','/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.05','/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.1','/projects/b1011/sourav/new_runs/kick_grid/rv1/kickscale_0.2']
+path=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/path_newmodel.dat', dtype='|S')
+#path=['/projects/b1011/syr904/cmc/cmc-mpi-06/rundir/3.5e6rv1fb10kick1.0']
+#path=['/projects/b1011/syr904/cmc/cmc-mpi-09/rundir/kickgrid/kickgrid_0.11', '/projects/b1011/syr904/cmc/cmc-mpi-09/rundir/kickgrid/kickgrid_0.13']
 
 def conv_dict(): return {'l':15, 't':19}    #?
 
@@ -50,23 +50,24 @@ def print_obspara(filestring, snapno, tc):
     print>>f_obs_params, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'], props['t'], props['vsigmac_rv'], M_total, N_BH, N_BHsingle, N_BHBH, N_BHnBH, N_BHNS, N_BHWD, N_BHMS, N_BHG
 
 
-
-for k in range(len(path)):
+for k in range(len(path)):   ### For all the snapshots in a model
     snaps=np.sort(glob(path[k]+'/'+'initial.snap*.dat.gz'))
     snapno_max=len(snaps)-1
     step=int(step_of_loop(snapno_max))
     filestring = path[k]+'/initial'
     units = obs.read_units(filestring)
     for n in range(len(snaps)-1, 0, step):
-	t_conv=conv('t',path[k]+'/'+'initial.conv.sh')
-	tcode=get_time(snaps[n])
-    	time=tcode*t_conv
-    	#if time >= 10000.0 and time <=12000.0:
-    	snapno=str(n).zfill(4)
-	#obs.make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1))
-        #print_obspara(filestring, snapno, tcode)
-	if n >= 140:
-		bh.get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15)
+        t_conv=conv('t',path[k]+'/'+'initial.conv.sh')
+        tcode=get_time(snaps[n])
+        time=tcode*t_conv
+        if time >= 10000.0:
+            snapno=str(n).zfill(4)
+            obs.make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1))
+            print_obspara(filestring, snapno, tcode)
+        #if n >= 140:
+            bh.get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15)
+
+    print k
 
     #if n > 0:
         #snapno=str(0).zfill(4)
@@ -75,3 +76,17 @@ for k in range(len(path)):
         #print_obspara(filestring, snapno, tcode)
 	#print k
 
+
+#for k in range(len(path)):   ###For only the last snapshot
+#    snaps=np.sort(glob(path[k]+'/'+'initial.snap*.dat.gz'))
+#    snapno_max=len(snaps)-1
+#    filestring = path[k]+'/initial'
+#    units = obs.read_units(filestring)
+#    t_conv=conv('t',path[k]+'/'+'initial.conv.sh')
+#    tcode=get_time(snaps[snapno_max])
+#    time=tcode*t_conv
+#    snapno=str(int(snapno_max)).zfill(4)
+#    obs.make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1))
+#    print_obspara(filestring, snapno, tcode)
+#    bh.get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15)
+#    print k

@@ -137,7 +137,7 @@ def make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1)):
 			else:
 				Ltot = data[ind[i],3]
 				Mtot = data[ind[i],8]
-			writefile.write("%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n" %(r2d[ind[i]], Ltot, data[ind[i],1], data[ind[i],2], Ltot, data[ind[i],4], data[ind[i],5], data[ind[i],6], data[ind[i],7], Mtot, data[ind[i],9], data[ind[i],10], data[ind[i],13], data[ind[i],14], data[ind[i],15], r3d[0,ind[i]], r3d[1,ind[i]], r3d[2,ind[i]], v3d[0,ind[i]], v3d[1,ind[i]], v3d[2,ind[i]], ))
+			writefile.write("%g %g %g %g %g %g %g %g %g %g %g %g %d %d %d %g %g %g %g %g %g\n" %(r2d[ind[i]], Ltot, data[ind[i],1], data[ind[i],2], Ltot, data[ind[i],4], data[ind[i],5], data[ind[i],6], data[ind[i],7], Mtot, data[ind[i],9], data[ind[i],10], data[ind[i],13], data[ind[i],14], data[ind[i],15], r3d[0,ind[i]], r3d[1,ind[i]], r3d[2,ind[i]], v3d[0,ind[i]], v3d[1,ind[i]], v3d[2,ind[i]], ))
 	writefile.close()
 	return r, vr, vt, r3d, v3d
 

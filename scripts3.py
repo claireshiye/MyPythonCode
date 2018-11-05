@@ -55,7 +55,7 @@ def read_segment(f,position):
 				.replace("Eint1=","").replace("Eint2=","").replace("Eint=","")\
 				.replace("id0=","").replace("id1=","").replace("id=","")\
 				.replace("a=","").replace("e=","")\
-				#.replace("ktype1=","").replace("ktype2=","").replace("ktype=","")
+				.replace("ktype1=","").replace("ktype2=","").replace("ktype=","")
 			values=parsed.split()
 			#print values
 			if values[0]=='binary':
@@ -66,8 +66,8 @@ def read_segment(f,position):
 					'Eint': [float(values[6]),float(values[7])],
 					'ids': [long(values[8]),long(values[9])],
 					'a': float(values[10]),
-					'e': float(values[11])
-					#'ktype': [values[12], values[13]]
+					'e': float(values[11]),
+					'ktype': [values[12], values[13]]
 					}
 			
 			elif values[0]=='single':
@@ -78,8 +78,8 @@ def read_segment(f,position):
 					'Eint': [float(values[4])],
 					'ids': [long(values[5])],
 					'a': na,
-					'e': na
-					#'ktype': [values[6]]
+					'e': na,
+					'ktype': [values[6]]
 					}	
 		
 			else:
@@ -89,14 +89,19 @@ def read_segment(f,position):
 		
 		line=f.readline()
 		parsed=line.replace("status: DE/E=","").replace("DE=","")\
-				.replace("DL/L=","").replace("DL=","").replace("tcpu=","")
+				.replace("DL/L=","").replace("DL=","").replace("DE_GW/E=","")\
+				.replace("DE_GW=","").replace("v_esc_cluster[km/s]=","")\
+				.replace("tcpu=","")
 		values=parsed.split()
 		#print values
 		status={'DE/E': float(values[0]),
 			'DE': float(values[1]),
 			'DL/L': float(values[2]),
 			'DL': float(values[3]),
-			'tcpu': float(values[4])
+			'DE_GW/E': float(values[4]),
+			'DE_GW': float(values[5]),
+			'v_esc_cluster[km/s]': float(values[6]),
+			'tcpu': float(values[7])
 			}
 		
 		line=f.readline()
@@ -137,10 +142,10 @@ def read_segment(f,position):
 				.replace("Eintout0=","").replace("Eintout1=","").replace("Eintout=","")\
 				.replace("idin1=","").replace("idin2=","").replace("idin=","")\
 				.replace("idout0=","").replace("idout1=","").replace("idout=","")\
-				.replace("ain=","").replace("aout=","").replace("ein=","").replace("eout=","")
-				#.replace("ktype1=","").replace("ktype2=","").replace("ktype=","")\
-				#.replace("ktypein1=","").replace("ktypein2=","").replace("ktypein=","")\
-				#.replace("ktypeout1=","").replace("ktypeout2=","").replace("ktypeout=","")
+				.replace("ain=","").replace("aout=","").replace("ein=","").replace("eout=","")\
+				.replace("ktype1=","").replace("ktype2=","").replace("ktype=","")\
+				.replace("ktypein1=","").replace("ktypein2=","").replace("ktypein=","")\
+				.replace("ktypeout1=","").replace("ktypeout2=","").replace("ktypeout=","")
 			values=parsed.split()
 			#print values
 			
