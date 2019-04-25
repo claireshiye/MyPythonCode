@@ -25,6 +25,7 @@ def readcollfile(filename) :
 		    .replace(") typem="," ")
 		    .replace("type1="," ").replace("type2="," ")
 		    .replace("type3="," ").replace("type4="," ")
+		    .replace("b[RSUN]=", " ").replace("vinf[km/s]="," ")
 		    .replace("\n","")
 		for line in file(filename) if line[0]!="#"]
 

@@ -296,14 +296,11 @@ def classifying_BSS(h, star_id, binary, m_cut, t_now, filestring, z):
 		note time when it became a BSS and what was the interaction that made it
 		to do that:
 		find the m_cut at t=t_now
-		go back in time and find after what interaction m_star >= m_cut: this is the interaction that 
-			made the BSS
-			get the time and position for the interaction and also the type of the interaction
+		go back in time and find after what interaction m_star >= m_cut: this is the interaction that made the BSS
+		get the time and position for the interaction and also the type of the interaction
 		When the star is not found to have a binary interaction, collision, or merger and disruption then 
-			the only other way it can grow in mass is if it had a clean undisturbed mass transfer in a 
-			binary
-			in that case, I need to get these masses and evolve them using BSE to find the onset time 
-			of the mass transfer.  This will be the time when the BSS started to be created.
+			the only other way it can grow in mass is if it had a clean undisturbed mass transfer in a binary
+			in that case, I need to get these masses and evolve them using BSE to find the onset time of the mass transfer.  This will be the time when the BSS started to be created.
 	"""
 	#print 'star_id', star_id, 't_now', t_now
 	units = scripts.read_units(filestring)
@@ -323,7 +320,9 @@ def classifying_BSS(h, star_id, binary, m_cut, t_now, filestring, z):
 	count = 0
 	interacted, t_of_interaction1, t_of_interaction2, t_of_interaction3, t_of_interaction = 0, 0., 0., 0., 0.
 	#first look for collisions
+	print h[star_id]['coll'].keys()
 	for i in h[star_id]['coll'].keys():
+		print i
 		interacted = 1
 		m_coll = h[star_id]['coll'][i]['coll_params']['mass']
 		t_coll = h[star_id]['coll'][i]['coll_params']['time']
@@ -335,9 +334,10 @@ def classifying_BSS(h, star_id, binary, m_cut, t_now, filestring, z):
 			interaction_dict[count] = h[star_id]['coll'][i]['coll_params']['interaction']
 			position_dict[count] = h[star_id]['coll'][i]['coll_params']['position']
 			channel_dict[count] = 'collision'
-			#print channel_dict[count], t_dict[count], star_id
+			print channel_dict[count], t_dict[count], star_id
 
 	#then for SE merger and disruption
+	print h[star_id]['se'].keys()
 	if len(h[star_id]['se'].keys())>0:
 		interacted = 1
 		t_of_interaction2 = h[star_id]['se']['time']
@@ -350,23 +350,23 @@ def classifying_BSS(h, star_id, binary, m_cut, t_now, filestring, z):
 			interaction_dict[count] = h[star_id]['se']['description']
 			position_dict[count] = h[star_id]['se']['position']
 			channel_dict[count] = 'se'
-			#print channel_dict[count], t_dict[count], star_id
+			print channel_dict[count], t_dict[count], star_id
 
 	#Now figure out which of these interactions actually made the BSS
 	#print interaction_dict
-	t_earliest = t_now+1. #initialization: the plus 1 is to avoid the rare event where on the last timestep 
-				#the BSS is formed.  In that case due to round off, t_now will seem like a later 
-				#time compared to the BSS formation time
+	t_earliest = t_now+1. #initialization: the plus 1 is to avoid the rare event where on the last timestep the BSS is formed.  In that case due to round off, t_now will seem like a later 
+	#time compared to the BSS formation time
 	if len(interaction_dict.keys())>0:
-		#print 'len', len(interaction_dict.keys()), 't_now', t_now
+		print 'len', len(interaction_dict.keys()), 't_now', t_now, interaction_dict.keys()
 		for i in interaction_dict.keys():
 			if t_dict[i] < t_earliest:
 				#finding which interaction first made it a BSS if there were multiple interactions
 				actual = i
 				t_earliest = t_dict[i]
+				print actual
 	else:
 		actual = 0   #this should happen for any MTB: no coll/se interaction is found
-	#print 'actual', actual
+	print 'actual', actual
 
 
 	if actual>0:
@@ -398,7 +398,7 @@ def classifying_BSS(h, star_id, binary, m_cut, t_now, filestring, z):
 
 	#check if this star ever had a binary interaction before: may be it is not important
 	if binary==1:
-		if (h[star_id]['binint']['binint'].keys()) > 0:
+		if len(h[star_id]['binint']['binint'].keys()) > 0:
 			for i in h[star_id]['binint']['binint'].keys():
 				t_binint = h[star_id]['binint']['binint'][i]['interaction']['type']['time']
 				t_of_interaction3 = t_binint
@@ -407,7 +407,7 @@ def classifying_BSS(h, star_id, binary, m_cut, t_now, filestring, z):
 
 	#check whether it may have been mass transfer in a binary
 	t_of_interaction = max([t_of_interaction1, t_of_interaction2, t_of_interaction3])
-	#print 'bss_coll', bss_coll, 'bss_se', bss_se, 'bss_had_binint', bss_had_binint, 'interacted', interacted, 't_of_int', t_of_interaction
+	print 'bss_coll', bss_coll, 'bss_se', bss_se, 'bss_had_binint', bss_had_binint, 'interacted', interacted, 't_of_int', t_of_interaction
 
 	try:
 		if bss_coll == 0 and bss_se == 0:

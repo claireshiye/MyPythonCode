@@ -6,6 +6,6 @@
 #MSUB -o pyoutput.out
 #MSUB -l nodes=1:ppn=4
 ####MSUB -l naccesspolicy=singlejob
-#MSUB -l walltime=24:0:0
+#MSUB -l walltime=48:0:0
 #MSUB -A b1011
 #MSUB -q ligo

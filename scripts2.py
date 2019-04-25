@@ -22,6 +22,8 @@ def readmergefile(filename) :
 		.replace("):id2="," ").replace("(m2="," ")
 		.replace(" id1="," ").replace(" id2="," ")
 		.replace(") (r="," ").replace(")","")
+		.replace("typer=", " ").replace("type1=", " ").replace("type2=", " ")
+		.replace("\n","")
 	for line in file(filename) if line[0]!="#"]
 
 def bse_int(filename):

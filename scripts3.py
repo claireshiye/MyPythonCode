@@ -48,6 +48,7 @@ def read_segment(f,position):
 		input={}	
 		for i in range(2):
 			line=f.readline()
+			#print line
 			parsed=line.replace("input: type=","")\
 				.replace("binary","binary 2").replace("single","single 1")\
 				.replace("m0=","").replace("m1=","").replace("m=","")\
@@ -55,7 +56,8 @@ def read_segment(f,position):
 				.replace("Eint1=","").replace("Eint2=","").replace("Eint=","")\
 				.replace("id0=","").replace("id1=","").replace("id=","")\
 				.replace("a=","").replace("e=","")\
-				.replace("ktype1=","").replace("ktype2=","").replace("ktype=","")
+				.replace("ktype1=","").replace("ktype2=","").replace("ktyp","")
+				##ktyp is not a typo, it only works this way I don't know why (Shi)
 			values=parsed.split()
 			#print values
 			if values[0]=='binary':
@@ -67,7 +69,7 @@ def read_segment(f,position):
 					'ids': [long(values[8]),long(values[9])],
 					'a': float(values[10]),
 					'e': float(values[11]),
-					'ktype': [values[12], values[13]]
+					'ktype': [int(values[12]), int(values[13])]
 					}
 			
 			elif values[0]=='single':
@@ -79,7 +81,7 @@ def read_segment(f,position):
 					'ids': [long(values[5])],
 					'a': na,
 					'e': na,
-					'ktype': [values[6]]
+					'ktype': [int(values[6])]
 					}	
 		
 			else:
@@ -94,7 +96,7 @@ def read_segment(f,position):
 				.replace("tcpu=","")
 		values=parsed.split()
 		#print values
-		status={'DE/E': float(values[0]),
+		status={'DE/E': float(values[0]),     ##For new codes
 			'DE': float(values[1]),
 			'DL/L': float(values[2]),
 			'DL': float(values[3]),
@@ -103,6 +105,14 @@ def read_segment(f,position):
 			'v_esc_cluster[km/s]': float(values[6]),
 			'tcpu': float(values[7])
 			}
+
+		#status={'DE/E': float(values[0]),     ##For old codes
+		#	'DE': float(values[1]),
+		#	'DL/L': float(values[2]),
+		#	'DL': float(values[3]),
+		#	'tcpu': float(values[4])
+		#	}
+		
 		
 		line=f.readline()
 		if line.rfind('stopped')>-1:
@@ -127,13 +137,13 @@ def read_segment(f,position):
 		output={}	
 		for i in range(outcome['nobj']):
 			line=f.readline()
-			parsed=line.replace("output: type=","").replace("binary","binary 2").replace("single","single 1")\
+			parsed=line.replace("output: type=","").replace("binary","binary 2").replace("single","single 1").replace("triple","triple 3")\
 				.replace("m0=","").replace("m1=","").replace("m=","")\
 				.replace("R0=","").replace("R1=","").replace("R=","")\
 				.replace("Eint1=","").replace("Eint2=","").replace("Eint=","")\
 				.replace("id0=","").replace("id1=","").replace("id=","")\
 				.replace("a=","").replace("e=","")\
-				.replace("triple","triple 3")\
+				.replace("ktype1=","").replace("ktype2=","").replace("ktype=","")\
 				.replace("min0=","").replace("min1=","").replace("min=","")\
 				.replace("mout0=","").replace("mout1=","").replace("mout=","")\
 				.replace("Rin0=","").replace("Rin1=","").replace("Rin=","")\
@@ -143,7 +153,6 @@ def read_segment(f,position):
 				.replace("idin1=","").replace("idin2=","").replace("idin=","")\
 				.replace("idout0=","").replace("idout1=","").replace("idout=","")\
 				.replace("ain=","").replace("aout=","").replace("ein=","").replace("eout=","")\
-				.replace("ktype1=","").replace("ktype2=","").replace("ktype=","")\
 				.replace("ktypein1=","").replace("ktypein2=","").replace("ktypein=","")\
 				.replace("ktypeout1=","").replace("ktypeout2=","").replace("ktypeout=","")
 			values=parsed.split()
@@ -170,6 +179,11 @@ def read_segment(f,position):
 						e+=[float(values[-3*(no-1) +(no-2+j)])]
 						#a+=[float(values[-2* (no-1) +j])]          ##For old models
 						#e+=[float(values[-(no-1) +j])]
+			if no==1: ktype=[values[-1]]
+			if no==2: ktype=[values[-2], values[-1]]
+			if no==3: ktype=[values[-3], values[-2], values[-1]]
+
+
 					
 			output[i]={'type': values[0],
 				'no': no,
@@ -179,7 +193,8 @@ def read_segment(f,position):
 				'ids': [values[2+ 3*no +j] for j in range(no)],
 				'a': a,
 				'e': e,
-				'merge': merge 
+				'merge': merge,
+				'ktype': ktype
 				}
 	except StopIteration:
 		goodrun=0

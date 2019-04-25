@@ -260,9 +260,9 @@ def find_t_ms(z, m):
 
 	t_MS = max(t_hook, x*t_BGB)
 
-	return (t_MS)
+	return (t_MS)   ## t in Myr
 
-def find_MS_TO(t, z, mguess):
+def find_MS_TO(t, z, mguess):  ## t in myr
 	tguess = find_t_ms(z, mguess)
 	#print mguess, tguess, (t-tguess)/t
 

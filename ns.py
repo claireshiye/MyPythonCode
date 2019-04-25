@@ -5,9 +5,9 @@ from collections import Counter
 import os,sys
 import subprocess
 import matplotlib
-import matplotlib.lines as mlines
-#matplotlib.use('PDF')
+matplotlib.use('PDF')
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 #import seaborn as sns
 import gzip
 import math
@@ -17,6 +17,10 @@ import history_maker_full5 as hi5
 import history_cmc as hic
 import dynamics as dyn
 import scripts3
+import scripts1
+import scripts2
+from scipy import stats
+import ecc_calc as gwcalc
 
 
 #path = '/projects/b1011/kyle/cmc/branches/cmc-mpi/m22_project/rundir/m10'
@@ -41,13 +45,18 @@ def readdata_freire():
 	
 	K=5.7*10**19
 	Ps=[]; Pdots=[]; Bs=[]; Pb=[]; Pdotb=[]; Bb=[]  ##P unit ms, dpdt has a factor of 10^-20
+	Ns=0; Nb=0.  ##Calculating the numbers of single and binary pulsars
+	period=[]; ecc=[]
 	with open('/projects/b1011/syr904/projects/PULSAR/GCpsr.txt', 'rb') as f:
 	    for _ in xrange(4):
 	        next(f)
 	    for line in f:
 	        data=line.split()
 	        if not data: continue
-	        if str(data[0][0])=='J' or data[0][0]=='B': 
+	        if str(data[0][0])=='J' or data[0][0]=='B':
+	            if str(data[5])=='i': Ns+=1
+	            if str(data[5])!='i' and str(data[5])!='*': Nb+=1
+	        	
 	            if str(data[3])!='*':
 	                if str(data[3][0])=='<':continue    
 	                if str(data[-1])=='i': 
@@ -72,14 +81,21 @@ def readdata_freire():
 	                            Pdotb.append(float(dpdtb[0])*10**-20)
 	                    else:
 	                        Pdotb.append(float(dpdtb[0])*10**-20)
-    
+
+	            if str(data[5])!='i' and str(data[5])!='*' and str(data[7])!='i' and str(data[7])!='*':
+	            	if str(data[5][0])=='<' or str(data[7][0])=='<' or str(data[5][0])=='>' or str(data[7][0])=='>': continue
+	            	else: period.append(float(data[5])); ecc.append(float(data[7]))
+	            	print data[7]
+
+
 	#print Pdots, Pdotb, Ps, Pb
 	#Bs=K*np.sqrt(np.abs(Pdots)*np.array(Ps)*0.001)
 	#Bb=K*np.sqrt(np.abs(Pdotb)*np.array(Pb)*0.001)
 	Ps=np.array(Ps); Pb=np.array(Pb); Pdots=np.array(Pdots); Pdotb=np.array(Pdotb)
 	#Bs=np.array(Bs); Bb=np.array(Bb)
 	#print Bs, Bb
-	return Ps, Pb, Pdots, Pdotb
+	print Ns, Nb, len(period), len(ecc)
+	return Ps, Pb, Pdots, Pdotb, period, ecc
 
 
 def conv_dict(): return {'l':15, 't':19, 'm':7}    #?
@@ -141,7 +157,8 @@ def find_history(sourcedir, ids):    #Find star history in snapshots.
 	snaps = np.sort(glob(sourcedir+'/'+'initial.snap*.dat.gz'))
 	t_conv = conv('t',sourcedir+'/'+'initial.conv.sh')
 	#ids=gen_snap_bnslist(sourcedir, folder)
-	#ids=[148267]
+	ids=[ids]
+	print ids
 	for j in range(len(ids)):
 		id_temp=ids[j]
 		m0=[]; m1=[]; id0=[]; id1=[]; a=[]; e=[]; k0=[]; k1=[]; P0=[]; P1=[]; B0=[]; B1=[]; t=[] 
@@ -152,17 +169,27 @@ def find_history(sourcedir, ids):    #Find star history in snapshots.
 						next(fi)
 					for line in fi:
 						data1=line.split()
-						if int(data1[7])==1:
-							if int(data1[10])==id_temp or int(data1[11])==id_temp:
-								m0.append(float(data1[8])); m1.append(float(data1[9])); id0.append(int(data1[10])); id1.append(int(data1[11])); a.append(float(data1[12])); e.append(float(data1[13])); k0.append(int(data1[17])); k1.append(int(data1[18])); P0.append(float(data1[45])); P1.append(float(data1[46])); B0.append(float(data1[47])); B1.append(float(data1[48]))
-								t.append(time)
-						if int(data1[7])!=1:
-							if int(data1[0])==id_temp:
-								m0.append(float(data1[1])); m1.append(float(-100)); id0.append(int(data1[0])); id1.append(int(-100)); k0.append(int(data1[14])); k1.append(int(-100)); a.append(float(-100)); e.append(float(-100)); P0.append(float(-100)); P1.append(float(-100)); B0.append(float(-100)); B1.append(float(-100))
-								t.append(time)
+						if int(data1[10])==id_temp and int(data1[17])==13:
+							m0.append(float(data1[8])); m1.append(float(data1[9])); id0.append(int(data1[10])); id1.append(int(data1[11])); a.append(float(data1[12])); e.append(float(data1[13])); k0.append(int(data1[17])); k1.append(int(data1[18])); P0.append(float(data1[45])); P1.append(float(data1[46])); B0.append(float(data1[47])); B1.append(float(data1[48]))
+							t.append(time)
 
-		idname=str(id_temp)
-		np.savetxt(sourcedir+'/'+'NS'+'/'+idname+'_snap.dat', np.c_[t, id0, id1, m0, m1, k0, k1, a, e, P0, P1, B0, B1], fmt ='%f %d %d %f %f %d %d %f %f %f %f %f %f', delimiter= ' ', header = '1.time, 2.id0, 3.id1, 4.m0, 5.m1, 6.k0, 7.k1, 8.a, 9.e, 10.p0, 11.p1, 12.B0, 13.B1', comments = '#')
+						if int(data1[11])==id_temp and int(data1[18])==13:
+							m0.append(float(data1[9])); m1.append(float(data1[8])); id0.append(int(data1[11])); id1.append(int(data1[10])); a.append(float(data1[12])); e.append(float(data1[13])); k0.append(int(data1[18])); k1.append(int(data1[17])); P0.append(float(data1[46])); P1.append(float(data1[45])); B0.append(float(data1[48])); B1.append(float(data1[47]))
+							t.append(time)
+
+						if int(data1[0])==id_temp and int(data1[14])==13:
+							m0.append(float(data1[1])); m1.append(float(-100)); id0.append(int(data1[0])); id1.append(int(-100)); k0.append(int(data1[14])); k1.append(int(-100)); a.append(float(-100)); e.append(float(-100)); P0.append(float(-100)); P1.append(float(-100)); B0.append(float(-100)); B1.append(float(-100))
+							t.append(time)
+
+			print i
+
+
+		#idname=str(id_temp)
+		#np.savetxt(sourcedir+'/'+'NS'+'/'+idname+'_snap.dat', np.c_[t, id0, id1, m0, m1, k0, k1, a, e, P0, P1, B0, B1], fmt ='%f %d %d %f %f %d %d %f %f %f %f %f %f', delimiter= ' ', header = '1.time, 2.id0, 3.id1, 4.m0, 5.m1, 6.k0, 7.k1, 8.a, 9.e, 10.p0, 11.p1, 12.B0, 13.B1', comments = '#')
+
+	print len(time), len(m0), len(B0), len(P0)
+
+	return time, m0, B0, P0
 
 
 
@@ -353,31 +380,35 @@ def get_snap_Nns(snapshot, dynlim):
 					if int(datasnap[0])>dynlim: nnsdyn+=1
 					spin=twopi*yearsc/float(datasnap[59])
 					deathcut=(spin**2)*(0.17*10**12)
-					if deathcut<float(datasnap[60]): npulsarsin+=1
-					if spin<=0.03: 
-						nmsp+=1; mspid.append(int(datasnap[0])); mspcomid.append(-100)
-						print int(datasnap[0]), -100
+					if deathcut<=float(datasnap[60]): 
+						npulsarsin+=1
+						if spin<=0.03: 
+							nmsp+=1; mspid.append(int(datasnap[0])); mspcomid.append(-100)
+							print int(datasnap[0]), -100
 			if int(datasnap[7])==1:
 				if int(datasnap[17])==13:
 					nns+=1
 					if int(datasnap[10])>dynlim: nnsdyn+=1
 					spin0=twopi*yearsc/float(datasnap[45])
 					deathcut0=(spin0**2)*(0.17*10**12)
-					if deathcut0<float(datasnap[47]): npulsarbin+=1
-					if float(datasnap[44])>=1: nmtb+=1	
-					if spin0<=0.03: 
-						nmsp+=1; mspid.append(int(datasnap[10])); mspcomid.append(int(datasnap[11]))
-						print int(datasnap[10]), int(datasnap[11])
+					if float(datasnap[44])>=1: nmtb+=1
+					if deathcut0<=float(datasnap[47]): 
+						npulsarbin+=1	
+						if spin0<=0.03: 
+							nmsp+=1; mspid.append(int(datasnap[10])); mspcomid.append(int(datasnap[11]))
+							print int(datasnap[10]), int(datasnap[11])
 				if int(datasnap[18])==13:
 					nns+=1
 					if int(datasnap[11])>dynlim: nnsdyn+=1
 					spin1=twopi*yearsc/float(datasnap[46])
 					deathcut1=(spin1**2)*(0.17*10**12)
-					if deathcut1<float(datasnap[48]): npulsarbin+=1
 					if float(datasnap[43])>=1: nmtb+=1
-					if spin1<=0.03: 
-						nmsp+=1; mspid.append(int(datasnap[11])); mspcomid.append(int(datasnap[10]))
-						print int(datasnap[11]), int(datasnap[10])
+					if deathcut1<=float(datasnap[48]): 
+						npulsarbin+=1
+						if spin1<=0.03: 
+							nmsp+=1; mspid.append(int(datasnap[11])); mspcomid.append(int(datasnap[10]))
+							print int(datasnap[11]), int(datasnap[10])
+	print len(mspid)
 
 	return npulsarsin, npulsarbin, nmsp, nmtb, mspid, mspcomid, nns, nnsdyn
 
@@ -454,7 +485,6 @@ def get_allmodel_MSPID_10to12Gyr(pathlist, start, end):
 
 
 def print_Nbh_Npulsar(start, end, pathlist):
-	dynno=[800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,3500000]
 	path=np.genfromtxt(pathlist, dtype='|S')
 	NBH=[]; NP=[]; NMSP=[]; NMT=[]; NTOT=[]; NMSPSIN=[]; NMSPBIN=[]; NNS=[]; NNSDYN=[]; NPSIN=[]; NPBIN=[]
 	for k in range(start, end):
@@ -464,7 +494,9 @@ def print_Nbh_Npulsar(start, end, pathlist):
 		pref='initial'
 		filestr=path[k]+'/'+pref
 		Nbh, Ntot=dyn.find_NBH_NTOT_last(filestr)
-		Npulsin, Npulbin, Nmsp, Nmt, MSPid, MSPcomid, Nns, Nnsdyn=get_snap_Nns(lastsnap,dynno[k])
+		if k<25: dynno=800000
+		else: dynno=3500000
+		Npulsin, Npulbin, Nmsp, Nmt, MSPid, MSPcomid, Nns, Nnsdyn=get_snap_Nns(lastsnap,dynno)
 
 		Nmspsin=0; Nmspbin=0
 		for i in range(len(MSPid)):
@@ -478,16 +510,16 @@ def print_Nbh_Npulsar(start, end, pathlist):
 	NBH=np.array(NBH); NTOT=np.array(NTOT); NP=np.array(NP); NMSP=np.array(NMSP); NMT=np.array(NMT); NNS=np.array(NNS); NNSDYN=np.array(NNSDYN); NMSPSIN=np.array(NMSPSIN); NMSPBIN=np.array(NMSPBIN); NPSIN=np.array(NPSIN); NPBIN=np.array(NPBIN)
 
 	print NBH, NTOT, NMT, NNS, NNSDYN, NP, NPSIN, NPBIN, NMSP, NMSPSIN, NMSPBIN 
-	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/ns_number_newmodel.dat', np.c_[NBH, NTOT, NMT, NNS, NNSDYN, NP, NPSIN, NPBIN, NMSP, NMSPSIN, NMSPBIN], fmt ='%d %d %d %d %d %d %d %d %d %d %d', delimiter= ' ', header = '1.NBH 2.NTOT 3.NMT 4.NNS 5.NNSDYN 6.NP 7.sNP 8.bNP 9.NMSP 10.sNMSP 11.bNMSP', comments = '#')
+	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/test/ns_number.dat', np.c_[NBH, NTOT, NMT, NNS, NNSDYN, NP, NPSIN, NPBIN, NMSP, NMSPSIN, NMSPBIN], fmt ='%d %d %d %d %d %d %d %d %d %d %d', delimiter= ' ', header = '1.NBH 2.NTOT 3.NMT 4.NNS 5.NNSDYN 6.NP 7.sNP 8.bNP 9.NMSP 10.sNMSP 11.bNMSP', comments = '#')
 
 
 
 def printout_Nbh_Npulsar_10to12Gyr(start, end, pathlist):
-	dynno=[800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,800000,3500000]
+	dynno=[800000,800000]
 	path=np.genfromtxt(pathlist, dtype='|S')
-	NBH=[]; NP=[]; NMSP=[]; NMT=[]; NTOT=[]; NMSPSIN=[]; NMSPBIN=[]; NNS=[]; NNSDYN=[]; M=[]; model=[]; T=[]
-	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/ns_number_9to12Gyr_newmodel.dat', 'a+', 0)
-	f.write('#Model Age(Gyr) Mtot(Msun) NBH NTOT NMT NNS NNSDYN NP NMSP NMSPSIN NMSPBIN\n')
+	NBH=[]; NP=[]; NPSIN=[]; NPBIN=[]; NMSP=[]; NMT=[]; NTOT=[]; NMSPSIN=[]; NMSPBIN=[]; NNS=[]; NNSDYN=[]; M=[]; model=[]; T=[]
+	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/Z0.0002/ns_number_9to12Gyr.dat', 'a+', 0)
+	f.write('#1.Model 2.Age(Gyr) 3.Mtot(Msun) 4.NBH 5.NTOT 6.NMT 7.NNS 8.NNSDYN 9.NP 10.sNP 11.bNP 12.NMSP 13.sNMSP 14.bNMSP\n')
 	for k in range(start, end):
 		snaps=np.sort(glob(path[k]+'/'+'initial.snap*.dat.gz'))
 		pref='initial'
@@ -498,21 +530,23 @@ def printout_Nbh_Npulsar_10to12Gyr(start, end, pathlist):
 		for j in range(len(snaps)-1, 0, -1):
 			t=get_time(snaps[j])
 			Time=t_conv*t/1000.
-			if Time>=9.0:
+			if Time>=9.0 and Time<=12.0:
 				Nbh, Ntot, ma=find_NBH_NTOT(filestr, t)
 				mass=ma*m_conv
 				print mass
-				Npuls, Nmsp, Nmt, MSPid, MSPcomid, Nns, Nnsdyn=get_snap_Nns(snaps[j], dynno[k])
-				NBH.append(Nbh); NP.append(Npuls); NMSP.append(Nmsp); NMT.append(Nmt); NTOT.append(Ntot); M.append(mass)
+				Npulsin, Npulbin, Nmsp, Nmt, MSPid, MSPcomid, Nns, Nnsdyn=get_snap_Nns(snaps[j], dynno[k])
+				Npul=Npulsin+Npulbin
+				NBH.append(Nbh); NP.append(Npulsin+Npulbin); NMSP.append(Nmsp); NMT.append(Nmt); NTOT.append(Ntot); M.append(mass); NPSIN.append(Npulsin); NPBIN.append(Npulbin)
 				model.append(k); T.append(Time)
 				Nmspsin=0; Nmspbin=0
 				for i in range(len(MSPid)):
 					if int(MSPcomid[i])==-100: Nmspsin+=1
 					else: Nmspbin+=1
 
-				f.write('%d %f %e %d %d %d %d %d %d %d %d %d\n'%(k, Time, mass, Nbh, Ntot, Nmt, Nns, Nnsdyn, Npuls, Nmsp, Nmspsin, Nmspbin))
+				f.write('%d %f %e %d %d %d %d %d %d %d %d %d %d %d\n'%(k, Time, mass, Nbh, Ntot, Nmt, Nns, Nnsdyn, Npul, Npulsin, Npulbin, Nmsp, Nmspsin, Nmspbin))
 
 			if Time<9.0: break
+
 
 		print k
 
@@ -774,7 +808,8 @@ def sub_MSP(sourcedir, folder):   #Find sub-MSP in the model
 		find_history(sid, sourcedir, folder)
 
 	
-		
+
+##There are some logical problems with the code, e.g. it doesn't make any sense to calculate Nnsprimd since collisions will always change the IDs and nesc_primd is less than the NSs that actually escaped.		
 def find_allNS(pathlist, start, end):
 	sourcedir=np.genfromtxt(pathlist, dtype=str)
 	#Nns=[]; Nnsesc=[]; Nnsprimd=[]; Nnsescprimd=[]
@@ -905,6 +940,94 @@ def find_allNS(pathlist, start, end):
 
 	#np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/all_ns.dat', np.c_[Nns, Nnsprimd, Nnsesc, Nnsescprimd], fmt='%d %d %d %d', header='Nns Nns_primd Nnsesc Nnsesc_primd', comments='#')
 	fallns.close()
+
+
+
+##Find all the NSs ever formed in the clusters. Check if the NSs were kicked out immediately after their formation or by dynamical interactions. New NSs formed through old NSs colliding with other stars won't be double-counted in this case since the old ones were never ejected if new ones were formed.
+def find_allNS_atbirth(pathlist, start, end):
+	sourcedir=np.genfromtxt(pathlist, dtype=str)
+	fallns=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/allNS_atbirth.dat', 'a+', 0)
+	fallns.write('#1.Model 2.Nnsesc(ALL) 3.Nnsesc(SN) 4.Nnsesc(DYN)\n')
+	for i in range(start, end):
+		IDs=[]; Flag=[]
+		filestr=sourcedir[i]+'/initial'
+		escfile=filestr+'.esc.dat'
+		collfile=filestr+'.collision.log'
+		binintfile=filestr+'.binint.log'
+
+		with open(escfile, 'r') as fesc:
+			next(fesc)
+			for line in fesc:
+				dataesc=line.split()
+				if int(dataesc[14])!=1:
+					if int(dataesc[21])==13: IDs.append(int(dataesc[13]))
+				else:
+					if int(dataesc[22])==13: IDs.append(int(dataesc[17]))
+					if int(dataesc[23])==13: IDs.append(int(dataesc[18]))
+
+		print len(IDs)
+
+		binint=scripts3.read_binint(binintfile)
+		colldata=scripts1.readcollfile(collfile)
+		for j in range(len(IDs)):
+			fg=0  ##0--kick after supernova, 1--kick after dynamical interaction
+			theid=IDs[j]
+
+			for k in range(len(binint)):
+				bininput=binint[k]['input']
+				for h in range(len(bininput)):
+					if int(bininput[h]['no'])==1:
+						if int(bininput[h]['ids'][0])==theid and int(bininput[h]['ktype'][0])==13:
+							fg=1
+					if int(bininput[h]['no'])==2:
+						if int(bininput[h]['ids'][0])==theid and int(bininput[h]['ktype'][0])==13:
+							fg=1
+						if int(bininput[h]['ids'][1])==theid and int(bininput[h]['ktype'][1])==13:
+							fg=1
+
+				if fg==1: print 'binint'; break
+
+			if fg==0:
+				for m in range(len(colldata)):
+					line=colldata[m].split()
+					if int(line[3])==theid:
+						if len(line)==19 and int(line[14])==13:
+							fg=1; print 'coll'; break
+						if len(line)==16 and int(line[12])==13:
+							fg=1; print 'coll'; break
+						if len(line)==13 and int(line[10])==13:
+							fg=1; print 'coll'; break
+
+			Flag.append(fg)
+			print j
+
+		nsn=0; ndyn=0
+		for n in range(len(Flag)):
+			if Flag[n]==0: nsn+=1
+			else: ndyn+=1
+
+		fallns.write('%d %d %d %d\n'%(i, len(IDs), nsn, ndyn))
+
+		#print Flag
+		print len(IDs), len(Flag), nsn, ndyn
+		print i
+	fallns.close()
+
+
+def find_allNS_fraction():
+	dataall=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/allNS_atbirth.dat')
+	datanum=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/ns_number_newmodel.dat')
+	Nesc=np.array(dataall[:,1]); Nescsn=np.array(dataall[:,2]); Nescdyn=np.array(dataall[:,3])
+	Nnsnow=np.array(datanum[:,4])
+
+	Nnsnow=np.delete(Nnsnow, -1)   ##Delete this line later when the large model has finished
+
+	Nformtot=Nesc+Nnsnow   ##This is the denominator
+
+	Nretatbirth=Nnsnow+Nescdyn
+	Nretnow=Nnsnow
+
+	print Nretatbirth/Nformtot, Nretnow/Nformtot
 
 
 def find_Nns_primd(sourcedir):
@@ -1501,12 +1624,13 @@ def plot_encounter_cdf(pathlist, start, end):
 
 
 ##Find the fraction of NSs in different formation channels
-def NS_formation_fraction(pathlist, start, end):
+def find_NS_formation_fraction(pathlist, start, end):
 	sourcedir=np.genfromtxt(pathlist, dtype=str)
-	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/NS_formation_fraction.dat', 'a+', 0)
-	f.write('#1.CC, 2.EIC, 3.AIC, 4.MIC, 5.Others\n')
-	for i in range(len(sourcedir)):
-		N0=0; N4=0; N5=0; N6=0; N7=0
+	#f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/NS_formation_fraction.dat', 'a+', 0)
+	#f.write('#1.CC, 2.EIC, 3.AIC, 4.MIC, 5.Others\n')
+	id_abnormal=[]; model=[]
+	for i in range(start, end):
+		N0=0; N4=0; N5=0; N6=0; N7=0; N100=0
 		filestr=sourcedir[i]+'/initial'
 		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
 		lastsnap=snaps[-1]
@@ -1517,31 +1641,343 @@ def NS_formation_fraction(pathlist, start, end):
 				datalast=line.split()
 				if int(datalast[7])!=1:
 					if int(datalast[14])==13:
-						if int(datalast[61])==0: N0+=1
-						if int(datalast[61])==4: N4+=1
-						if int(datalast[61])==5: N5+=1
-						if int(datalast[61])==6: N6+=1
-						if int(datalast[61])==7: N7+=1
+						if int(datalast[61])==0:  
+							N0+=1; id_abnormal.append(int(datalast[0])); model.append(i)
+						elif int(datalast[61])==4: N4+=1
+						elif int(datalast[61])==5: N5+=1
+						elif int(datalast[61])==6: N6+=1
+						elif int(datalast[61])==7: N7+=1
+						else: 
+							N100+=1; id_abnormal.append(int(datalast[0])); model.append(i)
+
 				else:
 					if int(datalast[17])==13:
-						if int(datalast[49])==0: N0+=1
-						if int(datalast[49])==4: N4+=1
-						if int(datalast[49])==5: N5+=1
-						if int(datalast[49])==6: N6+=1
-						if int(datalast[49])==7: N7+=1
+						if int(datalast[49])==0: 
+							N0+=1; id_abnormal.append(int(datalast[10])); model.append(i)
+						elif int(datalast[49])==4: N4+=1
+						elif int(datalast[49])==5: N5+=1
+						elif int(datalast[49])==6: N6+=1
+						elif int(datalast[49])==7: N7+=1
+						else:
+							N100+=1; id_abnormal.append(int(datalast[10])); model.append(i)	
+
 					if int(datalast[18])==13:
-						if int(datalast[50])==0: N0+=1
-						if int(datalast[50])==4: N4+=1
-						if int(datalast[50])==5: N5+=1
-						if int(datalast[50])==6: N6+=1
-						if int(datalast[50])==7: N7+=1
+						if int(datalast[50])==0: 
+							N0+=1; id_abnormal.append(int(datalast[11])); model.append(i)
+						elif int(datalast[50])==4: N4+=1
+						elif int(datalast[50])==5: N5+=1
+						elif int(datalast[50])==6: N6+=1
+						elif int(datalast[50])==7: N7+=1
+						else:
+							N100+=1; id_abnormal.append(int(datalast[11])); model.append(i) 
 
 
-		f.write('%d %d %d %d %d %d\n'%(i, N4, N5, N6, N7, N0))
+		#f.write('%d %d %d %d %d %d\n'%(i, N4, N5, N6, N7, N0))
 
 		print i
 
+	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/NS_formation_abmornal.dat', np.c_[model,id_abnormal], fmt='%d %d', header='1.Model 2.ID', delimiter='', comments='#')
+
+	#f.close()
+
+
+def find_formation_abnormalID(pathlist, start, end):
+	IDab=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/NS_formation_abnormal.dat')
+	sourcedir=np.genfromtxt(pathlist, dtype=str)
+	models=IDab[:,0]; IDs=IDab[:,1]
+	FMab=[]; modelab=[]; IDab=[]
+	for i in range(start, end):
+		for j in range(len(models)):
+			if models[j]==i:
+				filestr=sourcedir[i]+'/initial'
+				collfile=filestr+'.collision.log'
+				semergefile=filestr+'.semergedisrupt.log'
+
+				colldata=scripts1.readcollfile(collfile)
+				for k in range(len(colldata)):
+					line=colldata[k].split()
+					if int(line[3])==IDs[j] and IDs[j]!=0:				
+						if int(line[2])==2:  ##Single-single star collision
+							if (int(line[11])>=10 and int(line[11])<=12) and (int(line[12])>=10 and int(line[12])<=12) and int(line[10])==13:
+								FMab.append(7001); modelab.append(i); IDab.append(IDs[j])
+							elif (int(line[11])<10 and int(line[12])==13) or (int(line[12])<10 and int(line[11])==13) and int(line[10])==13:
+								FMab.append(8001); modelab.append(i); IDab.append(IDs[j])
+							else: 
+								FMab.append(-100); modelab.append(i); IDab.append(IDs[j])
+								print IDs[j]
+
+
+						if int(line[2])==3:  ##Binary-single star collision
+							if len(line)==16:  ##Three stars collision
+								if (int(line[13])>=10 and int(line[13])<=12) and (int(line[14])>=10 and int(line[14])<=12) and int(line[15])!=13 and int(line[12])==13:
+									FMab.append(7002); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[14])>=10 and int(line[14])<=12) and (int(line[15])>=10 and int(line[15])<=12) and int(line[13])!=13 and int(line[12])==13:
+									FMab.append(7002); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[13])>=10 and int(line[13])<=12) and (int(line[15])>=10 and int(line[15])<=12) and int(line[14])!=13 and int(line[12])==13:
+									FMab.append(7002); modelab.append(i); IDab.append(IDs[j])
+								else: 
+									FMab.append(-100); modelab.append(i); IDab.append(IDs[j])
+									print IDs[j]
+
+
+							if len(line)==13: ##Two stars collision
+								if (int(line[11])>=10 and int(line[11])<=12) and (int(line[12])>=10 and int(line[12])<=12) and int(line[10])==13:
+									FMab.append(7002); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[11])<10 and int(line[12])==13) or (int(line[12])<10 and int(line[11])==13) and int(line[10])==13:
+									FMab.append(8002); modelab.append(i); IDab.append(IDs[j])
+								else: 
+									FMab.append(-100); modelab.append(i); IDab.append(IDs[j])
+									print IDs[j]
+					
+
+						if int(line[2])==4:  ##Binary-binary star collision
+							if len(line)==19: ##Four stars collision
+								if (int(line[15])>=10 and int(line[15])<=12) and (int(line[16])>=10 and int(line[16])<=12) and int(line[17])!=13 and int(line[18])!=13 and int(line[14])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[16])>=10 and int(line[16])<=12) and (int(line[17])>=10 and int(line[17])<=12) and int(line[18])!=13 and int(line[15])!=13 and int(line[14])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[17])>=10 and int(line[17])<=12) and (int(line[18])>=10 and int(line[18])<=12) and int(line[15])!=13 and int(line[16])!=13 and int(line[14])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[15])>=10 and int(line[15])<=12) and (int(line[17])>=10 and int(line[17])<=12) and int(line[16])!=13 and int(line[18])!=13 and int(line[14])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[15])>=10 and int(line[15])<=12) and (int(line[18])>=10 and int(line[18])<=12) and int(line[16])!=13 and int(line[17])!=13 and int(line[14])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[16])>=10 and int(line[16])<=12) and (int(line[18])>=10 and int(line[18])<=12) and int(line[15])!=13 and int(line[17])!=13 and int(line[14])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								else: 
+									FMab.append(-100); modelab.append(i); IDab.append(IDs[j])
+									print IDs[j]
+							
+
+							if len(line)==16:  ##Three stars collision
+								if (int(line[13])>=10 and int(line[13])<=12) and (int(line[14])>=10 and int(line[14])<=12) and int(line[15])!=13 and int(line[12])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[14])>=10 and int(line[14])<=12) and (int(line[15])>=10 and int(line[15])<=12) and int(line[13])!=13 and int(line[12])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[13])>=10 and int(line[13])<=12) and (int(line[15])>=10 and int(line[15])<=12) and int(line[14])!=13 and int(line[12])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								else: 
+									FMab.append(-100); modelab.append(i); IDab.append(IDs[j])
+									print IDs[j]
+
+
+							if len(line)==13: ##Two stars collision
+								if (int(line[11])>=10 and int(line[11])<=12) and (int(line[12])>=10 and int(line[12])<=12) and int(line[10])==13:
+									FMab.append(7003); modelab.append(i); IDab.append(IDs[j])
+								elif (int(line[11])<10 and int(line[12])==13) or (int(line[12])<10 and int(line[11])==13) and int(line[10])==13:
+									FMab.append(8003); modelab.append(i); IDab.append(IDs[j])
+								else: 
+									FMab.append(-100); modelab.append(i); IDab.append(IDs[j])
+									print IDs[j]
+
+
+				semergedata=scripts2.readmergefile(semergefile)
+				for h in range(len(semergedata)):
+					line=semergedata[h].split()
+					if int(line[2])==IDs[j] and IDs[j]!=0:
+						if FMab[j]==-100:
+							print "merger", IDs[j]
+							if int(line[1])<3:
+								if (int(line[-1])>=10 and int(line[-1])<=12) and (int(line[-2])>=10 and int(line[-2])<=12):
+									FMab.append(7001); modelab.append(i); IDab.append(IDs[j])
+								else:
+									FMab.append(9001); modelab.append(i); IDab.append(IDs[j])
+
+				if IDs[j]==0: FMab.append(-100); modelab.append(i); IDab.append(IDs[j])
+
+		print i
+	print modelab, FMab, IDab
+
+	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/NS_abmornal.dat', np.c_[modelab,FMab, IDab], fmt='%d %d %d', header='1.Model 2.Formation 3.IDs', delimiter='', comments='#')
+
+
+def find_formationfraction_latetimes(fracfile):
+	nsfrac=np.genfromtxt(fracfile)
+	ncc=np.array(nsfrac[:,1]); neic=np.array(nsfrac[:,2]); naic=np.array(nsfrac[:,3]); nmic=np.array(nsfrac[:,4]); ncoll=np.array(nsfrac[:,5]); nmerger=np.array(nsfrac[:,6])
+
+	ntot=ncc+neic+naic+nmic+ncoll+nmerger
+	fraccc=(ncc+ncoll+nmerger)/ntot
+	fraceic=neic/ntot
+	fracaic=naic/ntot
+	fracmic=nmic/ntot
+	#fraccoll=ncoll/ntot
+	#fracmerger=nmerger/ntot
+
+	print fraccc, fraceic, fracaic, fracmic#, fraccoll, fracmerger
+
+	print np.sum(fraccc[0:10])/10., np.sum(fraceic[0:10])/10., np.sum(fracaic[0:10])/10., np.sum(fracmic[0:10])/10.#, np.sum(fraccoll[0:10])/10., np.sum(fracmerger[0:10])/10.
+	print np.sum(fraccc[10:19])/9., np.sum(fraceic[10:19])/9., np.sum(fracaic[10:19])/9., np.sum(fracmic[10:19])/9.#, np.sum(fraccoll[10:19])/9., np.sum(fracmerger[10:19])/9.
+	print np.sum(fraccc[19:25])/6., np.sum(fraceic[19:25])/6., np.sum(fracaic[19:25])/6., np.sum(fracmic[19:25])/6.#, np.sum(fraccoll[19:25])/6., np.sum(fracmerger[19:25])/6.
+
+
+def find_dynamicalNS_latetimes(pathlist, start, end, idabnormalfile):
+	idabfile=np.genfromtxt(idabnormalfile)
+	idab=idabfile[:,2]; fmab=idabfile[:,1]; modelab=idabfile[:,0]
+
+	sourcedir=np.genfromtxt(pathlist, dtype=str)
+	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/dynamical_NS.dat', 'a+', 0)
+	f.write('#1.Model 2.Nnodyn 3.Ndyn 4.Ntot\n')
+	for i in range(start, end):
+		filestr=sourcedir[i]+'/initial'
+		collfile=filestr+'.collision.log'
+		semergefile=filestr+'.semergedisrupt.log'
+		colldata=scripts1.readcollfile(collfile)
+		semergedata=scripts2.readmergefile(semergefile)
+
+		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
+		lastsnap=snaps[-1]
+
+		nnodyn=0; ndyn=0; ntot=0
+		with gzip.open(lastsnap, 'r') as flast:
+			next(flast); next(flast)
+			for line in flast:
+				datalast=line.split()
+				check=0
+				if int(datalast[7])!=1:
+					if int(datalast[14])==13: 
+						ntot+=1
+						theid=int(datalast[0])
+						if theid==0: ndyn+=1
+						if int(datalast[61])==4 and theid!=0: 
+							for k in range(len(colldata)):
+								line=colldata[k].split()
+								if int(line[3])==theid:
+									check=1;break
+
+							for h in range(len(semergedata)):
+								line=semergedata[h].split()
+								if int(line[2])==theid and theid!=0 and (int(line[-1])==13 or int(line[-2])==13):
+									check=1;break
+
+							if check==1: ndyn+=1
+							else: nnodyn+=1
+								
+
+						if int(datalast[61])==5 and theid!=0: 
+							for k in range(len(colldata)):
+								line=colldata[k].split()
+								if int(line[3])==theid and theid!=0:
+									check=1
+
+							for h in range(len(semergedata)):
+								line=semergedata[h].split()
+								if int(line[2])==theid and theid!=0 and (int(line[-1])==13 or int(line[-2])==13):
+									check=1
+
+							if check==1: ndyn+=1
+							else: nnodyn+=1
+
+						if int(datalast[61])==6 and theid!=0: ndyn+=1
+						if int(datalast[61])==7 and theid!=0: ndyn+=1
+						if int(datalast[61])==0 and theid!=0:
+							for j in range(len(idab)):
+								if idab[j]==theid and modelab[j]==i and theid!=0:
+									if fmab[j]==7001 or fmab[j]==7002 or fmab[j]==7003:
+										ndyn+=1
+									if fmab[j]==8001 or fmab[j]==8002 or fmab[j]==8003:
+										ndyn+=1
+									if fmab[j]==9001:
+										ndyn+=1
+
+				else:
+					if int(datalast[17])==13:
+						ntot+=1
+						theid=int(datalast[10])
+						if theid==0: ndyn+=1
+						if int(datalast[49])==4 and theid!=0: 
+							for k in range(len(colldata)):
+								line=colldata[k].split()
+								if int(line[3])==theid and theid!=0:
+									check=1
+
+							for h in range(len(semergedata)):
+								line=semergedata[h].split()
+								if int(line[2])==theid and theid!=0 and (int(line[-1])==13 or int(line[-2])==13):
+									check=1
+
+							if check==1: ndyn+=1
+							else: nnodyn+=1
+								
+
+						if int(datalast[49])==5 and theid!=0: 
+							for k in range(len(colldata)):
+								line=colldata[k].split()
+								if int(line[3])==theid and theid!=0:
+									check=1
+
+							for h in range(len(semergedata)):
+								line=semergedata[h].split()
+								if int(line[2])==theid and theid!=0 and (int(line[-1])==13 or int(line[-2])==13):
+									check=1
+
+							if check==1: ndyn+=1
+							else: nnodyn+=1
+
+						if int(datalast[49])==6 and theid!=0: ndyn+=1
+						if int(datalast[49])==7 and theid!=0: ndyn+=1
+						if int(datalast[49])==0 and theid!=0:
+							for j in range(len(idab)):
+								if idab[j]==theid and modelab[j]==i and theid!=0:
+									if fmab[j]==7001 or fmab[j]==7002 or fmab[j]==7003:
+										ndyn+=1
+									if fmab[j]==8001 or fmab[j]==8002 or fmab[j]==8003:
+										ndyn+=1
+									if fmab[j]==9001:
+										ndyn+=1
+						
+
+					if int(datalast[18])==13:
+						ntot+=1
+						theid=int(datalast[11])
+						if theid==0: ndyn+=1
+						if int(datalast[50])==4 and theid!=0: 
+							for k in range(len(colldata)):
+								line=colldata[k].split()
+								if int(line[3])==theid and theid!=0:
+									check=1
+
+							for h in range(len(semergedata)):
+								line=semergedata[h].split()
+								if int(line[2])==theid and theid!=0 and (int(line[-1])==13 or int(line[-2])==13):
+									check=1
+
+							if check==1: ndyn+=1
+							else: nnodyn+=1
+								
+
+						if int(datalast[50])==5 and theid!=0: 
+							for k in range(len(colldata)):
+								line=colldata[k].split()
+								if int(line[3])==theid and theid!=0:
+									check=1
+
+							for h in range(len(semergedata)):
+								line=semergedata[h].split()
+								if int(line[2])==theid and theid!=0 and (int(line[-1])==13 or int(line[-2])==13):
+									check=1
+
+							if check==1: ndyn+=1
+							else: nnodyn+=1
+
+						if int(datalast[50])==6 and theid!=0: ndyn+=1
+						if int(datalast[50])==7 and theid!=0: ndyn+=1
+						if int(datalast[50])==0 and theid!=0:
+							for j in range(len(idab)):
+								if idab[j]==theid and modelab[j]==i and theid!=0:
+									if fmab[j]==7001 or fmab[j]==7002 or fmab[j]==7003:
+										ndyn+=1
+									if fmab[j]==8001 or fmab[j]==8002 or fmab[j]==8003:
+										ndyn+=1
+									if fmab[j]==9001:
+										ndyn+=1
+						
+
+		f.write('%d %d %d %d\n'%(i, nnodyn, ndyn, ntot))
+		print i
+
 	f.close()
+
+
 
 
 
@@ -1700,18 +2136,18 @@ def get_id_BP(sourcedir, theid, modelno, savepath):
 			for line in fsnap:
 				datasnap=line.split()
 				if int(datasnap[7])!=1:
-					if int(datasnap[14])==13:
+					if int(datasnap[14])>=10:
 						if int(datasnap[0])==theid:
 							Age.append(float(time)); B.append(float(datasnap[60])); P.append((twopi*yearsc)/float(datasnap[59])); FC.append(int(datasnap[61])); m0.append(float(datasnap[1])); m1.append(-100)
 							k0.append(int(datasnap[14])); k1.append(-100); a.append(-100); ecc.append(-100)
 							id0.append(int(datasnap[0])); id1.append(-100); radrol0.append(-100); radrol1.append(-100)
 				if int(datasnap[7])==1:
-					if int(datasnap[17])==13:
+					if int(datasnap[17])>=10:
 						if int(datasnap[10])==theid:
 							Age.append(float(time)); B.append(float(datasnap[47])); P.append((twopi*yearsc)/float(datasnap[45])); FC.append(int(datasnap[49])); m0.append(float(datasnap[8])); m1.append(float(datasnap[9]))	
 							k0.append(int(datasnap[17])); k1.append(int(datasnap[18])); a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
 							id0.append(int(datasnap[10])); id1.append(int(datasnap[11])); radrol0.append(float(datasnap[43])); radrol1.append(float(datasnap[44]))
-					if int(datasnap[18])==13:
+					if int(datasnap[18])>=10:
 						if int(datasnap[11])==theid:
 							Age.append(float(time)); B.append(float(datasnap[48])); P.append((twopi*yearsc)/float(datasnap[46])); FC.append(int(datasnap[50])); m0.append(float(datasnap[9])); m1.append(float(datasnap[8]))
 							k0.append(int(datasnap[18])); k1.append(int(datasnap[17])); a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
@@ -1756,7 +2192,7 @@ def get_history_inpsrfile(sourcedir, theid):
 	filestr=sourcedir+'/'+pref
 	t_conv = conv('t',filestr+'.conv.sh')
 	fname=filestr+'.morepulsars.dat'
-	Age=[]; B=[]; P=[]; m0=[]; m1=[]; k0=[]; k1=[]; a=[]; ecc=[]
+	Age=[]; B=[]; P=[]; M=[]; Mcom=[]; Kcom=[]; a=[]; ecc=[]
 	id0=[]; id1=[]; radrol0=[]; radrol1=[]
 	with open(fname, 'r') as fpsr:
 		next(fpsr)
@@ -1868,53 +2304,6 @@ def plot_BPhistory_inpsrfile(sourcedir, theid):
 	plt.savefig('projects/b1011/syr904/cmc/cmc-ns-bse/rundir_kconst/8e5rv1fb10kick1.0_kconst49/history/'+str(theid)+'_BP.pdf', dpi=300)
 
 
-def plot_MBPchange(sourcedir):
-	dataid=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/bse_change/MSPID_8e5kconst_fc.dat')
-	id0=dataid[:,0]
-	Mini=[]; Mfinl=[]; Pini=[]; Pfinl=[]; Bini=[]; Bfinl=[]
-	for i in range(6,7):
-		Time, M0, M1, Bfield, Spin, K, A, ECC=get_history_inpsrfile(sourcedir, id0[i])
-		
-		Mini.append(M0[0]); Mfinl.append(M0[-1])
-		Pini.append(Spin[0]); Pfinl.append(Spin[-1]); Bini.append(Bfield[0]); Bfinl.append(Bfield[-1])
-
-		
-		fig, (ax0, ax1, ax2)=plt.subplots(nrows=3, sharex=True)
-		ax0.plot(Time, M0, lw=1.5)
-		#plt.xlabel(r'$Time(Myr)$')
-		ax0.set_ylabel(r'$M_\odot$')
-		ax0.set_title(str(id0[i]))
-		ax0.set_xlim(10715,10725)
-		##plt.show()
-
-		ax1.plot(Time, Spin, lw=1.5)
-		#plt.xlabel(r'$Time(Myr)$')
-		ax1.set_ylabel(r'$P(sec)$')
-		#plt.title(str(id0[i]))
-		ax1.set_yscale('log')
-		ax1.set_xlim(10715,10725)
-		##plt.show()
-
-		ax2.plot(Time, Bfield, lw=1.5)
-		ax2.set_xlabel(r'$Time(Myr)$')
-		ax2.set_ylabel(r'$B(G)$')
-		ax2.set_xlim(10715,10725)
-		##plt.title(str(id0[i]))
-		ax2.set_yscale('log')
-
-		plt.tight_layout()
-
-		plt.savefig('/projects/b1011/syr904/projects/PULSAR/bse_change/history_kconst_fc/'+str(id0[i])+'_zoomin.pdf', dpi=300)
-		##plt.show()
-
-		print i
-
-	#print Mini, Mfinl, Pini, Pfinl, Bini, Bfinl
-	#Mini=np.array(Mini); Mfinl=np.array(Mfinl); Pini=np.array(Pini); Pfinl=np.array(Pfinl); Bini=np.array(Bini); Bfinl=np.array(Bfinl)
-
-	#plt.figure()
-	#plt.plot(Mfinl-Mini, (Bini**2-Bfinl**2)/(Pini-Pfinl)
-	#plt.savefig('/projects/b1011/syr904/projects/PULSAR/bse_change/history_kconst_fc/M-P.pdf', dpi=300)
 
 
 def get_id_position_BP(theid, snapshot):
@@ -1960,7 +2349,7 @@ def get_id_allmodel_position(idlist, pathlist):
 	model=dataid[:,0]; id0=dataid[:,1]; id1=dataid[:,2]
 	sourcedir=np.genfromtxt(pathlist, dtype=str)
 	rposition=[]; rc=[]; B=[]; P=[]; Nbh=[]; Ntot=[]
-	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/kickgrid_msp_newmodel_new.dat', 'a+', 0)
+	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/test/kickgrid_msp.dat', 'a+', 0)
 	f.write('#1.Model 2.ID0 3.ID1 4.r(pc) 5.B(G) 6.P(sec) 7.rc(pc) 8.Nbh 9.Ntot 10.dmdt0 11.dmdt1 12.rolrad0 13.rolrad1 14.m0 15.m1 16.k0 17.k1 18.a(AU) 19.ecc 20.Formation 21.L(mJy*kpc^2)\n')
 	for i in range(len(model)):
 		num=int(model[i])
@@ -2721,7 +3110,7 @@ def find_DNS_NSBH(pathlist, start, end):
 			next(fns)
 			for line in fns:
 				datans=line.split()
-				if float(datans[0])*t_conv>=9000.0:
+				if float(datans[0])*t_conv>=10000.0:
 					if int(datans[7])>0:
 						model=i; t=float(datans[0])
 						print model, t, 'DNS'
@@ -2754,11 +3143,11 @@ def find_DNS_NSBH(pathlist, start, end):
 										if int(datasnap[17])==13 and int(datasnap[18])==14:
 											Model.append(i); Time.append(time); ID0.append(int(datasnap[10])); ID1.append(int(datasnap[11])); P0.append(twopi*yearsc/float(datasnap[45])); P1.append(-100); B0.append(float(datasnap[47])); B1.append(-100); M0.append(float(datasnap[8])); M1.append(float(datasnap[9])); A.append(float(datasnap[12])); E.append(float(datasnap[13])); Type.append(1314)
 										if int(datasnap[17])==14 and int(datasnap[18])==13:
-											Model.append(i); Time.append(time); ID0.append(int(datasnap[10])); ID1.append(int(datasnap[11])); P0.append(-100); P1.append(twopi*yearsc/float(datasnap[46])); B0.append(-100); B1.append(float(datasnap[48])); M0.append(float(datasnap[8])); M1.append(float(datasnap[9])); A.append(float(datasnap[12])); E.append(float(datasnap[13])); Type.append(1413)
+											Model.append(i); Time.append(time); ID0.append(int(datasnap[11])); ID1.append(int(datasnap[10])); P0.append(twopi*yearsc/float(datasnap[46])); P1.append(-100); B0.append(float(datasnap[48])); B1.append(-100); M0.append(float(datasnap[9])); M1.append(float(datasnap[8])); A.append(float(datasnap[12])); E.append(float(datasnap[13])); Type.append(1314)
 
 		#print Model, ID0, ID1, P0, P1, B0, B1, M0, M1, A, E, Type
 
-	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/DNS-NSBH.dat', np.c_[Model, Time, ID0, ID1, P0, P1, B0, B1, M0, M1, A, E, Type], fmt='%d %f %d %d %f %f %e %e %f %f %f %f %d', header='1.Model, 2.Time, 3.ID0, 4.ID1, 5.P0, 6.P1, 7.B0, 8.B1, 9.M0, 10.M1, 11.a, 12.ecc, 13.Type', delimiter='', comments='#')
+	np.savetxt('/projects/b1011/syr904/projects/SGRB/DNS_NSBH_1012Gyr.dat', np.c_[Model, Time, ID0, ID1, P0, P1, B0, B1, M0, M1, A, E, Type], fmt='%d %f %d %d %f %f %e %e %f %f %f %f %d', header='1.Model, 2.Time, 3.ID0, 4.ID1, 5.P0, 6.P1, 7.B0, 8.B1, 9.M0, 10.M1, 11.a, 12.ecc, 13.Type', delimiter='', comments='#')
 
 
 def DNS_NSBH_Unique(datfile, pathlist):
@@ -2795,6 +3184,38 @@ def DNS_NSBH_Unique(datfile, pathlist):
 		for m in range(len(lines_needed)):
 			listm=' '.join(str(e) for e in data[lines_needed[m],:])
 			out_file.write(listm+'\n')
+
+
+def DNS_NSBH_mergertime(datfile, pathlist):
+	data=np.genfromtxt(datfile)
+	modelno=data[:,0]; t=data[:,1]; id0=data[:,2]; id1=data[:,3]; m0=data[:,8]; m1=data[:,9]; a=data[:,10]; ecc=data[:,11]; tp=data[:,12]
+	sourcedir=np.genfromtxt(pathlist, dtype=str)
+	nnsbhm=0; nnsnsm=0
+	
+	idstr_hold1=str(0)
+	idstr_hold2=str(0)
+	for j in range(len(modelno)):
+		filestr=sourcedir[int(modelno[j])]+'/initial'
+		idstr=str(int(id0[j]))+str(int(id1[j]))
+		t_conv=dyn.conv('t', filestr+'.conv.sh')
+		time=t[j]*t_conv
+		t_inspiral=gwcalc.t_inspiral_2(a[j], ecc[j], m0[j], m1[j], 0, 0, 0, 1100)/10**6 #in Myr
+
+		if t_inspiral+time<=12000. and (tp[j]==1314. or tp[j]==1413.) and idstr!=idstr_hold1 and idstr!=idstr_hold2: 
+			print time, t_inspiral
+			print idstr
+			nnsbhm+=1
+			idstr_hold1=idstr
+			idstr_hold2=str(int(id1[j]))+str(int(id0[j]))
+		if t_inspiral+time<=12000. and tp[j]==1313. and idstr!=idstr_hold1 and idstr!=idstr_hold2:
+			print time, t_inspiral 
+			print idstr
+			nnsnsm+=1
+			idstr_hold1=idstr
+			idstr_hold2=str(int(id1[j]))+str(int(id0[j]))
+
+	print nnsbhm, nnsnsm
+
 
 
 
@@ -2906,7 +3327,129 @@ def find_DWD_MS_Triple(pathlist, start, end):
 		print i
 	
 	print Ntriple
+
 				
+##Find the fraction of AIC NSs that evole to MSPs in the same binary
+def find_direct_AICMSP(path_history):
+	hisfiles=np.sort(glob(path_history+'/*.dat'))
+	n=0
+	for i in range(len(hisfiles)):
+		datahis=np.genfromtxt(hisfiles[i])
+		P=datahis[:,2]; fc=datahis[:,3]; id1=datahis[:,5]; k0=datahis[:,8]; k1=datahis[:,9]
+		thefc=fc[-1]
+		if thefc==6:
+			n+=1
+			IDcom=[]
+			for j in range(len(k0)-1):
+				if k0[j]==12 and k0[j+1]==13: 
+					IDcom.append(id1[j]); IDcom.append(id1[j+1])
+				if P[j]<=0.03: IDcom.append(id1[j])
+
+			if IDcom[0]!=IDcom[1]: 
+				print 'switch companion after formation'
+				print hisfiles[i]
+			if IDcom[1]!=IDcom[2]: 
+				print 'spin up by different companion'
+				print hisfiles[i]
+
+		print i
+
+	print n
+
+
+def find_Lgammaray_lastsnapshot(sourcedir, eta_gamma):
+	dataobs=np.genfromtxt(sourcedir+'/kickgrid_obsproperty_newmodel.dat')
+	Mtot=np.array(dataobs[:,5])
+	datamsp=np.genfromtxt(sourcedir+'/kickgrid_msp_newmodel.dat')
+	datapsr=np.genfromtxt(sourcedir+'/kickgrid_normalpsr_newmodel.dat')
+	Bmsp=np.array(datamsp[:,4]); Pmsp=np.array(datamsp[:,5]); modelmsp=datamsp[:,0]
+	Bpsr=np.array(datapsr[:,4]); Ppsr=np.array(datapsr[:,5]); modelpsr=datapsr[:,0]
+
+	Cscale=9.6*10**33  ##in erg/s
+	Lgamma_msp=Cscale*(eta_gamma/0.2)*(Bmsp/10**8.5)**2*(3./(Pmsp*1000.))**4
+	Lgamma_psr=Cscale*(eta_gamma/0.2)*(Bpsr/10**8.5)**2*(3./(Ppsr*1000.))**4
+
+	Lgamma_tot=[]
+	for i in range(26):
+		ltot=0
+		for j in range(len(modelmsp)):
+			if modelmsp[j]==i:
+				ltot+=Lgamma_msp[j]
+		for k in range(len(modelpsr)):
+			if modelpsr[k]==i:
+				ltot+=Lgamma_psr[k]
+
+		Lgamma_tot.append(ltot)
+
+
+	return Lgamma_tot, Mtot
+
+
+def find_Lgammaray_alltime(pathlist, start, end):
+	Cscale=9.6*10**33  ##in erg/s
+	sourcedir=np.genfromtxt(pathlist,dtype=str)
+	for i in range(start, end):
+		fgamma=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/Lgamma/Lgamma_'+str(i).zfill(2), 'a+', 0)
+		fgamma.write('#1.T(Myr) 2.Ltot 3.Nmsp\n')
+		filestr=sourcedir[i]+'/initial'
+		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
+		for j in range(len(snaps)):
+			Ltot=0; nmsp=0
+			t=get_time(snaps[j])
+			t_conv=conv('t', filestr+'.conv.sh')
+			t=t*t_conv   ##in Myr
+			with gzip.open(snaps[j], 'r') as fsnap:
+				next(fsnap)
+				next(fsnap)
+				for line in fsnap:
+					datasnap=line.split()
+					if int(datasnap[14])==13:
+						Pspin=twopi*yearsc/float(datasnap[59])  ##in sec
+						B=float(datasnap[60])
+						if Pspin<=0.03:
+							nmsp+=1
+							Ltot+=Cscale*(2./0.2)*(B/10**8.5)**2*(3./(Pspin*1000.))**4
+
+					if int(datasnap[17])==13:
+						Pspin=twopi*yearsc/float(datasnap[45])  ##in sec
+						B=float(datasnap[47])
+						if Pspin<=0.03:
+							nmsp+=1
+							Ltot+=Cscale*(2./0.2)*(B/10**8.5)**2*(3./(Pspin*1000.))**4
+
+					if int(datasnap[18])==13:
+						Pspin=twopi*yearsc/float(datasnap[46])  ##in sec
+						B=float(datasnap[48])
+						if Pspin<=0.03:
+							nmsp+=1
+							Ltot+=Cscale*(2./0.2)*(B/10**8.5)**2*(3./(Pspin*1000.))**4
+
+
+			fgamma.write('%f %e %d\n'%(t, Ltot, nmsp))
+
+			print j
+
+		fgamma.close()
+
+		print 'model=', i
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
