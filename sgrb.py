@@ -23,7 +23,19 @@ import scripts3
 import LISA_calculations as lisa
 import ecc_calc as gwcalc
 
-savepath='/projects/b1011/syr904/projects/SGRB'
+savepath='/projects/b1095/syr904/projects/SGRB'
+
+##Colllecting useful models from the set of new models
+def find_models():
+	allmodels=np.genfromtxt('/projects/b1095/syr904/projects/SGRB/newruns/path_final.dat', dtype=str)
+	status=allmodels[:,1]; paths=allmodels[:,0]
+
+	sourcedir=[]
+	for i in range(len(paths)):
+		if status[i]=='2' or status[i]=='3': sourcedir.append(paths[i])
+
+	np.savetxt(savepath+'/newruns/path_newruns.dat', np.c_[sourcedir], fmt='%s')
+
 
 
 ##Find any mergers in cluster
@@ -684,28 +696,6 @@ def find_all_mergers_pnmodels(pathlist, start, end):
 
 	np.savetxt(savepath+'/pnmodels/Escbns.dat', np.c_[model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, tform_esc, snapno_esc], fmt='%d %f %f %f %f %f %d %d %f %f %f %d', header='1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 11.Tform(Myr) 12.Snapno', delimiter='', comments='#')
 
-
-
-##Find Nbh, Mtot, Nns, Ndns
-def find_clusterparameter_allmodel(pathlist, start, end):
-	model=[]; NBH=[]; MTOT=[]; RC=[]; RH=[]; NNS=[]; NDNS=[]; NNSBH=[]
-	sourcedir=np.genfromtxt(pathlist, dtype=str)
-	for i in range(start, end):
-		filestr=sourcedir[i]+'/initial'
-		t_conv=dyn.conv('t', filestr+'.conv.sh')
-		l_conv=dyn.conv('l', filestr+'.conv.sh')
-		m_conv=dyn.conv('m', filestr+'.conv.sh')
-
-
-		Nbh, Ntot, Mtot=dyn.find_NBH_NTOT(filestr, 12000., t_conv)
-		Mtot, Rc, Rh, Rhoc=dyn.find_rcrh_mtotrho0(filestr, 12000., t_conv)
-		Nns, Ndns, Nnsbh=dyn.find_Nns(filestr, 12000., t_conv)
-
-		model.append(i); NBH.append(Nbh); MTOT.append(Mtot*m_conv); RC.append(Rc*l_conv); RH.append(Rh*l_conv)
-		NNS.append(Nns); NDNS.append(Ndns); NNSBH.append(Nnsbh)
-
-
-	np.savetxt('/projects/b1011/syr904/projects/SGRB/extrememodels/clusterproperty_12Gyr.dat', np.c_[model, NBH, MTOT, RC, RH, NNS, NDNS, NNSBH], fmt='%d %d %f %f %f %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.Nns 7.Ndns 8.Nnsbh', delimiter='', comments='#')
 
 
 def find_formationchannel_escbns(pathlist, escbnsfile, start, end):

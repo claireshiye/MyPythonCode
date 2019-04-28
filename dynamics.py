@@ -160,14 +160,64 @@ def find_mc(filestring, r_c):   ##r_c in code units
 
 
 ##Find the number of NSs and NS binaries in the initial.ns.dat file at a random timestep
-def find_Nns(filestring, time, tconv):
+def find_Nns(filestring, timemin, timemax, tconv):
     datans=np.genfromtxt(filestring+'.ns.dat')
     for i in range(len(datans[:,0])):
-        if datans[:,0][i]*tconv>=time:
+        if datans[:,0][i]*tconv>=timemin and datans[:,0][i]*tconv<=timemax:
             nns=datans[:,1][i]; ndns=datans[:,7][i]; nnsbh=datans[:,8][i]
             break
 
     return nns, ndns, nnsbh
 
+
+def find_Nns_last(filestring):
+    datans=np.genfromtxt(filestring+'.ns.dat')
+    nns=datans[-1,1]; ndns=datans[-1,7]; nnsbh=datans[-1,8]
+
+    return nns, ndns, nnsbh
+
+
+##Find Nbh, Mtot, Nns, Ndns
+def find_clusterparameter_allmodel(pathlist, start, end):
+    model=[]; NBH=[]; MTOT=[]; RC=[]; RH=[]; NNS=[]; NDNS=[]; NNSBH=[]; status=[]
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    for i in range(start, end):
+        filestr=sourcedir[i]+'/initial'
+        t_conv=dyn.conv('t', filestr+'.conv.sh')
+        l_conv=dyn.conv('l', filestr+'.conv.sh')
+        m_conv=dyn.conv('m', filestr+'.conv.sh')
+
+        ##Numbers at a certain time
+        #Nbh, Ntot, Mtot=dyn.find_NBH_NTOT(filestr, 12000., t_conv)
+        #Mtot, Rc, Rh, Rhoc=dyn.find_rcrh_mtotrho0(filestr, 12000., t_conv)
+        #Nns, Ndns, Nnsbh=dyn.find_Nns(filestr, 12000., t_conv)
+
+        ##Numbers at the last snapshot
+        Nbh, Ntot=dyn.find_NBH_NTOT_last(filestr)
+        Mtot, Rc, Rh, Rhoc=dyn.find_rcrh_mtotrho0_last(filestr)
+
+        filedyn=filestr+'.dyn.dat'
+        with open(filedyn, 'r') as fdyn:
+            for line in fdyn: pass
+            lastdyn=line
+        datadyn=lastdyn.split()
+        t_last=float(datadyn[0])*t_conv
+
+        ##If the cluster dissolved, get the numbers for the last snapshot; if not, get the numbers within the last 3Gyr
+        if t_last<12000.:
+            Nns, Ndns, Nnsbh=dyn.find_Nns_last(filestr)
+            status.append(1)
+        else:
+            Nns, Ndns, Nnsbh=dyn.find_Nns(filestr, 9000., 12000., t_conv)
+            status.append(0)
+
+
+        model.append(i); NBH.append(Nbh); MTOT.append(Mtot*m_conv); RC.append(Rc*l_conv); RH.append(Rh*l_conv)
+        NNS.append(Nns); NDNS.append(Ndns); NNSBH.append(Nnsbh)
+
+        print i
+
+
+    np.savetxt(savepath+'/newruns/clusterproperty.dat', np.c_[model, NBH, MTOT, RC, RH, NNS, NDNS, NNSBH, status], fmt='%d %d %f %f %f %d %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.Nns 7.Ndns 8.Nnsbh 9.Dissolved?', delimiter='', comments='#')
 
 
