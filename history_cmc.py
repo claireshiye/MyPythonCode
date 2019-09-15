@@ -17,9 +17,9 @@ def history_maker(ids,positions,file_string,path,binary):
 	mergefile: merger file
 	filestring: the filestring from cmc
 	binary: whether there was any primordial binaries or not -> 0: no binary, 1: yes binary"""
-	binintfile=path+'/'+file_string+'.binint.log'
-	collfile=path+'/'+file_string+'.collision.log'
-	mergefile=path+'/'+file_string+'.semergedisrupt.log'
+	binintfile=path+file_string+'.binint.log'
+	collfile=path+file_string+'.collision.log'
+	mergefile=path+file_string+'.semergedisrupt.log'
 	history_interactions={}
 	#make the collision dictionary by reading and sorting the collision log file
 	coll=scripts1.collision(collfile)

@@ -42,8 +42,8 @@ def collision(collfile):
 		nopars = int(each_row[2])
 		parents = {'nopar': nopars,
 			'IDs': [long(each_row[5+i*2]) for i in range(nopars)],
-			'masses': [float(each_row[6+i*2]) for i in range(nopars)]
-			#'types': [float(each_row[4+nopars*2+3+i]) for i in range(nopars)]
+			'masses': [float(each_row[6+i*2]) for i in range(nopars)],
+			'types': [float(each_row[4+nopars*2+3+i]) for i in range(nopars)]
 			}
 		coll_prod[ID] = {'time': float(each_row[0]),
 				'interaction': each_row[1],
@@ -51,8 +51,8 @@ def collision(collfile):
 				'mass': float(each_row[4]),
 				'parents': parents,
 				'position': float(each_row[4+nopars*2+1]),
-				'fin_prod': 1
-				#'type': float(each_row[4+nopars*2+2])
+				'fin_prod': 1,
+				'types': float(each_row[4+nopars*2+2])
 				}
 		for parid in parents['IDs']:
 			parid

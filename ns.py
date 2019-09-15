@@ -106,7 +106,10 @@ def conv(unit,filepath):   # Returns the unit conversion multiplier given a simu
     from re import findall
     with open(filepath,'r') as f:
         head = [next(f) for x in xrange(24)]
-    return float(findall('\d+[\.]?\d*',head[dict[unit]])[0])
+        #print head[dict[unit]]
+    return float(head[dict[unit]].strip().split('=')[-1])
+    #return float(findall('\d+[\.]?\d*',head[dict[unit]])[0])
+
 
 
 def get_time(filepath):      # Returns the cluster's age for a given snapshot
@@ -116,6 +119,7 @@ def get_time(filepath):      # Returns the cluster's age for a given snapshot
     if not findall('\d+[\.]?\d*',contents):        # Returns time = 0 for snapshot files without a time header
         print 'snapshot empty'; return float(0)
     else: return float(findall('\d+[\.]?\d*',contents)[0])
+
 
 
 ##Find BH in random timestep
@@ -128,11 +132,31 @@ def find_NBH_NTOT(filestring, time):
         if databh[:,1][i]==time:
             nbh=databh[:,2][i]
 
+    filebh2=filestring+'2.bh.dat'
+    try:
+    	databh2=np.genfromtxt(filebh2)
+    	for i in range(len(databh2[:,1])):
+        	if databh2[:,1][i]==time:
+        		nbh=databh2[:,2][i]
+
+    except:
+    	pass
+
     filedyn=filestring+'.dyn.dat'
     datadyn=np.genfromtxt(filedyn)
     for j in range(len(datadyn[:,0])):
         if datadyn[:,0][j]==time:
             ntot=datadyn[:,3][j]; mass=datadyn[:,4][j] ##mass in code unit
+
+    filedyn2=filestring+'2.dyn.dat'
+    try:
+    	datadyn2=np.genfromtxt(filedyn2)
+    	for j in range(len(datadyn2[:,0])):
+        	if datadyn2[:,0][j]==time:
+        		ntot=datadyn2[:,3][j]; mass=datadyn2[:,4][j] ##mass in code unit
+
+    except:
+    	pass
 
     return nbh, ntot, mass
 
@@ -382,9 +406,9 @@ def get_snap_Nns(snapshot, dynlim):
 					deathcut=(spin**2)*(0.17*10**12)
 					if deathcut<=float(datasnap[60]): 
 						npulsarsin+=1
-						if spin<=0.03: 
+						if spin>0.03: 
 							nmsp+=1; mspid.append(int(datasnap[0])); mspcomid.append(-100)
-							print int(datasnap[0]), -100
+							#print int(datasnap[0]), -100
 			if int(datasnap[7])==1:
 				if int(datasnap[17])==13:
 					nns+=1
@@ -394,9 +418,9 @@ def get_snap_Nns(snapshot, dynlim):
 					if float(datasnap[44])>=1: nmtb+=1
 					if deathcut0<=float(datasnap[47]): 
 						npulsarbin+=1	
-						if spin0<=0.03: 
+						if spin0>0.03: 
 							nmsp+=1; mspid.append(int(datasnap[10])); mspcomid.append(int(datasnap[11]))
-							print int(datasnap[10]), int(datasnap[11])
+							#print int(datasnap[10]), int(datasnap[11])
 				if int(datasnap[18])==13:
 					nns+=1
 					if int(datasnap[11])>dynlim: nnsdyn+=1
@@ -405,10 +429,10 @@ def get_snap_Nns(snapshot, dynlim):
 					if float(datasnap[43])>=1: nmtb+=1
 					if deathcut1<=float(datasnap[48]): 
 						npulsarbin+=1
-						if spin1<=0.03: 
+						if spin1>0.03: 
 							nmsp+=1; mspid.append(int(datasnap[11])); mspcomid.append(int(datasnap[10]))
-							print int(datasnap[11]), int(datasnap[10])
-	print len(mspid)
+							#print int(datasnap[11]), int(datasnap[10])
+	#print len(mspid)
 
 	return npulsarsin, npulsarbin, nmsp, nmtb, mspid, mspcomid, nns, nnsdyn
 
@@ -441,7 +465,7 @@ def get_allmodel_MSPID(pathlist, start, end):
 		filestr=filepath+'/'+pref
 		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
 		lastsnap=snaps[-1]
-		Npulsar, Nmsp, Nmtb, Mspid, Mspcomid, Nns, Nnsdyn=get_snap_Nns(lastsnap, 800000)
+		Npulsarsin, Npulsarbin, Nmsp, Nmtb, Mspid, Mspcomid, Nns, Nnsdyn=get_snap_Nns(lastsnap, 800000)
 		MSPID=MSPID+Mspid; MSPCOMID=MSPCOMID+Mspcomid
 		temp=list(np.full_like(Mspid, fill_value=i))
 		model=model+temp
@@ -449,7 +473,7 @@ def get_allmodel_MSPID(pathlist, start, end):
 
 	print len(model), len(MSPID)
 
-	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/kickgrid_mspid_newmodel.dat', np.c_[model, MSPID, MSPCOMID], fmt='%d %d %d', header='Model ID0 ID1', comments='#', delimiter= ' ')
+	np.savetxt('/projects/b1095/syr904/projects/PULSAR2/newruns/normalpsrid.dat', np.c_[model, MSPID, MSPCOMID], fmt='%d %d %d', header='Model ID0 ID1', comments='#', delimiter= ' ')
 
 
 def get_allmodel_MSPID_10to12Gyr(pathlist, start, end):
@@ -514,36 +538,45 @@ def print_Nbh_Npulsar(start, end, pathlist):
 
 
 
-def printout_Nbh_Npulsar_10to12Gyr(start, end, pathlist):
-	dynno=[800000,800000]
-	path=np.genfromtxt(pathlist, dtype='|S')
-	NBH=[]; NP=[]; NPSIN=[]; NPBIN=[]; NMSP=[]; NMT=[]; NTOT=[]; NMSPSIN=[]; NMSPBIN=[]; NNS=[]; NNSDYN=[]; M=[]; model=[]; T=[]
-	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/Z0.0002/ns_number_9to12Gyr.dat', 'a+', 0)
-	f.write('#1.Model 2.Age(Gyr) 3.Mtot(Msun) 4.NBH 5.NTOT 6.NMT 7.NNS 8.NNSDYN 9.NP 10.sNP 11.bNP 12.NMSP 13.sNMSP 14.bNMSP\n')
+def printout_Nbh_Npulsar_9to12Gyr(start, end, pathlist):
+	path=np.genfromtxt(pathlist, dtype='str')
+	#st=sourcedir[:,1]; path=sourcedir[:,0]
+	#NBH=[]; NP=[]; NPSIN=[]; NPBIN=[]; NMSP=[]; NMT=[]; NTOT=[]; NMSPSIN=[]; NMSPBIN=[]; NNS=[]; NNSDYN=[]; M=[]; model=[]; T=[]
+	f=open('/projects/b1095/syr904/projects/SGRB/newruns/finaldata/ns_number_9to14Gyr_32e5.dat', 'a+', 0)
+	f.write('#1.Model 2.Age(Gyr) 3.Mtot(Msun) 4.NBH 5.NTOT 6.NMT 7.NNS 8.NNSDYN 9.NP 10.sNP 11.bNP 12.NMSP 13.sNMSP 14.bNMSP 15.Ninit 16.Rv 17.Z 18.Rg\n')
 	for k in range(start, end):
-		snaps=np.sort(glob(path[k]+'/'+'initial.snap*.dat.gz'))
 		pref='initial'
-		filestr=path[k]+'/'+pref
+		filestr=path[k]+pref
+		#print filestr
 		t_conv=conv('t',filestr+'.conv.sh')
 		m_conv=conv('m',filestr+'.conv.sh')
-		if k==25: m_conv=2.166e+06
-		for j in range(len(snaps)-1, 0, -1):
+		#print m_conv
+		snaps = dyn.get_snapshots(filestr)
+
+		s=path[k].split('/')
+		n_star=float(s[-2])
+		z=float(s[-3][1:])
+		rg=int(s[-4][2:])
+		rv=float(s[-5][2:])
+
+		for j in range(len(snaps)-1, 0, -4):
 			t=get_time(snaps[j])
 			Time=t_conv*t/1000.
-			if Time>=9.0 and Time<=12.0:
+			if Time>=9.0 and Time<=14.00:
 				Nbh, Ntot, ma=find_NBH_NTOT(filestr, t)
+				#print ma
 				mass=ma*m_conv
-				print mass
-				Npulsin, Npulbin, Nmsp, Nmt, MSPid, MSPcomid, Nns, Nnsdyn=get_snap_Nns(snaps[j], dynno[k])
+				#print mass
+				Npulsin, Npulbin, Nmsp, Nmt, MSPid, MSPcomid, Nns, Nnsdyn=get_snap_Nns(snaps[j], n_star)
 				Npul=Npulsin+Npulbin
-				NBH.append(Nbh); NP.append(Npulsin+Npulbin); NMSP.append(Nmsp); NMT.append(Nmt); NTOT.append(Ntot); M.append(mass); NPSIN.append(Npulsin); NPBIN.append(Npulbin)
-				model.append(k); T.append(Time)
+				#NBH.append(Nbh); NP.append(Npulsin+Npulbin); NMSP.append(Nmsp); NMT.append(Nmt); NTOT.append(Ntot); M.append(mass); NPSIN.append(Npulsin); NPBIN.append(Npulbin)
+				#model.append(k); T.append(Time)
 				Nmspsin=0; Nmspbin=0
 				for i in range(len(MSPid)):
 					if int(MSPcomid[i])==-100: Nmspsin+=1
 					else: Nmspbin+=1
 
-				f.write('%d %f %e %d %d %d %d %d %d %d %d %d %d %d\n'%(k, Time, mass, Nbh, Ntot, Nmt, Nns, Nnsdyn, Npul, Npulsin, Npulbin, Nmsp, Nmspsin, Nmspbin))
+				f.write('%d %f %e %d %d %d %d %d %d %d %d %d %d %d %d %f %f %f\n'%(k, Time, mass, Nbh, Ntot, Nmt, Nns, Nnsdyn, Npul, Npulsin, Npulbin, Nmsp, Nmspsin, Nmspbin, n_star, rv, z, rg))
 
 			if Time<9.0: break
 
@@ -552,9 +585,9 @@ def printout_Nbh_Npulsar_10to12Gyr(start, end, pathlist):
 
 	f.close()
 	
-	NBH=np.array(NBH); NTOT=np.array(NTOT); NP=np.array(NP); NMSP=np.array(NMSP); NMT=np.array(NMT)
-	M=np.array(M); model=np.array(model); T=np.array(T)
-	print NBH, NTOT, NMSP, NMT
+	#NBH=np.array(NBH); NTOT=np.array(NTOT); NP=np.array(NP); NMSP=np.array(NMSP); NMT=np.array(NMT)
+	#M=np.array(M); model=np.array(model); T=np.array(T)
+	#print NBH, NTOT, NMSP, NMT
 	#np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/ns_number_10to12Gyr.dat', np.c_[model, T, NBH, NTOT, NMSP, NMT, M], fmt ='%d %f %d %d %d %d %f', delimiter= ' ', header = 'Model Age(Gyr) Nbh Ntot Nmsp Nnsmt M(msun)', comments = '#')
 
 
@@ -658,63 +691,83 @@ def plot_t_Nns_allmodel(pathlist, start, end):
 
 
 def print_Nns_snap(pathlist, start, end):
-	sourcedir=np.genfromtxt(pathlist, dtype='|S')
-	#sourcedir=['/projects/b1011/syr904/cmc/cmc-mpi-08/rundir_1-3/8e5rv1fb5kick1.0']
+	#sourcedir=np.genfromtxt(pathlist, dtype='str')
+	#status=sourcedir[:,1]; sourcedir=sourcedir[:,0]
+
+	sourcedir=['/projects/b1091/CMC_Grid_March2019/rundir/rv2/rg20/z0.0002/3.2e6']
 	
 	for i in range(start, end):
 		pref='initial'
 		filestr=sourcedir[i]+'/'+pref
 		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
-		fhandle=open(filestr+'.ns.dat', 'w+', 0)
-		fhandle.write('#1.Totaltime, 2.Nns,tot, 3.Nns,single, 4.Nns,binary, 5.Nns,mtb, 6.Npulsar, 7.Nmsp, 8.Nns-ns, 9.Nns-bh, 10.Nns-wd, 11.Nns-ms, 12.Nns-postms\n')
-		for j in range(len(snaps)):
-			N_NS=0; N_NS_SIN=0; N_NS_BIN=0; N_NS_MTB=0; N_PULS=0; N_MSP=0; N_NSNS=0; N_NSBH=0; N_NSWD=0; N_NSMS=0; N_NSPOSTMS=0
-			T=get_time(snaps[j])
-			print j
-			with gzip.open(snaps[j], 'r') as fsnap:
-				for _ in xrange(2):
-					next(fsnap)
-				for line in fsnap:
-					datasnap=line.split()
-					if int(datasnap[7])!=1:
-						if int(datasnap[14])==13: 
-							N_NS+=1; N_NS_SIN+=1
-							spin=twopi*yearsc/float(datasnap[59])
-							deathcut=(spin**2)*(0.17*10**12)
-							if deathcut<float(datasnap[60]): N_PULS+=1
-							if spin<=0.03: N_MSP+=1
-					if int(datasnap[7])==1:
-						if int(datasnap[17])==13:
-							N_NS+=1; N_NS_BIN+=1
-							spin0=twopi*yearsc/float(datasnap[45])
-							deathcut0=(spin0**2)*(0.17*10**12)
-							if deathcut0<float(datasnap[47]): N_PULS+=1
-							if float(datasnap[44])>=1: N_NS_MTB+=1	
-							if spin0<=0.03: N_MSP+=1
+		#print snaps
+		snap2d=np.sort(glob(filestr+'.snap*.2Dproj.dat.gz'))
 
-							if int(datasnap[18])<2: N_NSMS+=1
-							elif int(datasnap[18])>=10 and int(datasnap[18])<=12: N_NSWD+=1
-							elif int(datasnap[18])==13: N_NSNS+=1
-							elif int(datasnap[18])==14: N_NSBH+=1
-							else: N_NSPOSTMS+=1
+		index=[]
+		for m in range(len(snaps)):
+			for n in range(len(snap2d)):
+				if snaps[m]==snap2d[n]: index.append(m)
 
-						if int(datasnap[18])==13 and int(datasnap[17])!=13:
-							N_NS+=1; N_NS_BIN+=1
-							spin1=twopi*yearsc/float(datasnap[46])
-							deathcut1=(spin1**2)*(0.17*10**12)
-							if deathcut1<float(datasnap[48]): N_PULS+=1
-							if float(datasnap[43])>=1: N_NS_MTB+=1
-							if spin1<=0.03: N_MSP+=1
+		snaps = [x for y, x in enumerate(snaps) if y not in index]
+		#print snaps
 
-							if int(datasnap[17])<2: N_NSMS+=1
-							elif int(datasnap[17])>=10 and int(datasnap[17])<=12: N_NSWD+=1
-							elif int(datasnap[17])==13: N_NSNS+=1
-							elif int(datasnap[17])==14: N_NSBH+=1
-							else: N_NSPOSTMS+=1
-			fhandle.write('%f %d %d %d %d %d %d %d %d %d %d %d\n'%(T, N_NS, N_NS_SIN, N_NS_BIN, N_NS_MTB, N_PULS, N_MSP, N_NSNS, N_NSBH, N_NSWD, N_NSMS, N_NSPOSTMS))
-		fhandle.close()
+		#try:
+		#	fh = open(filestr+'.ns.dat', 'r')
+		#except:
+        if True:
+			fhandle=open(filestr+'.ns.dat', 'a+', 0)
+			fhandle.write('#1.Totaltime, 2.Nns,tot, 3.Nns,single, 4.Nns,binary, 5.Nns,mtb, 6.Npulsar, 7.Nmsp, 8.Nns-ns, 9.Nns-bh, 10.Nns-wd, 11.Nns-ms, 12.Nns-postms\n')
+			for j in range(600, len(snaps)):
+				N_NS=0; N_NS_SIN=0; N_NS_BIN=0; N_NS_MTB=0; N_PULS=0; N_MSP=0; N_NSNS=0; N_NSBH=0; N_NSWD=0; N_NSMS=0; N_NSPOSTMS=0
+				T=get_time(snaps[j])
+				print j
+				with gzip.open(snaps[j], 'r') as fsnap:
+					for _ in xrange(2):
+						next(fsnap)
+					for line in fsnap:
+						datasnap=line.split()
+						if int(datasnap[7])!=1:
+							if int(datasnap[14])==13: 
+								N_NS+=1; N_NS_SIN+=1
+								spin=twopi*yearsc/float(datasnap[59])
+								deathcut=(spin**2)*(0.17*10**12)
+								if deathcut<float(datasnap[60]): 
+									N_PULS+=1
+									if spin<=0.03: N_MSP+=1
+						if int(datasnap[7])==1:
+							if int(datasnap[17])==13:
+								N_NS+=1; N_NS_BIN+=1
+								spin0=twopi*yearsc/float(datasnap[45])
+								deathcut0=(spin0**2)*(0.17*10**12)
+								if float(datasnap[44])>=1: N_NS_MTB+=1
+								if deathcut0<float(datasnap[47]): 
+									N_PULS+=1	
+									if spin0<=0.03: N_MSP+=1
+
+								if int(datasnap[18])<2: N_NSMS+=1
+								elif int(datasnap[18])>=10 and int(datasnap[18])<=12: N_NSWD+=1
+								elif int(datasnap[18])==13: N_NSNS+=1
+								elif int(datasnap[18])==14: N_NSBH+=1
+								else: N_NSPOSTMS+=1
+
+							if int(datasnap[18])==13 and int(datasnap[17])!=13:
+								N_NS+=1; N_NS_BIN+=1
+								spin1=twopi*yearsc/float(datasnap[46])
+								deathcut1=(spin1**2)*(0.17*10**12)
+								if float(datasnap[43])>=1: N_NS_MTB+=1
+								if deathcut1<float(datasnap[48]): 
+									N_PULS+=1
+									if spin1<=0.03: N_MSP+=1
+
+								if int(datasnap[17])<2: N_NSMS+=1
+								elif int(datasnap[17])>=10 and int(datasnap[17])<=12: N_NSWD+=1
+								elif int(datasnap[17])==13: N_NSNS+=1
+								elif int(datasnap[17])==14: N_NSBH+=1
+								else: N_NSPOSTMS+=1
+				fhandle.write('%f %d %d %d %d %d %d %d %d %d %d %d\n'%(T, N_NS, N_NS_SIN, N_NS_BIN, N_NS_MTB, N_PULS, N_MSP, N_NSNS, N_NSBH, N_NSWD, N_NSMS, N_NSPOSTMS))
+			fhandle.close()
 		
-		print i
+        print i
 
 
 def print_NSMTB_snap(pathlist, start, end):
@@ -2349,7 +2402,7 @@ def get_id_allmodel_position(idlist, pathlist):
 	model=dataid[:,0]; id0=dataid[:,1]; id1=dataid[:,2]
 	sourcedir=np.genfromtxt(pathlist, dtype=str)
 	rposition=[]; rc=[]; B=[]; P=[]; Nbh=[]; Ntot=[]
-	f=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/test/kickgrid_msp.dat', 'a+', 0)
+	f=open('/projects/b1095/syr904/projects/PULSAR2/newruns/normalpsr_last.dat', 'a+', 0)
 	f.write('#1.Model 2.ID0 3.ID1 4.r(pc) 5.B(G) 6.P(sec) 7.rc(pc) 8.Nbh 9.Ntot 10.dmdt0 11.dmdt1 12.rolrad0 13.rolrad1 14.m0 15.m1 16.k0 17.k1 18.a(AU) 19.ecc 20.Formation 21.L(mJy*kpc^2)\n')
 	for i in range(len(model)):
 		num=int(model[i])
@@ -2462,8 +2515,8 @@ def get_interact_t_type(theid, pref, filepath):
 	return ts, types
 
 
-def find_normalpsr(snapshot, modelno, t):
-	time=[]; id0=[]; id1=[]; m0=[]; m1=[]; k0=[]; k1=[]; B=[]; P=[]; a=[]; ecc=[]; FC=[]; model=[]
+def get_allpsr_snapshot(snapshot, modelno, t, mspflag):
+	time=[]; id0=[]; id1=[]; m0=[]; m1=[]; k0=[]; k1=[]; B=[]; P=[]; a=[]; ecc=[]; FC=[]; model=[]; dmdt0=[]; dmdt1=[]; radrol0=[]; radrol1=[]; r=[]
 	with gzip.open(snapshot, 'r') as fsnap:
 		for _ in xrange(2):
 			next(fsnap)
@@ -2473,52 +2526,111 @@ def find_normalpsr(snapshot, modelno, t):
 				if int(datasnap[14])==13:
 					spin=twopi*yearsc/float(datasnap[59])
 					deathcut=(spin**2)*(0.17*10**12)
-					if spin>0.03 and float(datasnap[60])>=deathcut:
-						time.append(t); id0.append(int(datasnap[0])); id1.append(-100); m0.append(float(datasnap[1])); m1.append(-100)
-						k0.append(int(datasnap[14])); k1.append(-100); FC.append(int(datasnap[61])); B.append(float(datasnap[60])); P.append(spin)
-						a.append(-100); ecc.append(-100)
-						model.append(modelno)
+					if mspflag==0:
+						if spin>0.03 and float(datasnap[60])>=deathcut:
+							time.append(t); id0.append(int(datasnap[0])); id1.append(-100); m0.append(float(datasnap[1])); m1.append(-100)
+							k0.append(int(datasnap[14])); k1.append(-100); FC.append(int(datasnap[61])); B.append(float(datasnap[60])); P.append(spin)
+							a.append(-100); ecc.append(-100)
+							model.append(modelno)
+							dmdt0.append(-100); dmdt1.append(-100); radrol0.append(-100); radrol1.append(-100)
+							r.append(float(datasnap[2])) ##code unit
+
+					else:
+						if spin<=0.03 and float(datasnap[60])>=deathcut:
+							time.append(t); id0.append(int(datasnap[0])); id1.append(-100); m0.append(float(datasnap[1])); m1.append(-100)
+							k0.append(int(datasnap[14])); k1.append(-100); FC.append(int(datasnap[61])); B.append(float(datasnap[60])); P.append(spin)
+							a.append(-100); ecc.append(-100)
+							model.append(modelno)
+							dmdt0.append(-100); dmdt1.append(-100); radrol0.append(-100); radrol1.append(-100)
+							r.append(float(datasnap[2])) ##code unit
+
 
 			if int(datasnap[7])==1:
 				if int(datasnap[17])==13:
 					spin0=twopi*yearsc/float(datasnap[45])
 					deathcut0=(spin0**2)*(0.17*10**12)
-					if spin0>0.03 and float(datasnap[47])>=deathcut0:
-						time.append(t); id0.append(int(datasnap[10])); id1.append(int(datasnap[11])); m0.append(float(datasnap[8])); m1.append(float(datasnap[9]))
-						k0.append(int(datasnap[17])); k1.append(int(datasnap[18])); FC.append(int(datasnap[49])); B.append(float(datasnap[47])); P.append(spin0)
-						a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
-						model.append(modelno)
+					if mspflag==0:
+						if spin0>0.03 and float(datasnap[47])>=deathcut0:
+							time.append(t); id0.append(int(datasnap[10])); id1.append(int(datasnap[11])); m0.append(float(datasnap[8])); m1.append(float(datasnap[9]))
+							k0.append(int(datasnap[17])); k1.append(int(datasnap[18])); FC.append(int(datasnap[49])); B.append(float(datasnap[47])); P.append(spin0)
+							a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
+							model.append(modelno)
+							dmdt0.append(float(datasnap[41])); dmdt1.append(float(datasnap[42]))
+							radrol0.append(float(datasnap[43])); radrol1.append(float(datasnap[44]))
+							r.append(float(datasnap[2])) ##code unit
+
+					else:
+						if spin0<=0.03 and float(datasnap[47])>=deathcut0:
+							time.append(t); id0.append(int(datasnap[10])); id1.append(int(datasnap[11])); m0.append(float(datasnap[8])); m1.append(float(datasnap[9]))
+							k0.append(int(datasnap[17])); k1.append(int(datasnap[18])); FC.append(int(datasnap[49])); B.append(float(datasnap[47])); P.append(spin0)
+							a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
+							model.append(modelno)
+							dmdt0.append(float(datasnap[41])); dmdt1.append(float(datasnap[42]))
+							radrol0.append(float(datasnap[43])); radrol1.append(float(datasnap[44]))
+							r.append(float(datasnap[2])) ##code unit
+
 
 				if int(datasnap[18])==13:
 					spin1=twopi*yearsc/float(datasnap[46])
 					deathcut1=(spin1**2)*(0.17*10**12)
-					if spin1>0.03 and float(datasnap[48])>=deathcut1:
-						time.append(t); id0.append(int(datasnap[11])); id1.append(int(datasnap[10])); m0.append(float(datasnap[9])); m1.append(float(datasnap[8]))
-						k0.append(int(datasnap[18])); k1.append(int(datasnap[17])); FC.append(int(datasnap[50])); B.append(float(datasnap[48])); P.append(spin1)
-						a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
-						model.append(modelno)
+					if mspflag==0:
+						if spin1>0.03 and float(datasnap[48])>=deathcut1:
+							time.append(t); id0.append(int(datasnap[11])); id1.append(int(datasnap[10])); m0.append(float(datasnap[9])); m1.append(float(datasnap[8]))
+							k0.append(int(datasnap[18])); k1.append(int(datasnap[17])); FC.append(int(datasnap[50])); B.append(float(datasnap[48])); P.append(spin1)
+							a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
+							model.append(modelno)
+							dmdt0.append(float(datasnap[42])); dmdt1.append(float(datasnap[41]))
+							radrol0.append(float(datasnap[44])); radrol1.append(float(datasnap[43]))
+							r.append(float(datasnap[2])) ##code unit
+					else:
+						if spin1<=0.03 and float(datasnap[48])>=deathcut1:
+							time.append(t); id0.append(int(datasnap[11])); id1.append(int(datasnap[10])); m0.append(float(datasnap[9])); m1.append(float(datasnap[8]))
+							k0.append(int(datasnap[18])); k1.append(int(datasnap[17])); FC.append(int(datasnap[50])); B.append(float(datasnap[48])); P.append(spin1)
+							a.append(float(datasnap[12])); ecc.append(float(datasnap[13]))
+							model.append(modelno)
+							dmdt0.append(float(datasnap[42])); dmdt1.append(float(datasnap[41]))
+							radrol0.append(float(datasnap[44])); radrol1.append(float(datasnap[43]))
+							r.append(float(datasnap[2])) ##code unit
 
-	return model, time, B, P, FC, id0, id1, m0, m1, k0, k1, a, ecc
+
+	np.savetxt('/projects/b1095/syr904/projects/nprmalpsrs_275.dat', np.c_[model, time, B, P, id0, id1, m0, m1, k0, k1, a, ecc, FC, dmdt0, dmdt1, radrol0, radrol1, r], fmt='%d %f %g %g %d %d %f %f %d %d %f %f %d %f %f %f %f %f', header='1.Model 2.Time 3.B(G) 4.P(sec) 5.ID0 6.ID1 7.M0 8.M1 9.K0 10.K1 11.A 12.ECC 13.FC 14.DMDT0 15.DMDT1 16.RADROL0 17.RADROL1 18.R(code unit)', delimiter='', comments='#')
+	
+	return model, time, B, P, id0, id1, m0, m1, k0, k1, a, ecc, FC, dmdt0, dmdt1, radrol0, radrol1, r
 
 
-def get_normalpsr_last(pathlist):   ##using /projects/b1011/syr904/projects/PULSAR/kickgrid_runs/path_normalpsr_paper.dat for pathlist
-	Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]
+def get_allpsr_last(pathlist, mspfg, filename):
+	Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]
 	sourcedir=np.genfromtxt(pathlist, dtype=str)
 	for i in range(len(sourcedir)):
 		pref='initial'
 		filepath=sourcedir[i]
 		filestr=filepath+'/'+pref
 		t_conv=conv('t', filestr+'.conv.sh')
+		l_conv=conv('l', filestr+'.conv.sh')
+
 		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
+		snap2d=np.sort(glob(filestr+'.snap*.2Dproj.dat.gz'))
+
+		index=[]
+		for m in range(len(snaps)):
+			for n in range(len(snap2d)):
+				if snaps[m]==snap2d[n]: index.append(m)
+
+		snaps = [x for y, x in enumerate(snaps) if y not in index]
+
 		lastsnap=snaps[-1]
 		t=get_time(lastsnap)*t_conv
 
-		Model, Time, Bf, Spin, Fc, Id0, Id1, M0, M1, K0, K1, A, Ecc=find_normalpsr(lastsnap, i, t)
+		Model, Time, Bf, Spin, Fc, Id0, Id1, M0, M1, K0, K1, A, Ecc, Dmdt0, Dmdt1, Radrol0, Radrol1, R=find_allpsr_snapshot(lastsnap, i, t, mspfg)
+
 		Md=Md+Model; T=T+Time; BF=BF+Bf; S=S+Spin; F=F+Fc; ID0=ID0+Id0; ID1=ID1+Id1; M_0=M_0+M0; M_1=M_1+M1; K_0=K_0+K0; K_1=K_1+K1; Aaxis=Aaxis+A; E=E+Ecc
+		DMDT0=DMDT0+Dmdt0; DMDT1=DMDT1+Dmdt1; RAD0=RAD0+Radrol0; RAD1=RAD1+Radrol1; RADIUS=RADIUS+R
 
 		print i
 
-	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/kickgrid_normalpsr_newmodel.dat', np.c_[Md, ID0, ID1, BF, S, F, M_0, M_1, K_0, K_1, Aaxis, E], fmt ='%d %f %e %f %d %d %d %f %f %d %d %f %f', delimiter= ' ', header = 'Model id0 id1 B(G) P(sec) FC m0 m1 k0 k1 a[AU] ecc', comments = '#')
+	RADIUS=np.array(RADIUS)*l_conv
+
+	np.savetxt('/projects/b1095/syr904/projects/GammaRay/'+filename, np.c_[Md, ID0, ID1, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, K_0, K_1, Aaxis, E, F, T], fmt ='%d %d %d %f %e %f %f %f %f %f %f %f %d %d %f %f %d %f', delimiter= ' ', header = '#1.Model 2.ID0 3.ID1 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.k0 14.k1 15.a(AU) 16.ecc 17.Formation 18.Time(Myr)', comments = '#')
 
 
 def get_normalpsr_10Gyr(filepath, savepath, modelno):
@@ -3098,162 +3210,6 @@ def DoubleNS(path):
 	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/doubelNS.dat', np.c_[ID0, ID1, M0, M1, B0, B1, P0, P1, FC0, FC1, A, E], fmt='%d %d %f %f %e %e %f %f %d %d %f %f', header='1.ID0, 2.ID1, 3.M0(Msun), 4.M1(Msun), 5.B0(G), 6.B1(G), 7.P0(sec), 8.P1(sec), 9.FC0, 10.FC1, 11.a(AU), 12.ecc', delimiter='', comments='#')
 
 
-def find_DNS_NSBH(pathlist, start, end):
-	sourcedir=np.genfromtxt(pathlist, dtype=str)
-	pref='initial'
-	Model=[]; Time=[]; ID0=[]; ID1=[]; P0=[]; P1=[]; B0=[]; B1=[]; M0=[]; M1=[]; A=[]; E=[]; Type=[]
-	for i in range(start, end):
-		filestr=sourcedir[i]+'/'+pref
-		t_conv=conv('t', filestr+'.conv.sh')
-		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
-		with open(filestr+'.ns.dat', 'r') as fns:
-			next(fns)
-			for line in fns:
-				datans=line.split()
-				if float(datans[0])*t_conv>=10000.0:
-					if int(datans[7])>0:
-						model=i; t=float(datans[0])
-						print model, t, 'DNS'
-						for j in range(len(snaps)-1, 0, -1):
-							time=get_time(snaps[j])
-							if round(time, 6)==round(t, 6):
-								print model, t, 'DNS'
-								with gzip.open(snaps[j], 'r') as fsnap:
-									next(fsnap)
-									next(fsnap)
-									for line in fsnap:
-										datasnap=line.split()
-										if int(datasnap[17])==13 and int(datasnap[18])==13:
-											Model.append(i); Time.append(time); ID0.append(int(datasnap[10])); ID1.append(int(datasnap[11])); P0.append(twopi*yearsc/float(datasnap[45])); P1.append(twopi*yearsc/float(datasnap[46])); B0.append(float(datasnap[47])); B1.append(float(datasnap[48])); M0.append(float(datasnap[8])); M1.append(float(datasnap[9])); A.append(float(datasnap[12])); E.append(float(datasnap[13])); Type.append(1313) 
-
-
-
-					if int(datans[8])>0: 
-						model=i; t=float(datans[0])
-						print model, t, 'NSBH'
-						for j in range(len(snaps)-1, 0, -1):
-							time=get_time(snaps[j])
-							if round(time, 6)==round(t, 6):
-								print model, t, 'NSBH'
-								with gzip.open(snaps[j], 'r') as fsnap:
-									next(fsnap)
-									next(fsnap)
-									for line in fsnap:
-										datasnap=line.split()
-										if int(datasnap[17])==13 and int(datasnap[18])==14:
-											Model.append(i); Time.append(time); ID0.append(int(datasnap[10])); ID1.append(int(datasnap[11])); P0.append(twopi*yearsc/float(datasnap[45])); P1.append(-100); B0.append(float(datasnap[47])); B1.append(-100); M0.append(float(datasnap[8])); M1.append(float(datasnap[9])); A.append(float(datasnap[12])); E.append(float(datasnap[13])); Type.append(1314)
-										if int(datasnap[17])==14 and int(datasnap[18])==13:
-											Model.append(i); Time.append(time); ID0.append(int(datasnap[11])); ID1.append(int(datasnap[10])); P0.append(twopi*yearsc/float(datasnap[46])); P1.append(-100); B0.append(float(datasnap[48])); B1.append(-100); M0.append(float(datasnap[9])); M1.append(float(datasnap[8])); A.append(float(datasnap[12])); E.append(float(datasnap[13])); Type.append(1314)
-
-		#print Model, ID0, ID1, P0, P1, B0, B1, M0, M1, A, E, Type
-
-	np.savetxt('/projects/b1011/syr904/projects/SGRB/DNS_NSBH_1012Gyr.dat', np.c_[Model, Time, ID0, ID1, P0, P1, B0, B1, M0, M1, A, E, Type], fmt='%d %f %d %d %f %f %e %e %f %f %f %f %d', header='1.Model, 2.Time, 3.ID0, 4.ID1, 5.P0, 6.P1, 7.B0, 8.B1, 9.M0, 10.M1, 11.a, 12.ecc, 13.Type', delimiter='', comments='#')
-
-
-def DNS_NSBH_Unique(datfile, pathlist):
-	data=np.genfromtxt(datfile)
-	model=data[:,0]; id0=data[:,2]; id1=data[:,3]
-	print np.array(data[0,:])
-	allmodel=Counter(model).keys()
-
-	lines=[]; lines_needed=[]
-	for i in range(len(allmodel)):
-		modelno=int(allmodel[i])
-		idmodel=[]	
-		for j in range(len(model)):
-			if model[j]==modelno:
-				idmodel.append(str(id0[j])+str(id1[j]))
-
-		idkey=Counter(idmodel).keys()
-		print idkey
-
-
-		for k in range(len(idkey)):
-			for l in range(len(model)):
-				if model[l]==modelno:
-					ids=str(id0[l])+str(id1[l])
-					if ids==idkey[k]:
-						lines.append(l)
-			lines_needed.append(lines[-1])
-
-		print modelno
-
-	print lines_needed
-
-	with open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/DNS_NSBH_Unique.dat', 'a+') as out_file:
-		for m in range(len(lines_needed)):
-			listm=' '.join(str(e) for e in data[lines_needed[m],:])
-			out_file.write(listm+'\n')
-
-
-def DNS_NSBH_mergertime(datfile, pathlist):
-	data=np.genfromtxt(datfile)
-	modelno=data[:,0]; t=data[:,1]; id0=data[:,2]; id1=data[:,3]; m0=data[:,8]; m1=data[:,9]; a=data[:,10]; ecc=data[:,11]; tp=data[:,12]
-	sourcedir=np.genfromtxt(pathlist, dtype=str)
-	nnsbhm=0; nnsnsm=0
-	
-	idstr_hold1=str(0)
-	idstr_hold2=str(0)
-	for j in range(len(modelno)):
-		filestr=sourcedir[int(modelno[j])]+'/initial'
-		idstr=str(int(id0[j]))+str(int(id1[j]))
-		t_conv=dyn.conv('t', filestr+'.conv.sh')
-		time=t[j]*t_conv
-		t_inspiral=gwcalc.t_inspiral_2(a[j], ecc[j], m0[j], m1[j], 0, 0, 0, 1100)/10**6 #in Myr
-
-		if t_inspiral+time<=12000. and (tp[j]==1314. or tp[j]==1413.) and idstr!=idstr_hold1 and idstr!=idstr_hold2: 
-			print time, t_inspiral
-			print idstr
-			nnsbhm+=1
-			idstr_hold1=idstr
-			idstr_hold2=str(int(id1[j]))+str(int(id0[j]))
-		if t_inspiral+time<=12000. and tp[j]==1313. and idstr!=idstr_hold1 and idstr!=idstr_hold2:
-			print time, t_inspiral 
-			print idstr
-			nnsnsm+=1
-			idstr_hold1=idstr
-			idstr_hold2=str(int(id1[j]))+str(int(id0[j]))
-
-	print nnsbhm, nnsnsm
-
-
-
-
-def BNS_NSBH_Appearperiod(datfile,pathlist):
-	data=np.genfromtxt(datfile, usecols=(0, 1, 2, 3, 12))
-	model=data[:,0]; time=data[:,1]; id0=data[:,2]; id1=data[:,3]; tp=data[:,4]
-	allmodel=Counter(model).keys()
-	sourcedir=np.genfromtxt(pathlist, dtype=str)
-
-	ids=[]; periods=[]; types=[]
-	for i in range(len(allmodel)):
-		modelno=int(allmodel[i])
-		t_conv=conv('t', sourcedir[modelno]+'/initial.conv.sh')
-
-		idmodel=[]; pmodel=[]; tmodel=[]
-		for j in range(len(model)):
-			if model[j]==modelno:
-				idmodel.append(str(id0[j])+str(id1[j]))
-				pmodel.append(time[j])
-				tmodel.append(tp[j])
-
-		idkey=Counter(idmodel).keys()
-		ids=ids+idkey
-
-		for k in range(len(idkey)):
-			p_temp=[]; t_temp=[]
-			for l in range(len(idmodel)):
-				if idmodel[l]==idkey[k]:
-					p_temp.append(pmodel[l])
-					t_temp.append(tmodel[l])
-
-			#print p_temp
-
-			if len(p_temp)==1: periods.append(30); types.append(t_temp[-1])
-			if len(p_temp)>1: periods.append((p_temp[-1]-p_temp[0])*t_conv); types.append(t_temp[-1])
-
-
-	return ids, periods, types
 
 
 def Ave_stellardensity(pathlist):
@@ -3357,81 +3313,7 @@ def find_direct_AICMSP(path_history):
 	print n
 
 
-def find_Lgammaray_lastsnapshot(sourcedir, eta_gamma):
-	dataobs=np.genfromtxt(sourcedir+'/kickgrid_obsproperty_newmodel.dat')
-	Mtot=np.array(dataobs[:,5])
-	datamsp=np.genfromtxt(sourcedir+'/kickgrid_msp_newmodel.dat')
-	datapsr=np.genfromtxt(sourcedir+'/kickgrid_normalpsr_newmodel.dat')
-	Bmsp=np.array(datamsp[:,4]); Pmsp=np.array(datamsp[:,5]); modelmsp=datamsp[:,0]
-	Bpsr=np.array(datapsr[:,4]); Ppsr=np.array(datapsr[:,5]); modelpsr=datapsr[:,0]
 
-	Cscale=9.6*10**33  ##in erg/s
-	Lgamma_msp=Cscale*(eta_gamma/0.2)*(Bmsp/10**8.5)**2*(3./(Pmsp*1000.))**4
-	Lgamma_psr=Cscale*(eta_gamma/0.2)*(Bpsr/10**8.5)**2*(3./(Ppsr*1000.))**4
-
-	Lgamma_tot=[]
-	for i in range(26):
-		ltot=0
-		for j in range(len(modelmsp)):
-			if modelmsp[j]==i:
-				ltot+=Lgamma_msp[j]
-		for k in range(len(modelpsr)):
-			if modelpsr[k]==i:
-				ltot+=Lgamma_psr[k]
-
-		Lgamma_tot.append(ltot)
-
-
-	return Lgamma_tot, Mtot
-
-
-def find_Lgammaray_alltime(pathlist, start, end):
-	Cscale=9.6*10**33  ##in erg/s
-	sourcedir=np.genfromtxt(pathlist,dtype=str)
-	for i in range(start, end):
-		fgamma=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/Lgamma/Lgamma_'+str(i).zfill(2), 'a+', 0)
-		fgamma.write('#1.T(Myr) 2.Ltot 3.Nmsp\n')
-		filestr=sourcedir[i]+'/initial'
-		snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
-		for j in range(len(snaps)):
-			Ltot=0; nmsp=0
-			t=get_time(snaps[j])
-			t_conv=conv('t', filestr+'.conv.sh')
-			t=t*t_conv   ##in Myr
-			with gzip.open(snaps[j], 'r') as fsnap:
-				next(fsnap)
-				next(fsnap)
-				for line in fsnap:
-					datasnap=line.split()
-					if int(datasnap[14])==13:
-						Pspin=twopi*yearsc/float(datasnap[59])  ##in sec
-						B=float(datasnap[60])
-						if Pspin<=0.03:
-							nmsp+=1
-							Ltot+=Cscale*(2./0.2)*(B/10**8.5)**2*(3./(Pspin*1000.))**4
-
-					if int(datasnap[17])==13:
-						Pspin=twopi*yearsc/float(datasnap[45])  ##in sec
-						B=float(datasnap[47])
-						if Pspin<=0.03:
-							nmsp+=1
-							Ltot+=Cscale*(2./0.2)*(B/10**8.5)**2*(3./(Pspin*1000.))**4
-
-					if int(datasnap[18])==13:
-						Pspin=twopi*yearsc/float(datasnap[46])  ##in sec
-						B=float(datasnap[48])
-						if Pspin<=0.03:
-							nmsp+=1
-							Ltot+=Cscale*(2./0.2)*(B/10**8.5)**2*(3./(Pspin*1000.))**4
-
-
-			fgamma.write('%f %e %d\n'%(t, Ltot, nmsp))
-
-			print j
-
-		fgamma.close()
-
-		print 'model=', i
 
 
 

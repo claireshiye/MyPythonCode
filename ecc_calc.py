@@ -191,6 +191,9 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
 
         if LIGO =1, integrate ALL the way to inspiral
         """
+
+        #print a0, e0, m1, m2, t_flag, array, LIGO, steps
+
         M1 = m1*1.989e30
         M2 = m2*1.989e30
         G = 6.67408e-11
@@ -238,7 +241,7 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
                 DELTA = t[j+1] - t[j]
                 a0 = a
                 e0 = e
-                a_array.append(a/1.496e11)
+                a_array.append(a/1.496e11)  ##Unit conversion
                 ecc_array.append(e)
                 t_array.append(t[j]/seconds)
                 a = a-64./5.*G**3*M1*M2*(M1+M2)/(c**5.*a**3.*(1-e**2.)**3.5) * (1 + 73/24.*e**2. + 37/96.*e**4.)*DELTA
@@ -256,15 +259,19 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
                         DELTA_T_FINAL = LISA.inspiral_time_peters(a0/1.486e11,e0,m1,m2,af=0)*1.e9*1.2
                         #print DELTA_T_FINAL
                         break
+        #print t_FINAL
+        #print DELTA_T_FINAL
 
-        #if 'DELTA_T_FINAL' in locals()==False:
-                #DELTA_T_FINAL=1.0e-6
-                #t_FINAL=t[-1]/seconds
+        if 'DELTA_T_FINAL' in locals()==False:
+                DELTA_T_FINAL=1.0e-6
+                t_FINAL=t[-1]/seconds
+
+        #print DELTA_T_FINAL
 
         if DELTA_T_FINAL > DELTA_T_MIN:
                 flag = 0
                 while flag == 0:
-
+        
                         T_START = t_FINAL
                         #t_max = t_START + DELTA_T_FINAL
                         #t = np.linspace(T_START*seconds,t_max*seconds,100)
@@ -276,10 +283,12 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
                                 t[i] = (t_max + t_start - delta[len(delta)-i-1])*seconds
                         a = a0
                         e = e0
+        
                         for k in range(len(t)-1):
                                 DELTA = t[k+1] - t[k]
                                 a0 = a
                                 e0 = e
+                                #print a, e
                                 a_array.append(a/1.496e11)
                                 ecc_array.append(e)
                                 t_array.append(t[k]/seconds+T_START)
@@ -300,8 +309,10 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
                                         else:
                                                 DELTA_T_FINAL = LISA.inspiral_time_peters(a0/1.486e11,e0,m1,m2,af=0)*1.e9*1.2
                                         break
+
                         if DELTA_T_FINAL < DELTA_T_MIN:
                                 flag = 1
+
         if t_flag == 0 and array == 0:
                 return t_FINAL
         if t_flag > 0 and array == 0:

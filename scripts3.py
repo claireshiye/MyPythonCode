@@ -69,7 +69,7 @@ def read_segment(f,position):
 					'ids': [long(values[8]),long(values[9])],
 					'a': float(values[10]),
 					'e': float(values[11]),
-					'ktype': [int(values[12]), int(values[13])]
+					'startype': [int(values[12]), int(values[13])]
 					}
 			
 			elif values[0]=='single':
@@ -81,7 +81,7 @@ def read_segment(f,position):
 					'ids': [long(values[5])],
 					'a': na,
 					'e': na,
-					'ktype': [int(values[6])]
+					'startype': [int(values[6])]
 					}	
 		
 			else:
@@ -179,9 +179,9 @@ def read_segment(f,position):
 						e+=[float(values[-3*(no-1) +(no-2+j)])]
 						#a+=[float(values[-2* (no-1) +j])]          ##For old models
 						#e+=[float(values[-(no-1) +j])]
-			if no==1: ktype=[values[-1]]
-			if no==2: ktype=[values[-2], values[-1]]
-			if no==3: ktype=[values[-3], values[-2], values[-1]]
+			if no==1: startype=[values[-1]]
+			if no==2: startype=[values[-2], values[-1]]
+			if no==3: startype=[values[-3], values[-2], values[-1]]
 
 
 					
@@ -194,7 +194,7 @@ def read_segment(f,position):
 				'a': a,
 				'e': e,
 				'merge': merge,
-				'ktype': ktype
+				'startype': startype
 				}
 	except StopIteration:
 		goodrun=0
