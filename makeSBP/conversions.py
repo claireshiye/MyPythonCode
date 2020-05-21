@@ -15,7 +15,7 @@ def metallicity(m,s):
         m1 = 0.02*10**m
     return m1
 
-def find_rtidal(mc,vg=220.,rg=7400.):
+def find_rtidal(mc,vg=220.,rg=8000.):
     """takes 
     the cluster mass (mc) in solar mass, 
     the galactic circular velocity (vg) in km/s, 
@@ -43,7 +43,8 @@ def arcsec_to_pc(arcsec, R_sun):
 
 def SB_converter(I_v):
     """takes I_v (V-band Luminosity/pc^2) and converts to mu_v in V_mag/arcsec^2"""
-    SB_arcsec = (21.572-2.5*np.log10(I_v))
+    #SB_arcsec = (21.572-2.5*np.log10(I_v))
+    SB_arcsec = (21.572+4.83-2.5*np.log10(I_v))
     return SB_arcsec
 
 def SB_converter_tot(I):

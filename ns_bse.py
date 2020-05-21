@@ -12,7 +12,6 @@ import seaborn as sns
 import gzip
 import math
 import re
-import history_maker_full5
 import history_cmc as hic
 import dynamics as dyn    
 

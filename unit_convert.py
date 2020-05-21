@@ -77,6 +77,14 @@ def ttoredshift(t):
 
 	return Z
 
+
+def redshifttot(Z):
+	##Return the corresponding t in Gyr for a redshift
+	from astropy.cosmology import FlatLambdaCDM
+	cosmo = FlatLambdaCDM(H0=69.6, Om0=0.286)
+	return cosmo.age(Z).value
+
+
 def ComovingDistance(redshift):
 	from astropy.cosmology import FlatLambdaCDM
 	cosmo = FlatLambdaCDM(H0=69.6, Om0=0.286)

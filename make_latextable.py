@@ -78,12 +78,12 @@ for i in range(len(paths)):
 
 #np.savetxt('/projects/b1095/syr904/projects/SGRB/newruns/table_allnums_BBH.txt', np.c_[model, N, Rv, Z, Rg, rc, rhl, Mtot, Nbh, Nns, Npsr, Nmsp, Ngwcap, Nincluster, Nesc, Nescmerge, DNS, NSBH, status], header='1.Model 2.N 3.rv(pc) 4.z 5.rg(kpc) 6.rc(pc) 7.rhl(pc) 8.mtot(Msun) 9.Nbh 10.Nns 11.Npsr 12.Nmsp 13.Ngwcap 14.Nincluster 15.Nesc 16.Nescmerge 17.DNS 18.NSBH 19.status', fmt='%d %d %g %g %d %.2f %.2f %.2f %d %d %d %d %d %d %d %d %d %d %d', delimiter=' ', comments='#')
 
-f=open('/projects/b1095/syr904/projects/SGRB/newruns/finaldata/latextable_maingrid.txt', 'w+')
+f=open('/projects/b1095/syr904/projects/SGRB/newruns/finaldata/latextable_maingrid_v2.txt', 'w+')
 for i in range(len(paths)):
 	if int(status[i])==1:
-		f.write('%s & %.2f & %.2f & %.2f & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d\\\\\n'%(model_name[i], rc[i], rhl[i], Mtot[i], Nbh[i], Nns[i], Npsr[i], Nmsp[i], Ngwcap_dns[i], Nincluster_dns[i], Nesc_dns[i], Nescmerge_dns[i], Ngwcap_nsbh[i], Nincluster_nsbh[i], Nesc_nsbh[i], Nescmerge_nsbh[i], DNS[i], NSBH[i]))
+		f.write('%s & %.2f & %.2f & %.2f & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d\\\\\n'%(model_name[i], rc[i], rhl[i], Mtot[i], Nbh[i], Nns[i], Npsr[i], Nmsp[i], Ngwcap_dns[i]+Nincluster_dns[i], Nesc_dns[i], Nescmerge_dns[i], Ngwcap_nsbh[i]+Nincluster_nsbh[i], Nesc_nsbh[i], Nescmerge_nsbh[i], DNS[i], NSBH[i]))
 	else:
-		f.write('%s & %.2f & %.2f & %.2f & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %s\\\\\n'%(model_name[i], rc[i], rhl[i], Mtot[i], Nbh[i], Nns[i], Npsr[i], Nmsp[i], Ngwcap_dns[i], Nincluster_dns[i], Nesc_dns[i], Nescmerge_dns[i], Ngwcap_nsbh[i], Nincluster_nsbh[i], Nesc_nsbh[i], Nescmerge_nsbh[i], "\multicolumn{2}{c}{dissolved}"))
+		f.write('%s & %.2f & %.2f & %.2f & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d & %s\\\\\n'%(model_name[i], rc[i], rhl[i], Mtot[i], Nbh[i], Nns[i], Npsr[i], Nmsp[i], Ngwcap_dns[i]+Nincluster_dns[i], Nesc_dns[i], Nescmerge_dns[i], Ngwcap_nsbh[i]+Nincluster_nsbh[i], Nesc_nsbh[i], Nescmerge_nsbh[i], "\multicolumn{2}{c}{disrupted}"))
 
 
 f.close()

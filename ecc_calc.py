@@ -13,145 +13,145 @@ import LISA_calculations as LISA
 M_sun = 1.989e30
 
 def c0_func(a0, e0):
-	return a0*(1.-e0**2)/e0**(12./19.) * (1.+(121./304.)*e0**2)**(-870./2299.)
+    return a0*(1.-e0**2)/e0**(12./19.) * (1.+(121./304.)*e0**2)**(-870./2299.)
 
 def beta_func(m1, m2):
-	return 64./5.*m1*m2*(m1+m2)
+    return 64./5.*m1*m2*(m1+m2)
 
 def integrand(e):
-	return e**(29./19.)*(1.+(121./304.)*e**2)**(1181./2299.)/(1.-e**2)**(3./2.)
+    return e**(29./19.)*(1.+(121./304.)*e**2)**(1181./2299.)/(1.-e**2)**(3./2.)
 
 def a_from_e(e, a0, e0):
-	#peters equation 5.11
-	c0 = c0_func(a0, e0)
-	return c0*e**(12./19.)/(1.-e**2) * (1.+(121./304.)*e**2)**(870./2299.)
+    #peters equation 5.11
+    c0 = c0_func(a0, e0)
+    return c0*e**(12./19.)/(1.-e**2) * (1.+(121./304.)*e**2)**(870./2299.)
 
 def t_merg(a0,e0, m1, m2, t_obs=10.0):
-	beta = beta_func(m1, m2)
-	c0 = c0_func(a0, e0)
+    beta = beta_func(m1, m2)
+    c0 = c0_func(a0, e0)
 
-	#G = 6.67e-11
-	#M1 = m1/ct.G*ct.c**2.  #put masses in kg
-	#M2 = m2/ct.G*ct.c**2.
-	#c = 3.0e8
-	#delta = 304./15.*e0*G**3*M1*M2*(M1+M2)/(c**5*a0**4*(1-e0**2.)**2.5) * (1 + 121./304*e0**2.)*10.*3.15e7
-	#print 'delta=',delta
+    #G = 6.67e-11
+    #M1 = m1/ct.G*ct.c**2.  #put masses in kg
+    #M2 = m2/ct.G*ct.c**2.
+    #c = 3.0e8
+    #delta = 304./15.*e0*G**3*M1*M2*(M1+M2)/(c**5*a0**4*(1-e0**2.)**2.5) * (1 + 121./304*e0**2.)*10.*3.15e7
+    #print 'delta=',delta
 
-	#epsilon = delta*1.e-3
-	epsilon = 1.e-8
+    #epsilon = delta*1.e-3
+    epsilon = 1.e-8
 
-	prefactor = 12./19.*c0**4./beta
+    prefactor = 12./19.*c0**4./beta
 
-	ecc_out, a_out, t_out = [], [], []
+    ecc_out, a_out, t_out = [], [], []
 
-	t = 0.0
-	num_step = 1
-	while t/ct.c/ct.Julian_year<=t_obs:
-		if e0-num_step*epsilon<0.0:
-			break
-		ecc_vals = np.linspace(e0-num_step*epsilon, e0, 1000)
-		integrand_vals = integrand(ecc_vals)
+    t = 0.0
+    num_step = 1
+    while t/ct.c/ct.Julian_year<=t_obs:
+        if e0-num_step*epsilon<0.0:
+            break
+        ecc_vals = np.linspace(e0-num_step*epsilon, e0, 1000)
+        integrand_vals = integrand(ecc_vals)
 
-		t = prefactor*np.trapz(integrand_vals, x=ecc_vals)
+        t = prefactor*np.trapz(integrand_vals, x=ecc_vals)
 
-		t_out.append(t)
-		a_out.append(a_from_e(e0-num_step*epsilon, a0, e0))
-		ecc_out.append(e0-num_step*epsilon)
-		#print(num_step, t/ct.c/ct.Julian_year)
-		num_step +=1
-	return  np.asarray(t_out), np.asarray(ecc_out), np.asarray(a_out)
+        t_out.append(t)
+        a_out.append(a_from_e(e0-num_step*epsilon, a0, e0))
+        ecc_out.append(e0-num_step*epsilon)
+        #print(num_step, t/ct.c/ct.Julian_year)
+        num_step +=1
+    return  np.asarray(t_out), np.asarray(ecc_out), np.asarray(a_out)
 
 def chirp_mass(m1, m2):
-	return (m1*m2)**(3./5.)/(m1+m2)**(1./5.)
+    return (m1*m2)**(3./5.)/(m1+m2)**(1./5.)
 
 def F_func(e):
-	return (1.+(73./24.)*e**2.+(37./96.)*e**4.)/(1.-e**2.)**(7./2.)
+    return (1.+(73./24.)*e**2.+(37./96.)*e**4.)/(1.-e**2.)**(7./2.)
 
 def g_func(n,e):
-	return n**4./32. * ((jv(n-2., n*e) - 2.*e*jv(n-1., n*e) + 2./n*jv(n, n*e) + 2.*e*jv(n+1., n*e) - jv(n+2., n*e))**2. + (1.-e**2.)*(jv(n-2., n*e) - 2.*jv(n, n*e) + jv(n+2., n*e))**2. + 4./(3.*n**2.)*(jv(n, n*e))**2.)
+    return n**4./32. * ((jv(n-2., n*e) - 2.*e*jv(n-1., n*e) + 2./n*jv(n, n*e) + 2.*e*jv(n+1., n*e) - jv(n+2., n*e))**2. + (1.-e**2.)*(jv(n-2., n*e) - 2.*jv(n, n*e) + jv(n+2., n*e))**2. + 4./(3.*n**2.)*(jv(n, n*e))**2.)
 
 def dEndfr(m1, m2, z, n, f, e):
-	#eq 4 from orazio and samsing
-	# takes f in detector frame
-	Mc = chirp_mass(m1, m2)/(1.+z)  ## chirp mass in observed frame
-	return np.pi**(2./3.)*Mc**(5./3.)/(3.*(f*(1.+z))**(1./3.))*(2./n)**(2./3.)*g_func(n,e)/F_func(e)
+    #eq 4 from orazio and samsing
+    # takes f in detector frame
+    Mc = chirp_mass(m1, m2)/(1.+z)  ## chirp mass in observed frame
+    return np.pi**(2./3.)*Mc**(5./3.)/(3.*(f*(1.+z))**(1./3.))*(2./n)**(2./3.)*g_func(n,e)/F_func(e)
 
 def hcn_func(m1, m2, z, n, f, e):
-	D = cosmo.luminosity_distance(z).value*1e6*ct.parsec
-	return 1./(np.pi*D)*np.sqrt(2.*dEndfr(m1, m2, z, n, f, e))
+    D = cosmo.luminosity_distance(z).value*1e6*ct.parsec
+    return 1./(np.pi*D)*np.sqrt(2.*dEndfr(m1, m2, z, n, f, e))
 
 def snr_outside(f, mode_vals, noise_vals, averaging_factor=1.):
-	snr_squared_per_mode = averaging_factor*np.trapz(1./f*(mode_vals/noise_vals)**2., x=f)
-	#check on sqrt(2) in paper also and BOWIE
-	return np.sqrt(1.)*np.sqrt(snr_squared_per_mode.sum())
+    snr_squared_per_mode = averaging_factor*np.trapz(1./f*(mode_vals/noise_vals)**2., x=f)
+    #check on sqrt(2) in paper also and BOWIE
+    return np.sqrt(1.)*np.sqrt(snr_squared_per_mode.sum())
 
 def snr_inside(f, hn, mode_vals, averaging_factor=16/5.):
-	hc = np.sum(mode_vals, axis=0)
-	#check on sqrt(2) in paper also and BOWIE
-	return np.sqrt(2.)*np.sqrt(averaging_factor*np.trapz(1./f*(hc/hn)**2, x=f))
+    hc = np.sum(mode_vals, axis=0)
+    #check on sqrt(2) in paper also and BOWIE
+    return np.sqrt(2.)*np.sqrt(averaging_factor*np.trapz(1./f*(hc/hn)**2, x=f))
 
 def snr(m1, m2, a0, e0, d, n_max, noise_interp, t_final):
 
-	z = LISA.zAtLuminosityDistance(d) # takes d in Mpc
+    z = LISA.zAtLuminosityDistance(d) # takes d in Mpc
 
-	t, a, e = t_inspiral_2(a0/1.5e11,e0,m1,m2,t_flag=t_final, array=1, LIGO=0) # Calculates a, e evolution until t_final. t_final = LISA observation time in years or t_merger
-	t = np.asarray(t)*3.15e7*3.0e8
-	a = np.asarray(a)*1.5e11
-	e = np.asarray(e)
-	#for j in range(len(t)):
-	#	print t[j]/3.0e8/3.15e7, a[j]/1.5e11, e[j]
+    t, a, e = t_inspiral_2(a0/1.5e11,e0,m1,m2,t_flag=t_final, array=1, LIGO=0) # Calculates a, e evolution until t_final. t_final = LISA observation time in years or t_merger
+    t = np.asarray(t)*3.15e7*3.0e8
+    a = np.asarray(a)*1.5e11
+    e = np.asarray(e)
+    #for j in range(len(t)):
+    #    print t[j]/3.0e8/3.15e7, a[j]/1.5e11, e[j]
 
-	m1 = m1*M_sun*ct.G/ct.c**2.   # converting to c=G=1 units
-        m2 = m2*M_sun*ct.G/ct.c**2.
+    m1 = m1*M_sun*ct.G/ct.c**2.   # converting to c=G=1 units
+    m2 = m2*M_sun*ct.G/ct.c**2.
 
-        #t, e, a = t_merg(a0,e0, m1, m2)
-	
-	# wrong! f_orb = np.sqrt((m1+m2)/(4.*np.pi**2.*a**3.))/(1.+z)   # divide by (1+z) to convert from source frame to detector frame
-	f_orb = np.sqrt((m1+m2)/(4.*np.pi**2.*a**3.))
+    #t, e, a = t_merg(a0,e0, m1, m2)
+    
+    # wrong! f_orb = np.sqrt((m1+m2)/(4.*np.pi**2.*a**3.))/(1.+z)   # divide by (1+z) to convert from source frame to detector frame
+    f_orb = np.sqrt((m1+m2)/(4.*np.pi**2.*a**3.))
 
-	mode_vals = []
-	freqs = []
-	for n in np.arange(1.,n_max):
-		hcn = hcn_func(m1, m2, z, n, n*f_orb, e)
-		f_orb_new = np.logspace(np.log10(f_orb[0]), np.log10(f_orb[-1]), 100)
+    mode_vals = []
+    freqs = []
+    for n in np.arange(1.,n_max):
+        hcn = hcn_func(m1, m2, z, n, n*f_orb, e)
+        f_orb_new = np.logspace(np.log10(f_orb[0]), np.log10(f_orb[-1]), 100)
 
-		freqs.append(n*f_orb_new*ct.c)
-		mode_vals.append(np.interp(f_orb_new, f_orb, hcn))
-		#interp_funcs.append(interp1d(n*f_orb_new*ct.c, np.interp(f_orb_new, f_orb, hcn), bounds_error=False, fill_value=1.e-60))
+        freqs.append(n*f_orb_new*ct.c)
+        mode_vals.append(np.interp(f_orb_new, f_orb, hcn))
+        #interp_funcs.append(interp1d(n*f_orb_new*ct.c, np.interp(f_orb_new, f_orb, hcn), bounds_error=False, fill_value=1.e-60))
 
-	mode_vals = np.asarray(mode_vals)
-	freqs = np.asarray(freqs)
-	noise_vals = noise_interp(freqs*(1.+z))
-	#mode_vals = np.asarray([interp(fn) for interp in interp_funcs])
-	#import pdb
-	#pdb.set_trace()
+    mode_vals = np.asarray(mode_vals)
+    freqs = np.asarray(freqs)
+    noise_vals = noise_interp(freqs*(1.+z))
+    #mode_vals = np.asarray([interp(fn) for interp in interp_funcs])
+    #import pdb
+    #pdb.set_trace()
 
-	#overall_snr_sum_inside = snr_inside(fn, hn, mode_vals)
-	overall_snr_sum_outside = snr_outside(freqs, mode_vals, noise_vals)
+    #overall_snr_sum_inside = snr_inside(fn, hn, mode_vals)
+    overall_snr_sum_outside = snr_outside(freqs, mode_vals, noise_vals)
 
-	"""
-	plt.plot(t/ct.c/ct.Julian_year, e/e0, label='e')
-	plt.plot(t/ct.c/ct.Julian_year, a/a0, label='a')
-	plt.legend()
-	plt.show()
-	"""
-	return overall_snr_sum_outside
+    """
+    plt.plot(t/ct.c/ct.Julian_year, e/e0, label='e')
+    plt.plot(t/ct.c/ct.Julian_year, a/a0, label='a')
+    plt.legend()
+    plt.show()
+    """
+    return overall_snr_sum_outside
 
 
 """
 def dadt(a,e, m1, m2):
-	#m1 and m2 are in geometrized units
-	return -64./5. * m1*m2*(m1+m2)/(a**3*(1-e**2)**(7/2)) * (1.+(73./24.)*e**2+(37./96.)*e**4)
+    #m1 and m2 are in geometrized units
+    return -64./5. * m1*m2*(m1+m2)/(a**3*(1-e**2)**(7/2)) * (1.+(73./24.)*e**2+(37./96.)*e**4)
 
 def dedt(a,e,m1,m2):
-	return -304./15. * e*m1*m2*(m1+m2)/(a**4*(1-e**2)**(5/2)) * (1+(121./304.)*e**2)
+    return -304./15. * e*m1*m2*(m1+m2)/(a**4*(1-e**2)**(5/2)) * (1+(121./304.)*e**2)
 
 #def ecc_gw_emission(y, t, m1, m2):
 def ecc_gw_emission(t, y, m1, m2):
-	#pdb.set_trace()
-	a, e = y
-	dydt = [dadt(a,e, m1, m2), dedt(a,e, m1, m2)]
-	return dydt
+    #pdb.set_trace()
+    a, e = y
+    dydt = [dadt(a,e, m1, m2), dedt(a,e, m1, m2)]
+    return dydt
 
 m1 = 3e1*M_sun*ct.G/ct.c**2
 m2 = 3e1*M_sun*ct.G/ct.c**2
@@ -219,7 +219,7 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
                 #        return t_guess
                 #else:
                 #        return a0, e0
-	t_max = t_guess*1.2
+        t_max = t_guess*1.2
 
         if t_flag > 0:
                 t_start = t_flag*.0001
@@ -227,7 +227,7 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
         else:
                 t_start = t_max*.0001
 ########
-	
+    
         delta = np.logspace(np.log10(t_start),np.log10(t_max),steps)
         t = np.zeros(steps)
         for i in range(1,len(delta)):
@@ -323,25 +323,25 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
 
 if __name__ == '__main__':
 
-	noise = np.genfromtxt('noise_curves/PL.txt', skip_header=4, names=True)
-	fn = noise['f']
-	hn = np.sqrt(fn)*noise['ASD']
+    noise = np.genfromtxt('noise_curves/PL.txt', skip_header=4, names=True)
+    fn = noise['f']
+    hn = np.sqrt(fn)*noise['ASD']
 
-	e0 = 0.9
-	m1 = 30.0
-	m2 = 30.0
+    e0 = 0.9
+    m1 = 30.0
+    m2 = 30.0
 
-	m1_trans = m1*M_sun*ct.G/ct.c**2
-	m2_trans = m2*M_sun*ct.G/ct.c**2
+    m1_trans = m1*M_sun*ct.G/ct.c**2
+    m2_trans = m2*M_sun*ct.G/ct.c**2
 
-	z = 0.01
-	nmax=1000
+    z = 0.01
+    nmax=1000
 
-	f0_gw = 1e-3 #hz - gw frequency
-	f0_gw = f0_gw/ct.c #per meters
+    f0_gw = 1e-3 #hz - gw frequency
+    f0_gw = f0_gw/ct.c #per meters
 
-	f0_orb = 0.5*f0_gw
+    f0_orb = 0.5*f0_gw
 
-	a0 = ((m1_trans+m2_trans)/(4.*np.pi**2*f0_orb**2))**(1/3)
+    a0 = ((m1_trans+m2_trans)/(4.*np.pi**2*f0_orb**2))**(1/3)
 
-	print(snr(m1, m2, a0, e0, z, nmax, fn, hn))
+    print(snr(m1, m2, a0, e0, z, nmax, fn, hn))

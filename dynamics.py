@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import gzip
 import math
 import re
-import history_maker_full5
 import history_cmc as hcmc
 
 savepath='/projects/b1095/syr904/projects/SGRB'
@@ -25,7 +24,7 @@ def conv(unit,filepath):   # Returns the unit conversion multiplier given a simu
     dict = conv_dict()
     from re import findall
     with open(filepath,'r') as f:
-        head = [next(f) for x in xrange(24)]
+        head = [next(f) for x in range(24)]
     return float(head[dict[unit]].strip().split('=')[-1])
     #return float(findall('\d+[\.]?\d*',head[dict[unit]])[0])
 
@@ -34,9 +33,9 @@ def get_time(filepath):      # Returns the cluster's age for a given snapshot
     import gzip
     from re import findall
     with gzip.open(filepath,'r') as f: contents = f.readline()
-    if not findall('\d+[\.]?\d*',contents):        # Returns time = 0 for snapshot files without a time header
-        print 'snapshot empty'; return float(0)
-    else: return float(findall('\d+[\.]?\d*',contents)[0])
+    if not findall(b'\d+[\.]?\d*',contents):        # Returns time = 0 for snapshot files without a time header
+        print('snapshot empty'); return float(0)
+    else: return float(findall(b'\d+[\.]?\d*',contents)[0])
 
 
 ###Find the snapshots while excluding the 2Dproj snapshots
@@ -69,7 +68,7 @@ def find_obsrcrh(filestring, time):  ##if time==-100, find observed rc, rh in mo
                     rc=dataobs[0, 9]; rhl=dataobs[0, 10];  t_Gyr=dataobs[0, 0]/1000.0; mass=dataobs[0, 4]
                     break
             except:
-                print "Empty File", "snapno", i, "model=", filestring
+                print("Empty File", "snapno", i, "model=", filestring)
                 continue
     else:
         try:
@@ -77,7 +76,7 @@ def find_obsrcrh(filestring, time):  ##if time==-100, find observed rc, rh in mo
             dataobs=np.genfromtxt(snapobs_last)
             rc=dataobs[0, 9]; rhl=dataobs[0, 10];  t_Gyr=dataobs[0, 0]/1000.0; mass=dataobs[0, 4]
         except:
-            print "Empty File", "snapno=", snapobs_last, "model=", filestring
+            print("Empty File", "snapno=", snapobs_last, "model=", filestring)
             snapobs_last=snapobs[-2]
             dataobs=np.genfromtxt(snapobs_last)
             rc=dataobs[0, 9]; rhl=dataobs[0, 10];  t_Gyr=dataobs[0, 0]/1000.0; mass=dataobs[0, 4]
@@ -93,7 +92,7 @@ def find_obsrcrh_last(filestring):
         dataobs=np.genfromtxt(snapobs_last)
         rc=dataobs[0, 9]; rhl=dataobs[0, 10];  t_Gyr=dataobs[0, 0]/1000.0; mass=dataobs[0, 4]
     except:
-        print "Empty File", "snapno=", snapobs_last, "model=", filestring
+        print("Empty File", "snapno=", snapobs_last, "model=", filestring)
         snapobs_last=snapobs[-2]
         dataobs=np.genfromtxt(snapobs_last)
         rc=dataobs[0, 9]; rhl=dataobs[0, 10];  t_Gyr=dataobs[0, 0]/1000.0; mass=dataobs[0, 4]
@@ -103,23 +102,23 @@ def find_obsrcrh_last(filestring):
 
 
 def find_obsrcrh_lastsnap_allmodels(pathlist, start, end):
-	pref='initial'
-	sourcedir=np.genfromtxt(pathlist, dtype='|S')
-	RC=[]; RHL=[]; T=[]; NBH=[]; NTOT=[]; M=[]
-	for i in range(start, end):
-		filepath=sourcedir[i]
-		pref='initial'
-		filestr=filepath+'/'+pref
-		snapobs=np.sort(glob(filestr+'.snap*.obs_params.dat'))
-		lastsnapobs=snapobs[-1]
-		Rc, Rhl, T_Gyr, m=find_obsrcrh(lastsnapobs)
-		RC.append(Rc); RHL.append(Rhl); T.append(T_Gyr); M.append(m)
-        	Nbh, Ntot=find_NBH_NTOT_last(filestr)
-        	NBH.append(float(Nbh)); NTOT.append(float(Ntot))
-		
-		print i
+    pref='initial'
+    sourcedir=np.genfromtxt(pathlist, dtype='|S')
+    RC=[]; RHL=[]; T=[]; NBH=[]; NTOT=[]; M=[]
+    for i in range(start, end):
+        filepath=sourcedir[i]
+        pref='initial'
+        filestr=filepath+'/'+pref
+        snapobs=np.sort(glob(filestr+'.snap*.obs_params.dat'))
+        lastsnapobs=snapobs[-1]
+        Rc, Rhl, T_Gyr, m=find_obsrcrh(lastsnapobs)
+        RC.append(Rc); RHL.append(Rhl); T.append(T_Gyr); M.append(m)
+        Nbh, Ntot=find_NBH_NTOT_last(filestr)
+        NBH.append(float(Nbh)); NTOT.append(float(Ntot))
+        
+        print(i)
 
-   	np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/kickgrid_obsproperty_newmodel.dat', np.c_[T, NTOT, NBH, RC, RHL, M], fmt='%f %d %d %f %f %f', delimiter=' ', header='t_Gyr Ntot Nbh rc rhl M', comments='#')
+    np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/kickgrid_obsproperty_newmodel.dat', np.c_[T, NTOT, NBH, RC, RHL, M], fmt='%f %d %d %f %f %f', delimiter=' ', header='t_Gyr Ntot Nbh rc rhl M', comments='#')
 
 
 ##Find BH in the last timestep
@@ -300,7 +299,8 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
     model=[]; NBH=[]; MTOT=[]; RC=[]; RH=[]; NNS=[]; NDNS=[]; NNSBH=[]; st=[]
     RC_obs=[]; RHL_obs=[]; NPSR=[]; NMSP=[]
     sourcedir=np.genfromtxt(pathlist, dtype=str)
-    filepath=sourcedir[:,0]; status=sourcedir[:,1]
+    filepath=sourcedir[:,0]#; status=sourcedir[:,1]
+    status=[0,0,0,0,0,0,0,0,0,0]
     #print filepath
 
     for i in range(start, end):
@@ -339,10 +339,10 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
         model.append(i); NBH.append(Nbh); MTOT.append(Mtot*m_conv); RC.append(Rc*l_conv); RH.append(Rh*l_conv); RC_obs.append(Rc_obs); RHL_obs.append(Rhl_obs)
         NNS.append(Nns); NDNS.append(Ndns); NNSBH.append(Nnsbh); NPSR.append(Npsr); NMSP.append(Nmsp)
 
-        print i
+        print(i)
 
 
-    np.savetxt(savepath+'/newruns/finaldata/clusterproperty_12Gyr_maingrid.dat', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH, NPSR, NMSP, st], fmt='%d %d %f %f %f %f %f %d %d %d %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh 11.Npsr 12.Nmsp 13.Dissolved?', delimiter='', comments='#')
+    np.savetxt('/projects/b1095/syr904/cmc/47Tuc/rundir/clusterproperty_lastsnap.dat', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH, NPSR, NMSP, st], fmt='%d %d %f %f %f %f %f %d %d %d %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh 11.Npsr 12.Nmsp 13.Dissolved?', delimiter='', comments='#')
 
 
 
@@ -379,7 +379,7 @@ def find_clusterparameter_allmodel_last(pathlist, start, end):
         model.append(i); NBH.append(Nbh); MTOT.append(Mtot*m_conv); RC.append(Rc*l_conv); RH.append(Rh*l_conv); RC_obs.append(Rc_obs); RHL_obs.append(Rhl_obs)
         NNS.append(Nns); NDNS.append(Ndns); NNSBH.append(Nnsbh)
 
-        print i
+        print(i)
 
 
     np.savetxt(savepath+'/newruns/finaldata/clusterproperty_nondissolved_last.dat', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH], fmt='%d %d %f %f %f %f %f %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh', delimiter='', comments='#')
@@ -402,7 +402,7 @@ def printout_interact_history(pathlist, sourcefile, filename):
         find_binint(hdict, id0[k], id1[k], models[k], t_conv, filename)
         #print a_in, a_out
 
-        print k
+        print(k)
 
     
 
@@ -452,13 +452,13 @@ def find_binint(hdict, theid, comid, modelno, tconv, fname):
                             aout=float(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['a'][0])
                             eout=float(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['e'][0])
                             mout=float(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['m'][0])
-                            print aout, eout, mout
+                            print(aout, eout, mout)
 
                         if long(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['ids'][1])==theid and long(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['ids'][0])==comid:
                             aout=float(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['a'][0])
                             eout=float(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['e'][0])
                             mout=float(hdict[theid]['binint']['binint'][j]['interaction']['output'][o]['m'][1])
-                            print aout, eout, mout
+                            print(aout, eout, mout)
 
                 if aout!=0:
                         typeint=hdict[theid]['binint']['binint'][j]['interaction']['type']['type']

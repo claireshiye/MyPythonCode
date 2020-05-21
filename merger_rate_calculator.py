@@ -287,7 +287,7 @@ def get_merger_rate(filepath):
     n_random=500.
     weights[:] = [x / n_random for x in weights]
     modtot=np.sum(noweights)
-    print modtot
+    print(modtot)
     noweights[:] = [y / n_random/modtot for y in noweights]
     #print modtot, noweights
     #noweights=[1./n_random]

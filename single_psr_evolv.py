@@ -3,7 +3,7 @@ import numpy as np
 twopi=2.*np.pi
 yearsc=3.1557*10**7
 bconst=-3000.   ##Myr
-K=2*twopi*2.5*10**-49  ##Unit is year/Gauss^2
+K=twopi**2*2.5*10**-49  ##Unit is year/Gauss^2
 Bbot=5.*10**7
 
 
