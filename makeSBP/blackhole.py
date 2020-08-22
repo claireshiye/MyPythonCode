@@ -860,7 +860,7 @@ def make_2D_projection(filestring, snapno, seedy=100, proj=(0,1)):
 	writefile.close()
 
 
-def get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15):
+def get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15, NCUT=0.6):
 	filename = filestring+'.snap'+snapno+'.2Dproj.dat.gz'
 	print filename
 	projfile = gzip.open(filename, 'r')
@@ -870,47 +870,60 @@ def get_sbp_from_2D_projection(filestring, snapno, BINNO=50, LCUT=15):
 	t_myr = float(line.split('t=')[1].split()[0])
 	print projfile
 	data = np.loadtxt(projfile)
-	writefilename=filestring+'.snap'+snapno+'.2D_SBP.dat'
+	writefilename=filestring+'.snap'+snapno+'.2D_SBP_NCUT.dat'
 	writefile=open(writefilename, 'w')
-	writefile.write("#t=%g\n#1.r2Dlow(pc) 2.r2Dmid(pc) 3.r2Dhigh 4.Sigma(L/pc^2) 5.Sigmaerr(L/pc^2) 6.Sigma_n(1/pc^2) 7.Sigma_nerr(1/pc^2)\n" %(t_myr))
-	writefilename1=filestring+'.snap'+snapno+'.2D_SBPLcut'+str(LCUT)+'.dat'
+	writefile.write("#t=%g\n#1.r2Dlow(pc) 2.r2Dmid(pc) 3.r2Dhigh 4.Sigma(L/pc^2) 5.Sigmaerr(L/pc^2) 6.Sigma_n(1/pc^2) 7.Sigma_nerr(1/pc^2) 8.N_density(1/pc^2) 9.N_densityerr(1/pc^2)\n" %(t_myr))
+	writefilename1=filestring+'.snap'+snapno+'.2D_SBPLcut'+str(LCUT)+'_NCUT.dat'
 	writefile1=open(writefilename1, 'w')
-	writefile1.write("#t=%g\n#1.r2Dlow(pc) 2.r2Dmid(pc) 3.r2Dhigh 4.Sigma(L/pc^2) 5.Sigmaerr(L/pc^2) 6.Sigma_n(1/pc^2) 7.Sigma_nerr(1/pc^2)\n" %(t_myr))
+	writefile1.write("#t=%g\n#1.r2Dlow(pc) 2.r2Dmid(pc) 3.r2Dhigh 4.Sigma(L/pc^2) 5.Sigmaerr(L/pc^2) 6.Sigma_n(1/pc^2) 7.Sigma_nerr(1/pc^2) 8.N_density(1/pc^2) 9.N_densityerr(1/pc^2)\n" %(t_myr))
 
 	lr2d = np.log10(data[:,0])
 	lbinsize = (lr2d[-1]-lr2d[0])/float(BINNO)
 	print lbinsize
+        mtot=data[:,9]; m0=data[:,10]; m1=data[:,11]; biflag=data[:,2]; ksin=data[:,3]; k0=data[:,5]; k1=data[:,6]
 	n2d_prev = 0
-	for i in range(1, BINNO):
+	for i in range(1, BINNO+1):
 		lsum, lsumerr, n2d, n2derr = 0., 0., 0., 0.
 		lsumcut, lsumcuterr, n2dcut, n2dcuterr = 0., 0., 0., 0.
 		lr_high, lr_low = lr2d[0]+i*lbinsize, lr2d[0]+(i-1)*lbinsize
 		lr_mid = (lr_low+lr_high)/2.
 		area = np.pi * ((10.**lr_high)**2. - (10.**lr_low)**2.)
+                nd, ndcut = 0., 0.
 		try:
 			for j in range(int(n2d_prev), len(lr2d)):
 				#print n2d_prev, lr_low, lr_high, lr2d[j]
 				if lr2d[j]<lr_high and lr2d[j]>=lr_low:
 					lsum = lsum + data[j,1]
 					n2d = n2d + 1
+                                        if NCUT!=-1 and biflag[j]!=1 and ksin[j]<10 and mtot[j]>=NCUT:
+                                                nd += 1
+                                        if NCUT!=-1 and biflag[j]==1 and ((k0[j]<10 and m0[j]>=NCUT) or (k1[j]<10 and m1[j]>=NCUT)):
+                                                nd += 1
 					if data[j,1]<LCUT:
 						lsumcut += data[j,1]
 						n2dcut += 1
+                                                if NCUT!=-1 and biflag[j]!=1 and ksin[j]<10 and mtot[j]>=NCUT:
+                                                        ndcut += 1 
+                                                if NCUT!=-1 and biflag[j]==1 and ((k0[j]<10 and m0[j]>=NCUT) or (k1[j]<10 and m1[j]>=NCUT)):
+                                                        ndcut += 1
+                                                                                                                                          
 				else:
 					raise StopIteration()
 		except StopIteration:
-			print 'got value:n2d=', n2d, 'n2d_prev=', n2d_prev
+			print 'got value:n2d=', n2d, 'n2d_prev=', n2d_prev, 'nd=', nd
 		n2d_prev += n2d
 		if n2d>2:
 			sbp, sbperr = lsum/area, lsum/float(n2d)**0.5/area	
 			snp, snperr = n2d/area, float(n2d)**0.5/area
-			writefile.write('%g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbp, sbperr, snp, snperr))
+                        sdp, sdperr = nd/area, float(nd)**0.5/area
+			writefile.write('%g %g %g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbp, sbperr, snp, snperr, sdp, sdperr))
 			if n2dcut>2:
 				############3	
 				sbpcut, sbpcuterr = lsumcut/area, lsumcut/float(n2d)**0.5/area	
 				snpcut, snpcuterr = n2dcut/area, float(n2dcut)**0.5/area
+                                sdpcut, sdpcuterr = ndcut/area, float(ndcut)**0.5/area                              
 				################
-				writefile1.write('%g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbpcut, sbpcuterr, snpcut, snpcuterr))
+				writefile1.write('%g %g %g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbpcut, sbpcuterr, snpcut, snpcuterr, sdpcut, sdpcuterr))
 
 	projfile.close()
 	writefile.close()

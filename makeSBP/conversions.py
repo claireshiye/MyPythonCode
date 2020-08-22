@@ -52,6 +52,11 @@ def SB_converter_tot(I):
         SB_arcsec = (21.572+4.74-2.5*np.log10(I))
         return SB_arcsec
 
+def SD_converter(Epsilon, Rsun):
+    """takes the surface brightness (1/pc^2) and converts to surface brightness (1/arcsec^2)"""
+    SD_arcsec = Epsilon/pc_to_arcsec(1, Rsun)**2
+    return SD_arcsec
+
 def V_band_Lum_calculator(R,L):
     """calculates v-band luminosity from the radius (in units of RSUN) and total Luminosity (in units of LSUN) by integrating Plank's law"""
     sigma = 5.67*10**(-8) ### Stefan-Boltzmann constant in mks

@@ -595,11 +595,11 @@ def printout_Nbh_Npulsar_9to14Gyr(start, end, pathlist):
 
 
 def print_Nns_snap(pathlist, start, end):
-    sourcedir=np.genfromtxt(pathlist, dtype='str')
+    #sourcedir=np.genfromtxt(pathlist, dtype='str')
     #status=sourcedir[:,1]; 
-    sourcedir=sourcedir[:,0]
+    #sourcedir=sourcedir[:,0]
 
-    #sourcedir=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir/NGC6626/tc_on']
+    sourcedir=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_150maxmass_rv1.4/']
     
     for i in range(start, end):
         pref='initial'
@@ -975,6 +975,115 @@ def find_allNS_atbirth(pathlist, start, end):
     fallns.close()
 
 
+##Find the formation channels of all the NSs ever formed in the clusters.
+def find_allNS_atbirth(pathlist, start, end):
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    fallns=open('/projects/b1095/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/allNS_formation1.dat', 'a+')
+    fallns.write('#1.Model 2.CCSN 3.EIC 4.AIC 5.MIC 6.CCSNesc 7.EICesc 8.AICesc 9.MICesc\n')
+    for i in range(start, end):
+        print(sourcedir[i])
+
+        filestr=sourcedir[i]+'/initial'
+        escfile=filestr+'.esc.dat'
+        collfile=filestr+'.collision.log'
+
+        snaps = dyn.get_snapshots(filestr)
+
+
+        ##First get all the NS ids.
+        IDescs=[]; Formationesc=[]
+        IDs=[]; Formation=[]
+        with open(escfile, 'r') as fesc:
+            next(fesc)
+            for line in fesc:
+                dataesc=line.split()
+                if int(dataesc[14])!=1:
+                    if int(dataesc[21])==13: 
+                        IDescs.append(int(dataesc[13])); Formationesc.append(int(dataesc[62]))
+                else:
+                    if int(dataesc[22])==13: 
+                        IDescs.append(int(dataesc[17])); Formationesc.append(int(dataesc[47]))
+                    if int(dataesc[23])==13: 
+                        IDescs.append(int(dataesc[18])); Formationesc.append(int(dataesc[48]))
+
+
+        for k in range(len(snaps)):
+            with gzip.open(snaps[k]) as fsnap:
+                next(fsnap)
+                next(fsnap)
+                for line in fsnap:
+                    datasnap=line.split()
+                    if int(datasnap[7])==1:
+                        if int(datasnap[17])==13:
+                            theID = int(datasnap[10])
+                            if theID not in IDs:
+                                IDs.append(int(datasnap[10])); Formation.append(int(datasnap[49]))
+                        if int(datasnap[18])==13:
+                            theID = int(datasnap[11])
+                            if theID not in IDs:
+                                IDs.append(int(datasnap[11])); Formation.append(int(datasnap[50]))
+                    else:
+                        if int(datasnap[14])==13:
+                            theID = int(datasnap[0])
+                            if theID not in IDs:
+                                IDs.append(int(datasnap[0])); Formation.append(int(datasnap[61]))
+            #print(k)
+
+        
+        ##Pick out the NSs that went through collision and remain a NS
+        ##Remove the collision NSs from the NS lists
+        colldata=scripts1.collision(collfile)
+        collids=colldata.keys()
+        IDcoll=[]; Formationcoll=[]; index_rm=[]
+        IDcollesc=[]; Formationcollesc=[]; indexesc_rm=[]
+        for j in range(len(IDs)):
+            theid=IDs[j]
+            if theid in collids:
+                if 13 in colldata[theid]['parents']['types']:
+                    IDcoll.append(theid); Formationcoll.append(Formation[j])
+                    index_rm.append(j)
+
+        for j in range(len(IDescs)):
+            theidesc=IDescs[j]
+            if theidesc in collids:
+                if 13 in colldata[theidesc]['parents']['types']:
+                    IDcollesc.append(theidesc); Formationcollesc.append(Formationesc[j])
+                    indexesc_rm.append(j)
+
+        new_IDs=np.delete(IDs, index_rm)
+        new_IDescs=np.delete(IDescs, indexesc_rm)
+        new_Fm=np.delete(Formation, index_rm)
+        new_FMescs=np.delete(Formationesc, indexesc_rm)
+        
+        print(len(IDs), len(IDescs))
+        print(len(IDcoll), len(IDcollesc))
+        print(len(new_IDs), len(new_IDescs))
+
+
+        CC=0; EIC=0; AIC=0; MIC=0; abnormal=0
+        for n in range(len(new_Fm)):
+            if new_Fm[n]==4: CC+=1
+            elif new_Fm[n]==5: EIC+=1
+            elif new_Fm[n]==6: AIC+=1
+            elif new_Fm[n]==7: MIC+=1
+            else: abnormal+=1
+        
+        CCesc=0; EICesc=0; AICesc=0; MICesc=0; abnormalesc=0
+        for n in range(len(new_FMescs)):
+            if new_FMescs[n]==4: CCesc+=1
+            elif new_FMescs[n]==5: EICesc+=1
+            elif new_FMescs[n]==6: AICesc+=1
+            elif new_FMescs[n]==7: MICesc+=1
+            else: abnormalesc+=1
+
+
+        fallns.write('%d %d %d %d %d %d %d %d %d\n'%(i, CC, EIC, AIC, MIC, CCesc, EICesc, AICesc, MICesc))
+
+        print(i)
+
+    fallns.close()
+
+
 def find_allNS_fraction():
     dataall=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/allNS_atbirth.dat')
     datanum=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/ns_number_newmodel.dat')
@@ -1235,6 +1344,67 @@ def find_primordialbin(pathlist, msplist):   #Find NS Primordial binaries
     #       ##print x0, x1
 #
         
+
+def find_primdbin_AIC(pathlist, start, end):   
+#Find how many AIC MSPs are from primordial binaries
+    datamsp=np.genfromtxt('/projects/b1095/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/kickgrid_msp_newmodel.dat')
+    IDmsp0=datamsp[:,1]; ID1msp1=datamsp[:,2]
+
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+
+    for i in range(start, end):
+        print(sourcedir[i])
+
+        filestr=sourcedir[i]+'/initial'
+
+        snaps = dyn.get_snapshots(filestr)
+
+        ##First get all the AIC NS ids.
+        ID0=[]; ID1=[]
+        for k in range(len(snaps)):
+            with gzip.open(snaps[k]) as fsnap:
+                next(fsnap)
+                next(fsnap)
+                for line in fsnap:
+                    datasnap=line.split()
+                    if int(datasnap[7])==1:
+                        if int(datasnap[17]) == 13 and int(datasnap[49]) == 6:
+                            theID = int(datasnap[10])
+                            if theID not in ID0:
+                                ID0.append(int(datasnap[10])); ID1.append(int(datasnap[11]))
+                        if int(datasnap[18]) == 13 and int(datasnap[50]) == 6:
+                            theID = int(datasnap[11])
+                            if theID not in ID0:
+                                ID0.append(int(datasnap[11])); ID1.append(int(datasnap[10]))
+      
+
+        ##Then check which AIC NSs are formed in primordial binaries
+        IDpri0=[]; IDpri1=[]
+        with gzip.open(snaps[0]) as f1:
+            next(f1)
+            next(f1)
+            for line in f1:
+                data1=line.split()
+                if int(data1[7])==1:
+                    for j in range(len(ID0)):
+                        if (int(data1[10]) == ID0[j] and int(data1[11]) == ID1[j]):
+                            IDpri0.append(int(data1[10])); IDpri1.append(int(data1[11]))
+
+                        if (int(data1[11]) == ID0[j] and int(data1[10]) == ID1[j]):
+                            IDpri0.append(int(data1[11])); IDpri1.append(int(data1[10]))
+        print(IDpri0, IDpri1)
+
+        Model=[]; IDf0=[]; IDf1=[]
+        for x in range(len(IDmsp0)):
+            for y in range(len(IDpri0)):
+                if IDpri0[y] == IDmsp0[x]:
+                    print('MSP:', IDpri0[y])
+                    Model.append(i); IDf0.append(IDpri0[y]); IDf1.append(IDpri1[y])
+
+        print(i)
+    
+    print(Model, IDf0, IDf1)
+
 
 def find_pulsar(sourcedir):
     sispin=[]; bispin=[]; Bs=[]; Bb=[]; idns=[]; idcom=[]; B=[]

@@ -193,5 +193,5 @@ for i in range(0,len(lines)-1):
                 ax2.set_ylabel(r'$\sigma_v\,(\rm{km\,s^{-1}})$',fontsize=24)
 		ax2.legend(loc=3,scatterpoints=1)
 		#plt.show()
-		plt.savefig(path+'vel_sbp.pdf', dpi=300)	
+		plt.savefig(path+'vel_sbp_'+snapno+'.pdf', dpi=300)	
 		break

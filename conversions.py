@@ -43,14 +43,19 @@ def arcsec_to_pc(arcsec, R_sun):
 
 def SB_converter(I_v):
     """takes I_v (V-band Luminosity/pc^2) and converts to mu_v in V_mag/arcsec^2"""
-    SB_arcsec = (21.572+4.83-2.5*np.log10(I_v))
     #SB_arcsec = (21.572-2.5*np.log10(I_v))
+    SB_arcsec = (21.572+4.83-2.5*np.log10(I_v))
     return SB_arcsec
 
 def SB_converter_tot(I):
         """takes I (Luminosity/pc^2) and converts to mu in mag/arcsec^2"""
         SB_arcsec = (21.572+4.74-2.5*np.log10(I))
         return SB_arcsec
+
+def SD_converter(Epsilon, Rsun):
+    """takes the surface brightness (1/pc^2) and converts to surface brightness (1/arcsec^2)"""
+    SD_arcsec = Epsilon/pc_to_arcsec(1, Rsun)**2
+    return SD_arcsec
 
 def V_band_Lum_calculator(R,L):
     """calculates v-band luminosity from the radius (in units of RSUN) and total Luminosity (in units of LSUN) by integrating Plank's law"""

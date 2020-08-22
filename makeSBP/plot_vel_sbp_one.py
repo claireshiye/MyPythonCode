@@ -1,16 +1,20 @@
 import numpy as np
 import conversions
 import sys
+from glob import glob
+import gzip
 import matplotlib
+import matplotlib.cm as cm
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 matplotlib.use('PDF')
 
-#path = np.str(sys.argv[1])
+
+path = np.str(sys.argv[1])
 
 #snapno = np.str(sys.argv[2])
 
-cluster = np.str(sys.argv[1])
+cluster = np.str(sys.argv[2])
 
 ft = open('trager.dat','r')
 linest = ft.readlines()
@@ -69,20 +73,15 @@ if flag == 0:
         print 'No observed sigmav profile'
         sys.exit()
 
-#pathfile=np.genfromtxt('/projects/b1095/syr904/cmc/47Tuc/rundir/lowIMF/path_lowimf.dat', dtype=str)
-#snap2d=pathfile[:,1]; paths=pathfile[:,0]; mass=pathfile[:,-1]
-paths=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc/', '/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_largertidal/', '/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_150maxmass/']
-snap2d=['0453','0459','0605']
-#rv=[0.75, 0.75, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 3.0, 3.0]
-#alpha1=[0.1, 0.4, 0.7, 0.99, 1.3, 1.6]
-cs=['red', 'orange', 'blue']
-lss=['-', '-', '-']
-rv=['1.84', '1.84', '1.8']
-rg=['5.47', '7.4', '7.4']
-maxm=['50', '50', '150']
-#prof=['King-100Myr', 'King-1Gyr', 'King-14Gyr', 'Elson-100Myr', 'Elson-1Gyr', 'Elson-14Gyr']
-#cs=['blue','blue','blue','orange','orange','orange']
-#lss=['-.','--', '-', '-.', '--', '-']
+
+snap2D = np.sort(glob(path+'initial.snap*.2Dproj.dat.gz'))
+print snap2D
+snap2D_L15 = np.sort(glob(path+'initial.snap*.2D_SBPLcut15.dat'))
+snap_giant = np.sort(glob(path+'initial.snap*.vel_dispersion_giants_25.dat'))
+
+cs = cm.Blues(np.linspace(0.5, 1, len(snap2D)))
+#cmap=matplotlib.colors.ListedColormap([c[0], c[1], c[2], c[3]])
+
 
 fig, (ax1, ax2)=plt.subplots(2, 1, sharex=True, figsize=(10,16))
 ax2.scatter(R_obs, sigma_obs,c='gold',s=30, edgecolor='black')
@@ -90,10 +89,15 @@ ax2.errorbar(R_obs,sigma_obs,yerr=2*sigma_err_obs_up, fmt='o',c='gold', lw=2.0)
 ax1.scatter(10**arcsec_t[:], SB_t[:],facecolor='gold',edgecolor='black',s=20,label=r'$\rm{Trager\,et\,al.\,1995}$')
 ax2.scatter([10000,10000],[-5,-5],c='gold',s=30, edgecolor='black',label=r'$\rm{Baumgardt\,&\,Hilker\,(2018)}$')
 
-for i in range(0, len(paths)):
-    path=paths[i]
-    snapno=snap2d[i]
-    data5 = np.genfromtxt(path+'initial.snap'+snapno+'.2D_SBPLcut15.dat')
+for i in range(0, len(snap2D)):
+    with gzip.open(snap2D[i], 'r') as f2D:
+        first_line=f2D.readline()
+            
+    t_gyr = first_line.strip().split('=')[-1]
+    print t_gyr 
+    if t_gyr>12000.: continue
+
+    data5 = np.genfromtxt(snap2D_L15[i])
     arcsec = conversions.pc_to_arcsec(data5[:,1],R_sun_obs)
     SB = conversions.SB_converter(data5[:,3])
     SBerr = data5[:,6]/data5[:,5]*SB
@@ -109,7 +113,7 @@ for i in range(0, len(paths)):
             SB_cut.append(SB[k])
             #SBerr_cut.append(SBerr[k])
 
-    dataG = np.genfromtxt(path+'initial.snap'+snapno+'.vel_dispersion_giants_25.dat')
+    dataG = np.genfromtxt(snap_giant[i])
     R_model = conversions.pc_to_arcsec(dataG[:,0],R_sun_obs)
     sigma_model = dataG[:,1]
     sigma_err_model = dataG[:,2]
@@ -125,7 +129,7 @@ for i in range(0, len(paths)):
     #print 'Nbh:', Nbh
     #print 'Nns:', Nns
 
-    ax1.plot(arcsec_cut, SB_cut, lw=2, color=cs[i], ls=lss[i])
+    ax1.plot(arcsec_cut, SB_cut, lw=2, color=cs[i])
     ax2.scatter(R_model, sigma_model,s=15,zorder=2,alpha=0.5, color=cs[i])
     ax2.errorbar(R_model,sigma_model,yerr=2*sigma_err_model, fmt='o',markersize=0.01,zorder=1,alpha=0.5, color=cs[i])
     #ax2.scatter(R_obs, sigma_obs,c='gold',s=30, edgecolor='black')
@@ -134,7 +138,7 @@ for i in range(0, len(paths)):
 
     #ax1.title(cluster,fontsize=24)
     #ax1.text(300,15,cluster,fontsize=20)
-    ax1.plot([10000,10000],[-5,-5], lw=2, ls=lss[i], label='maxm:'+maxm[i]+', rg:'+rg[i], color=cs[i])
+    ax1.plot([10000,10000],[-5,-5], lw=2, label='time = '+str(t_gyr), color=cs[i])
     #ax1.scatter(10**arcsec_t[:], SB_t[:],facecolor='gold',edgecolor='black',s=20,label=r'$\rm{Trager\,et\,al.\,1995}$')
     ax1.set_xscale('log')
     ax1.set_xlim(0.03,5000)
@@ -143,7 +147,7 @@ for i in range(0, len(paths)):
     ax1.set_ylabel(r'$\mu_v$',fontsize=24)
     ax1.legend(loc='best',scatterpoints=1, ncol=2)
 
-    ax2.scatter([10000,10000],[-5,-5],lw=2,label='maxm:'+maxm[i]+', rg:'+rg[i], color=cs[i])
+    ax2.scatter([10000,10000],[-5,-5],lw=2,label='time = '+str(t_gyr), color=cs[i])
     #ax2.scatter([10000,10000],[-5,-5],c='gold',s=30, edgecolor='black',label=r'$\rm{Baumgardt\,&\,Hilker\,(2018)}$')
     ax2.set_xscale('log')
     ax2.set_xlim(0.03,5000)
@@ -152,4 +156,4 @@ for i in range(0, len(paths)):
     ax2.set_ylabel(r'$\sigma_v\,(\rm{km\,s^{-1}})$',fontsize=24)
     ax2.legend(loc=3,scatterpoints=1, ncol=2)
     #plt.show()
-    plt.savefig('/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/sbp_vel_47Tuc_maxm.pdf', dpi=300)
+    plt.savefig(path+'sbp_vel_timeserie.pdf', dpi=300)

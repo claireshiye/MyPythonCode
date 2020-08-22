@@ -13,7 +13,7 @@ import scripts3
 import scripts1
 import scripts2
 import ns
-import NS_tidalcapture as tc
+import ns_tidalcapture as tc
 #from scipy import stats
 
 yearsc=31557600.

@@ -13,6 +13,7 @@ import gzip
 import math
 import re
 import history_cmc as hcmc
+import conversions
 
 savepath='/projects/b1095/syr904/projects/SGRB'
 
@@ -472,3 +473,28 @@ def find_binint(hdict, theid, comid, modelno, tconv, fname):
 
     #print ain, aout
     #return timeint, typeint, ain, ein, minp, aout, eout, mout
+
+
+##Find the mass within a radius of the cluster. 
+##Input radius is in the unit of arcsec. Input R_sun is in the radius of kpc
+def find_mass_inradius(modelpath, snap2d_no, radius_arcsec, R_sun_kpc):
+    #data2d=np.genfromtxt(modelpath+'initial.snap'+snap2d_no+'.2Dproj.dat.gz')
+    #r2d=data2d[:,0]; Mr=data2d[:,9]   ##r2d in pc and Mr in Msun
+
+    rcut=conversions.arcsec_to_pc(radius_arcsec, R_sun_kpc)
+
+    Mtot_cut=0; Mtot=0
+    with gzip.open(modelpath+'initial.snap'+snap2d_no+'.2Dproj.dat.gz', 'r') as f2d:
+        next(f2d)
+        next(f2d)
+        for line in f2d:
+            data2d=line.split()
+            Mtot+=float(data2d[9])
+
+            if float(data2d[0])<=rcut:
+                Mtot_cut+=float(data2d[9])
+
+    print(Mtot_cut, Mtot)
+
+
+
