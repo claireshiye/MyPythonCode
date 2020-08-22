@@ -90,5 +90,7 @@ def ComovingDistance(redshift):
 	cosmo = FlatLambdaCDM(H0=69.6, Om0=0.286)
 	return cosmo.comoving_distance(redshift)
 
-
-
+def SD_converter(Epsilon, Rsun):
+    """takes the surface brightness (1/pc^2) and converts to surface brightness (1/arcsec^2)"""
+    SD_arcsec = Epsilon/pc_to_arcsec(1, Rsun)**2
+    return SD_arcsec

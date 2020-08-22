@@ -276,7 +276,7 @@ def convert_to_3d(r, vr, vt):
 
 	return r3d, v3d
 
-def velocity_dispersion(path,string, snapno,ALL=1):
+def velocity_dispersion(path,string,snapno,ALL=1,Bin_no=25):
 	import scripts
 	import random
 	units=scripts.read_units(path+string)
@@ -380,7 +380,7 @@ def velocity_dispersion(path,string, snapno,ALL=1):
 	bin_count = 0
 	total_count = 0
 	for j in range(0,len(array)):   
-		if total_count <= 25:
+		if total_count <= Bin_no:
 		#if total_count <= 500:
 			vel_array.append(array[j,1])
 			r_array.append(array[j,0])

@@ -32,15 +32,18 @@ Lsun=4.02*10**16 ##mJy*kpc^2
 def readdata_freire():
     #from astropy.extern.six.moves.urllib import request
     #url = 'http://www.naic.edu/~pfreire/GCpsr.txt'
-    #open('GCpsr.txt', 'wb').write(request.urlopen(url).read())
+    #open('/projects/b1095/syr904/projects/PULSAR/GC_psr.txt', 'wb').write(request.urlopen(url).read())
     
     K=5.7*10**19
     p=[]; pdot=[]; binflag=[]; namespin=[] #Ps=[]; Pdots=[]; Bs=[]; Pb=[]; Pdotb=[]; Bb=[]  ##P unit ms, dpdt has a factor of 10^-20
     Ns=0; Nb=0.  ##Calculating the numbers of single and binary pulsars
     period=[]; ecc=[]; mc=[]; names=[]
+    
+    pall=[]; bfall=[]; nameall=[]
 
+    ntot=0
 
-    with open('/projects/b1095/syr904/projects/PULSAR/GCpsr.txt', 'rb') as f:
+    with open('/projects/b1095/syr904/projects/PULSAR/GC_psr.txt', 'rb') as f:
         for _ in range(4):
             next(f)
         for line in f:
@@ -50,11 +53,17 @@ def readdata_freire():
             for item in datanew:
                 data.append(re.sub(r'\([^)]*\)', '', item.decode('utf-8')))
             #print(datanew)
+            #print(data)
             if not data: continue
             if str(data[0][0])=='J' or data[0][0]=='B':
+                ntot+=1
                 ##Calculate numbers
-                if str(data[5])=='i': Ns+=1
-                if str(data[5])!='i' and str(data[5])!='*': Nb+=1
+                if str(data[5])=='i': 
+                    Ns+=1; pall.append(float(data[2])); bfall.append(0); nameall.append(data[0])
+                elif str(data[5])!='i' and str(data[5])!='*': 
+                    Nb+=1; pall.append(float(data[2])); bfall.append(1); nameall.append(data[0])
+                else:
+                    pall.append(float(data[2])); bfall.append(-100); nameall.append(data[0]) 
              
                 ##Extract orbital data
                 if str(data[5])!='i' and str(data[5])!='*':
@@ -114,5 +123,6 @@ def readdata_freire():
     #Ps=np.array(Ps); Pb=np.array(Pb); Pdots=np.array(Pdots); Pdotb=np.array(Pdotb)
     #Bs=np.array(Bs); Bb=np.array(Bb)
     ##print Bs, Bb
-    print(pdot)
-    return p, pdot, binflag, namespin, period, ecc, mc, names
+    #print(pdot)
+    print(ntot)
+    return p, pdot, binflag, namespin, period, ecc, mc, names, pall, bfall, nameall

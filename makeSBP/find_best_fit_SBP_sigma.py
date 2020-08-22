@@ -1,6 +1,8 @@
 import numpy as np
 import conversions
 import sys
+import matplotlib
+matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 
 cluster = np.str(sys.argv[1])
@@ -214,21 +216,25 @@ for i in range(0,len(lines)-1):
 		ind = np.argpartition(chi_sq_arr, bf_number)[:bf_number]
                 #print ind
 		N_bh_array = []
-		ax1 = plt.subplot(211)
-		ax2 = plt.subplot(212)
+                #print 'check'
+                fig, (ax1, ax2) = plt.subplots(nrows = 2)
+		#ax1 = plt.subplot(211)
+		#ax2 = plt.subplot(212)
+                #print 'check'
                 for n in range(len(ind)):
                         loc = ind[n]
 			#print ID_h, Mass_h, Mass[loc], rc_h, rc[loc], rh_h, rh[loc], np.len(chi_sq_arr)
+                        finfo = open('/projects/b1095/syr904/projects/massive_clusters/matching_SBP/'+cluster+'_info.txt','w')
 			print '####################'
-			print ID_h, i
-			print 'Mass:', Mass_h, Mass_arr[loc]
-			print 'rc:', rc_h, rc_arr[loc]
-			print 'rh:', rh_h, rh_arr[loc]
-			print 'Nbh:', Nbh_arr[loc]
-			print 'Nns:', Nns_arr[loc]
-			print 'Number of fits:', len(chi_sq_arr), 'Goodness of fit:', chi_sq_arr[loc]
-			print 'rv:', rv_arr[loc], 'N:',N_arr[loc], 'time:', t_arr[loc], 'Z:', Z_bin, 'Rgc:', Rgc_bin
-			print 'path:', path_arr[loc], 'snapno:', snapno_arr[loc]
+			print >> finfo, ID_h, i
+			print >> finfo, 'Mass:', Mass_h, Mass_arr[loc]
+			print >> finfo, 'rc:', rc_h, rc_arr[loc]
+			print >> finfo, 'rh:', rh_h, rh_arr[loc]
+			print >> finfo, 'Nbh:', Nbh_arr[loc]
+			print >> finfo, 'Nns:', Nns_arr[loc]
+			print >> finfo, 'Number of fits:', len(chi_sq_arr), 'Goodness of fit:', chi_sq_arr[loc]
+			print >> finfo, 'rv:', rv_arr[loc], 'N:',N_arr[loc], 'time:', t_arr[loc], 'Z:', Z_bin, 'Rgc:', Rgc_bin
+			print >> finfo, 'path:', path_arr[loc], 'snapno:', snapno_arr[loc]
 
 			## Get SBP for best-fit model
 			data_bf = np.genfromtxt(path_arr[loc]+'initial.snap'+snapno_arr[loc]+'.2D_SBPLcut15.dat')
@@ -258,8 +264,9 @@ for i in range(0,len(lines)-1):
 			#############################
 			N_bh_array.append(Nbh_arr[loc])
 
-		print 'BH mean+range:',np.mean(N_bh_array), np.max(N_bh_array), np.min(N_bh_array)
-		#ax1.title(cluster,fontsize=24)
+		print >> finfo, 'BH mean+range:',np.mean(N_bh_array), np.max(N_bh_array), np.min(N_bh_array)
+	        finfo.close()	
+                #ax1.title(cluster,fontsize=24)
 		ax1.text(300,15,ID_h,fontsize=20)
 		ax1.plot([10000,10000],[-5,-5],lw=2,color='black',label=r'$\rm{Best-fit\,models}$')
 		ax1.scatter(10**arcsec_t[:], SB_t[:],facecolor='gold',edgecolor='black',s=20,label=r'$\rm{Trager\,et\,al.\,1995}$')
@@ -278,5 +285,5 @@ for i in range(0,len(lines)-1):
                 ax2.set_xlabel(r'$r\,(\rm{arcsec})$',fontsize=20)
                 ax2.set_ylabel(r'$\sigma_v\,(\rm{km\,s^{-1}})$',fontsize=24)
 		ax2.legend(loc=3,scatterpoints=1)
-		plt.show()	
+		plt.savefig('/projects/b1095/syr904/projects/massive_clusters/matching_SBP/'+cluster+'.pdf', dpi=300)
 		break

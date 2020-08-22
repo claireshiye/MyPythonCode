@@ -13,10 +13,10 @@ import blackhole
 import extract_observed_prop as OBS
 
 
-path = '/projects/b1095/syr904/cmc/47Tuc/rundir/rv1.0_rg7.4_z0.0038_N7.5e5_alpha32.3_fb0.05/'
-N=7.5e5
+path = '/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_elson_rv4_3e6/'
+N=3000000
 Z=0.0038
-rv=1.0
+rv=4
 rg=7.4
 
 string = 'initial'
@@ -40,9 +40,9 @@ for k in range(len(time_array)-1,-1,Delta):
 	time = time_array[k]
 	snapno = snap_array[k]
 	print 'time=', time, 'snapno=', snapno,
-	#if time < 10000:
-	#	print 'stop!'
-	#	break
+	if time < 10000:
+		print 'stop!'
+		break
 	try:
 		f = open(path+'initial.snap'+snapno+'.vel_dispersion_giants_25.dat','r')
 		print snapno, 'is done'
@@ -131,7 +131,7 @@ for k in range(len(time_array)-1,-1,Delta):
 			print 'made params file'
 			blackhole.get_sbp_from_2D_projection(path+string, snapno)
 			print snapno, 'made SBP'
-			finder2.velocity_dispersion(path,string, snapno, ALL=0)
+			finder2.velocity_dispersion(path,string, snapno, ALL=0, Bin_no=100)
 			print 'Made vel dispersion for',snapno
 		except:
 			print snapno, 'failed'
