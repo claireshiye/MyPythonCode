@@ -3,7 +3,6 @@ import os,sys
 from collections import Counter
 import re
 import gzip
-
 import scripts
 import scripts1
 import scripts2
@@ -31,18 +30,65 @@ def find_tc_properties(filepath):
     tcfile=filestr+'.tidalcapture.log'
     t=[]; types=[]; id0i=[]; id1i=[]; m0i=[]; m1i=[]; k0i=[]; k1i=[]; r0i=[]; r1i=[]; rperi=[]
     a=[]; e=[]; id0f=[]; id1f=[]; m0f=[]; m1f=[]; k0f=[]; k1f=[]; r0f=[]; r1f=[]
+    v_inf = []
 
     t_des=[]; type_des=[]; rperi_des=[]; idf_des=[]; mf_des=[]; kf_des=[]
     id0_des=[]; id1_des=[]; m0_des=[]; m1_des=[]; k0_des=[]; k1_des=[]; r0_des=[]; r1_des=[]
+    v_inf_des=[]
 
+    n_tc_merged = 0; n_giant_coll = 0
     with open(tcfile, 'r') as ftc:
         next(ftc)
         for line in ftc:
             data=line.split()
             #print(data)
             #numstr=re.findall(r"\d*\.\d+|\d+", data[2])
-            if data[0]=='coll_CE_debug':
+
+
+            if data[0] == 'coll_CE_debug': continue
+            if data[1]=='SS_COLL_TC_P_FAILED' or data[1]=='SS_COLL_GW':
                 continue
+            if data[2][-1] == 'd' and data[1] == 'SS_COLL_TC_P': 
+                n_tc_merged+=1
+                numstr=re.split(',|\(|\)|->|\[|\]', data[2])
+                numstr=list(filter(None, numstr))
+                numstr=list(filter(lambda x: x!='+', numstr))
+
+                #if len(numstr)>19: 
+                #    expo=float(numstr.pop(14))
+                #    numstr[13]=str(float(numstr[13])**(-expo))
+                numstr[9] = numstr[9][1:]
+
+                t_des.append(float(data[0])); type_des.append(data[1])
+                id0_des.append(int(numstr[0])); id1_des.append(int(numstr[3]))
+                m0_des.append(float(numstr[1])); m1_des.append(float(numstr[4]))
+                k0_des.append(int(numstr[2])); k1_des.append(int(numstr[5]))
+                r0_des.append(float(numstr[6])); r1_des.append(float(numstr[7]))
+                rperi_des.append(float(numstr[8])); v_inf_des.append(float(numstr[9]))
+
+                continue
+
+            if data[2][-1] == 'd' and data[1] == 'SS_COLL_Giant': 
+                n_giant_coll+=1
+                numstr=re.split(',|\(|\)|->|\[|\]', data[2])
+                numstr=list(filter(None, numstr))
+                numstr=list(filter(lambda x: x!='+', numstr))
+
+                #if len(numstr)>19: 
+                #    expo=float(numstr.pop(14))
+                #    numstr[13]=str(float(numstr[13])**(-expo))
+                numstr[9] = numstr[9][1:]
+
+                t_des.append(float(data[0])); type_des.append(data[1])
+                id0_des.append(int(numstr[0])); id1_des.append(int(numstr[3]))
+                m0_des.append(float(numstr[1])); m1_des.append(float(numstr[4]))
+                k0_des.append(int(numstr[2])); k1_des.append(int(numstr[5]))
+                r0_des.append(float(numstr[6])); r1_des.append(float(numstr[7]))
+                rperi_des.append(float(numstr[8])); v_inf_des.append(float(numstr[9]))
+
+                continue
+
+
             numstr=re.split(',|\(|\)|->|\[|\]', data[2])
             numstr=list(filter(None, numstr))
             numstr=list(filter(lambda x: x!='+', numstr))
@@ -50,43 +96,34 @@ def find_tc_properties(filepath):
             #if len(numstr)>19: 
             #    expo=float(numstr.pop(14))
             #    numstr[13]=str(float(numstr[13])**(-expo))
+            numstr[9] = numstr[9][1:]
+            numstr[13] = numstr[13][1:]; numstr[14] = numstr[14][:-1]
             #print(numstr)
 
-            if data[1]=='SS_COLL_TC_P_FAILED' or data[1]=='SS_COLL_GW':
-                continue
 
-            elif len(numstr)<=12:
-                t_des.append(float(data[0])); type_des.append(data[1])
-                id0_des.append(int(numstr[0])); id1_des.append(int(numstr[3]))
-                m0_des.append(float(numstr[1])); m1_des.append(float(numstr[4]))
-                k0_des.append(int(numstr[2])); k1_des.append(int(numstr[5]))
-                r0_des.append(float(numstr[6])); r1_des.append(float(numstr[7]))
-                rperi_des.append(float(numstr[8]))
+            #print(numstr)
+            ##Initial properties
+            t.append(float(data[0]))
+            types.append(data[1])
+            id0i.append(int(numstr[0])); id1i.append(int(numstr[3]))
+            m0i.append(float(numstr[1])); m1i.append(float(numstr[4]))
+            k0i.append(int(numstr[2])); k1i.append(int(numstr[5]))
+            r0i.append(float(numstr[6])); r1i.append(float(numstr[7]))
+            rperi.append(float(numstr[8]))
+            v_inf.append(float(numstr[9]))
 
-                idf_des.append(int(numstr[9])); mf_des.append(float(numstr[10]))
-                kf_des.append(int(numstr[11]))
+            ##Final properties
+            id0f.append(int(numstr[10])); id1f.append(int(numstr[15]))
+            m0f.append(float(numstr[11])); m1f.append(float(numstr[16]))
+            k0f.append(int(numstr[12])); k1f.append(int(numstr[17]))
+            a.append(float(numstr[13])); e.append(float(numstr[14]))
+            r0f.append(float(numstr[18])); r1f.append(float(numstr[19]))
 
-            else:
-                #print(numstr)
-                ##Initial properties
-                t.append(float(data[0]))
-                types.append(data[1])
-                id0i.append(int(numstr[0])); id1i.append(int(numstr[3]))
-                m0i.append(float(numstr[1])); m1i.append(float(numstr[4]))
-                k0i.append(int(numstr[2])); k1i.append(int(numstr[5]))
-                r0i.append(float(numstr[6])); r1i.append(float(numstr[7]))
-                rperi.append(float(numstr[8]))
-
-                ##Final properties
-                id0f.append(int(numstr[9])); id1f.append(int(numstr[14]))
-                m0f.append(float(numstr[10])); m1f.append(float(numstr[15]))
-                k0f.append(int(numstr[11])); k1f.append(int(numstr[16]))
-                a.append(float(numstr[12][1:])); e.append(float(numstr[13][:-1]))
-                r0f.append(float(numstr[17])); r1f.append(float(numstr[18]))
-
-    Prop_init = {'time':t, 'type':types, 'id0': id0i, 'id1': id1i, 'm0': m0i, 'm1': m1i, 'k0': k0i, 'k1': k1i, 'r0': r0i, 'r1': r1i, 'rperi': rperi}
+    Prop_init = {'time':t, 'type':types, 'id0': id0i, 'id1': id1i, 'm0': m0i, 'm1': m1i, 'k0': k0i, 'k1': k1i, 'r0': r0i, 'r1': r1i, 'rperi': rperi, 'vinf': v_inf}
     Prop_finl = {'id0': id0f, 'id1': id1f, 'm0': m0f, 'm1': m1f, 'k0': k0f, 'k1': k1f, 'r0': r0f, 'r1': r1f, 'sma': a, 'ecc': e}
-    Prop_des = {'time':t_des, 'type':type_des, 'id0': id0_des, 'id1': id1_des, 'm0': m0_des, 'm1': m1_des, 'k0': k0_des, 'k1': k1_des, 'r0': r0_des, 'r1': r1_des, 'rperi': rperi_des, 'idf': idf_des, 'mf': mf_des, 'kf': kf_des}
+    Prop_des = {'time':t_des, 'type':type_des, 'id0': id0_des, 'id1': id1_des, 'm0': m0_des, 'm1': m1_des, 'k0': k0_des, 'k1': k1_des, 'r0': r0_des, 'r1': r1_des, 'rperi': rperi_des, 'vinf': v_inf_des}
+
+    print('n_giant_coll:', n_giant_coll, 'n_tc_merged:', n_tc_merged)
 
     return Prop_init, Prop_finl, Prop_des
 
@@ -257,7 +294,7 @@ def find_NSMS_atalltime(filepath, savepath):
 
 
 
-##Find the unique rb progenitors at their first and last timesteps from the rb_progenitor_alltimes.dat file
+##Find the unique redback progenitors at their first and last timesteps from the rb_progenitor_alltimes.dat file
 def find_rbprogen_Unique(savepath, modelpath):
     data=np.genfromtxt(savepath+'rb_progenitor_alltimes.dat')
     times=data[:,0]; id0=data[:,1]; id1=data[:,2]
@@ -357,6 +394,134 @@ def find_msp_NSMS_9to14Gyr(savepath):
     #        f.write(data_all[i])
 
     #f.close()
+
+
+##Find the frequency of all collisions from single-single and from fewbody in the collision file
+##Make a table like the BSE collision table
+def find_num_allcollision():
+    pathlist = np.genfromtxt('/projects/b1095/syr904/projects/tidal_capture/path_allfinished_newruns_maingrid.dat', dtype=str)
+    filepaths = pathlist[:,0]; status = pathlist[:,1]
+    
+    index_delete = []
+    for i in range(len(status)):
+        if status[i] != '1':
+            index_delete.append(i)
+
+    path_finished = list(np.delete(filepaths, index_delete))
+    #print(len(path_finished))
+
+    ss = np.zeros([15, 15]); fewbody = np.zeros([15, 15])
+    fewbody_34 = np.zeros([15, 15])
+    n34 = 0; n34_gg = 0; n34_g = 0
+    n_ss_gg = 0; n_fb_gg = 0
+    n_ss_g = 0; n_fb_g = 0
+    for j in range(len(path_finished)):
+        #print(path_finished[j])
+        collfile = path_finished[j]+'initial.collision.log'
+        colldata = scripts1.collision(collfile)
+        print(len(colldata))
+        
+        IDs = list(colldata.keys())
+
+        for k in range(len(IDs)):
+            if colldata[IDs[k]]['interaction'] == 'single-single':
+                x_tmp = int(colldata[IDs[k]]['parents']['types'][0])
+                y_tmp = int(colldata[IDs[k]]['parents']['types'][1])
+
+                if x_tmp<y_tmp: xvalue = x_tmp; yvalue = y_tmp
+                else: xvalue = y_tmp; yvalue = x_tmp
+
+                ss[xvalue, yvalue]+=1
+
+                if (2<=xvalue<=9 and xvalue!=7) and (2<=yvalue<=9 and yvalue!=7):
+                    n_ss_gg += 1
+                elif (2<=xvalue<=9 and xvalue!=7) or (2<=yvalue<=9 and yvalue!=7):
+                    n_ss_g += 1
+
+            elif colldata[IDs[k]]['interaction'] == 'binary-single' or colldata[IDs[k]]['interaction'] == 'binary-binary':
+                nopars = len(colldata[IDs[k]]['parents']['types'])
+                partypes = colldata[IDs[k]]['parents']['types']
+                if nopars < 3:
+                    x_tmp = int(colldata[IDs[k]]['parents']['types'][0])
+                    y_tmp = int(colldata[IDs[k]]['parents']['types'][1])
+
+                    if x_tmp<y_tmp: xvalue = x_tmp; yvalue = y_tmp
+                    else: xvalue = y_tmp; yvalue = x_tmp
+
+                    fewbody[xvalue, yvalue]+=1
+                    fewbody_34[xvalue, yvalue]+=1
+
+                    if (2<=xvalue<=9 and xvalue!=7) and (2<=yvalue<=9 and yvalue!=7):
+                        n_fb_gg += 1
+                    elif (2<=xvalue<=9 and xvalue!=7) or (2<=yvalue<=9 and yvalue!=7):
+                        n_fb_g += 1
+                else:
+                    n34 += 1
+                    n_giant = 0
+                    for x in range(nopars):
+                        if 2<=int(partypes[x])<=9 and int(partypes[x])!=7:
+                            n_giant += 1
+
+                    if n_giant>=2: 
+                        n34_gg += 1
+                    elif n_giant>=1:
+                        n34_g += 1
+
+                    pt_sort = np.sort(partypes)
+                    if nopars == 3:
+                        xvalue = int(pt_sort[0])
+                        yvalue = int(pt_sort[1])
+                        zvalue = int(pt_sort[2])
+
+                        fewbody_34[xvalue, yvalue]+=1
+                        fewbody_34[xvalue, zvalue]+=1
+                        fewbody_34[yvalue, zvalue]+=1
+
+                    if nopars == 4:
+                        xvalue = int(pt_sort[0])
+                        yvalue = int(pt_sort[1])
+                        zvalue = int(pt_sort[2])
+                        wvalue = int(pt_sort[3])
+
+                        fewbody_34[xvalue, yvalue]+=1
+                        fewbody_34[xvalue, zvalue]+=1
+                        fewbody_34[xvalue, wvalue]+=1
+                        fewbody_34[yvalue, zvalue]+=1
+                        fewbody_34[yvalue, wvalue]+=1
+                        fewbody_34[zvalue, wvalue]+=1
+
+                    #print(colldata[IDs[k]])
+
+
+    sscoll_sum = np.sum(ss)
+    fewbodycoll_sum = np.sum(fewbody)
+    tot_sum = sscoll_sum+fewbodycoll_sum
+
+    ss_frac = ss/tot_sum
+    fewbody_frac = fewbody/tot_sum
+
+    ss_permodel = ss/len(path_finished)
+    fewbody_permodel = fewbody/len(path_finished)
+    fewbody34_permodel = fewbody_34/len(path_finished)
+
+
+    #np.savetxt('/projects/b1095/syr904/projects/tidal_capture/sscoll_frac_maingrid.txt', ss_frac, fmt = '%f', delimiter=" ")
+    #np.savetxt('/projects/b1095/syr904/projects/tidal_capture/fewbodycoll_frac_maingrid.txt', fewbody_frac, fmt = '%f', delimiter=" ")
+
+    np.savetxt('/projects/b1095/syr904/projects/tidal_capture/sscoll_permodel_maingrid.txt', ss_permodel, fmt = '%f', delimiter=" ")
+    np.savetxt('/projects/b1095/syr904/projects/tidal_capture/fewbodycoll_permodel_maingrid.txt', fewbody_permodel, fmt = '%f', delimiter=" ")
+    np.savetxt('/projects/b1095/syr904/projects/tidal_capture/fewbody34coll_permodel_maingrid.txt', fewbody34_permodel, fmt = '%f', delimiter=" ")
+
+
+    #print(ss)
+    #print(fewbody)
+    print(sscoll_sum, fewbodycoll_sum, tot_sum, n34)
+    print(n_ss_gg, n_fb_gg, n34_gg)
+    print(n_ss_g, n_fb_g, n34_g)
+
+
+##Find how the tidal capture binaries/giant collision binaries are disrupted or not
+#def find_howbin_disrupt():
 
 
 

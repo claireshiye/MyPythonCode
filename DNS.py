@@ -104,7 +104,8 @@ def find_formationtime_DNS_new(ids, filestring, flag):
     tinteract_last=0
     primordial=0; dynamics_eject=0; anydyn=0
     with gzip.open(firstsnap, 'r') as ffirst:
-        for _ in xrange(2): next(ffirst)
+        next(ffirst)
+        next(ffirst)
         for line in ffirst:
             datafirst=line.split()
             if int(datafirst[7])==1:
@@ -463,7 +464,9 @@ def find_formationtime_BBH(ids, filestring):
 
 def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the cluster and escaped
     sourcedir=np.genfromtxt(pathlist, dtype=str)
-    status=map(int, sourcedir[:,1]); sourcedir=sourcedir[:,0]
+    status = np.ones(len(sourcedir))
+    #status=map(int, sourcedir[:,1]); 
+    #sourcedir=sourcedir[:,0]
     #sourcedir=['/projects/b1095/syr904/cmc/extreme_model/N8e5fbh100rv0.5_NSkick20_BHkick_300_IMF20/']
     #status=[1]
 
@@ -634,19 +637,19 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
                     idsemerge.append(int(line[2])); id0merge.append(int(line[4])); id1merge.append(int(line[6]))
                     mf_merge.append(float(line[3])); m0_merge.append(float(line[5])); m1_merge.append(float(line[7]))
                     r_merge.append(float(line[8]))
-                    #tf_semerge, sno_semerge, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(line[4]), int(line[6])], filestr, typeflag)
-                    #if tf_semerge!=-100:
-                    #   tform_semerge.append(tf_semerge*t_conv); snapno_semerge.append(sno_semerge)
-                    #else:
-                    #   tform_semerge.append(t_conv*float(line[0])); snapno_semerge.append(-100)
-                    #primordial_bin.append(pribin); dynamics_ejection.append(dyn_eject); any_interact.append(dyn_any)
+                    tf_semerge, sno_semerge, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(line[4]), int(line[6])], filestr, typeflag)
+                    if tf_semerge!=-100:
+                       tform_semerge.append(tf_semerge*t_conv); snapno_semerge.append(sno_semerge)
+                    else:
+                       tform_semerge.append(t_conv*float(line[0])); snapno_semerge.append(-100)
+                    primordial_bin.append(pribin); dynamics_ejection.append(dyn_eject); any_interact.append(dyn_any)
 
         print('semerge:', nsemerge)#, idsemerge, timesemerge
         Nsemerge.append(nsemerge)
 
 
-        fesc_merger=open(savepath+'/newruns/finaldata/BBH/Esc_'+typeflag+'_maingrid_1.dat', 'a+', 0)
-        #fescbns.write('#1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 11.Tform(Myr) 12.Primordial? 13.Dynamically_Ejected?\n')
+        fesc_merger=open('/projects/b1095/syr904/projects/IMF/Esc_'+typeflag+'.dat', 'a+')
+        #fescbns.write('#1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 11.Tform(Myr) 12.Primordial? 13.Dynamically_Ejected? 14.Status\n')
         ####For mergers that happen outside of the clusters####
         escfile=filestr+'.esc.dat'
         with open(escfile, 'r') as fesc:
@@ -737,12 +740,12 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
 
 
     ##Output files
-    #np.savetxt(savepath+'/newruns/finaldata/GWcap_'+typeflag+'_extreme.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
+    np.savetxt('/projects/b1095/syr904/projects/IMF/GWcap_'+typeflag+'.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
 
-    #np.savetxt(savepath+'/newruns/finaldata/BBH/Incluster_'+typeflag+'_maingrid_12.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, tform_semerge, primordial_bin, dynamics_ejection, status_merge], fmt='%d %f %f %d %d %d %f %f %f %f %f %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R 11.Tform(Myr) 12.Primordial 13.Dynamics? 14.Status(1-done; 2&3-dissolved)', comments='#')
+    np.savetxt('/projects/b1095/syr904/projects/IMF/Incluster_'+typeflag+'.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, tform_semerge, primordial_bin, dynamics_ejection, status_merge], fmt='%d %f %f %d %d %d %f %f %f %f %f %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R 11.Tform(Myr) 12.Primordial 13.Dynamics? 14.Status(1-done; 2&3-dissolved)', comments='#')
     ##Turn off dyn_any for BBH
 
-    np.savetxt(savepath+'/newruns/finaldata/num_merger_'+typeflag+'_maingrid_v2.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, status], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
+    np.savetxt('/projects/b1095/syr904/projects/IMF/num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, status], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
 
 
 

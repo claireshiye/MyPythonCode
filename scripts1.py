@@ -11,7 +11,7 @@ def cnp(line) : # calculate number of parents for a given line
 
 def readcollfile(filename) :
     #print 'input file:', filename
-    return [line.replace("t=","")
+    return [line
             .replace("idm=",cnp(line))
             .replace("idm=",cnp(line))
             .replace("idm=",cnp(line))
@@ -26,19 +26,27 @@ def readcollfile(filename) :
             .replace("type1="," ").replace("type2="," ")
             .replace("type3="," ").replace("type4="," ")
             .replace("b[RSUN]=", " ").replace("vinf[km/s]="," ")
+            .replace("rad1=", " ").replace("rad2=", " ")
+            .replace("rperi=", " ").replace("coll_mult=", " ")
+            .replace("t=","")
             .replace("\n","")
         for line in open(filename) if line[0]!="#"]
 
 #rows=readcollfile('coll.log')
 
-
+##Not up to date
 def collision(collfile): 
     rows = readcollfile(collfile)
-    #print rows
+    print(len(rows))
+    allID = []; n_repeat = 0
     coll_prod = {}
     for i in range(len(rows)):
         each_row = rows[i].split()
         ID = long(each_row[3])
+        if ID in allID: 
+            n_repeat+=1
+            ID = -(ID+i)
+        allID.append(ID)
         nopars = int(each_row[2])
         parents = {'nopar': nopars,
             'IDs': [long(each_row[5+i*2]) for i in range(nopars)],
@@ -58,6 +66,7 @@ def collision(collfile):
             parid
             if parid in coll_prod:
                 coll_prod[parid]['fin_prod'] = 0
+    #print(n_repeat)
     return coll_prod
 
 

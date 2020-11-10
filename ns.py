@@ -599,7 +599,7 @@ def print_Nns_snap(pathlist, start, end):
     #status=sourcedir[:,1]; 
     #sourcedir=sourcedir[:,0]
 
-    sourcedir=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_150maxmass_rv1.4/']
+    sourcedir=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir_test14/8e5rv1rg8z0.002_tc_poly/']
     
     for i in range(start, end):
         pref='initial'
@@ -905,7 +905,7 @@ def find_allNS(pathlist, start, end):
 
 
 ##Find all the NSs ever formed in the clusters. Check if the NSs were kicked out immediately after their formation or by dynamical interactions. New NSs formed through old NSs colliding with other stars won't be double-counted in this case since the old ones were never ejected if new ones were formed.
-def find_allNS_atbirth(pathlist, start, end):
+def find_allNS_atbirth_escaped(pathlist, start, end):
     sourcedir=np.genfromtxt(pathlist, dtype=str)
     fallns=open('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/allNS_atbirth.dat', 'a+', 0)
     fallns.write('#1.Model 2.Nnsesc(ALL) 3.Nnsesc(SN) 4.Nnsesc(DYN)\n')
@@ -977,13 +977,14 @@ def find_allNS_atbirth(pathlist, start, end):
 
 ##Find the formation channels of all the NSs ever formed in the clusters.
 def find_allNS_atbirth(pathlist, start, end):
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
-    fallns=open('/projects/b1095/syr904/projects/PULSAR/kickgrid_runs/MSPBHinGC/data/allNS_formation1.dat', 'a+')
-    fallns.write('#1.Model 2.CCSN 3.EIC 4.AIC 5.MIC 6.CCSNesc 7.EICesc 8.AICesc 9.MICesc\n')
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    sourcedir = ['/projects/b1091/CMC_Grid_March2019/rundir/rv1/rg8/z0.002/8e5/']
+    fallns=open('/projects/b1091/CMC_Grid_March2019/rundir/rv1/rg8/z0.002/8e5/allNS_formation.dat', 'a+')
+    fallns.write('#1.Model 2.CCSN 3.EIC 4.AIC 5.MIC 6.USSN 7.PPI 8.PISN 9.CCSNesc 10.EICesc 11.AICesc 12.MICesc 13.USSNesc 14.PPIesc 15.PISNesc\n')
     for i in range(start, end):
         print(sourcedir[i])
 
-        filestr=sourcedir[i]+'/initial'
+        filestr=sourcedir[i]+'initial'
         escfile=filestr+'.esc.dat'
         collfile=filestr+'.collision.log'
 
@@ -1027,28 +1028,29 @@ def find_allNS_atbirth(pathlist, start, end):
                             theID = int(datasnap[0])
                             if theID not in IDs:
                                 IDs.append(int(datasnap[0])); Formation.append(int(datasnap[61]))
-            #print(k)
+            print(k)
 
         
         ##Pick out the NSs that went through collision and remain a NS
         ##Remove the collision NSs from the NS lists
         colldata=scripts1.collision(collfile)
         collids=colldata.keys()
+        print(collids, len(collids))
         IDcoll=[]; Formationcoll=[]; index_rm=[]
         IDcollesc=[]; Formationcollesc=[]; indexesc_rm=[]
         for j in range(len(IDs)):
             theid=IDs[j]
             if theid in collids:
-                if 13 in colldata[theid]['parents']['types']:
-                    IDcoll.append(theid); Formationcoll.append(Formation[j])
-                    index_rm.append(j)
+                #if 13 in colldata[theid]['parents']['types']:
+                IDcoll.append(theid); Formationcoll.append(Formation[j])
+                index_rm.append(j)
 
         for j in range(len(IDescs)):
             theidesc=IDescs[j]
             if theidesc in collids:
-                if 13 in colldata[theidesc]['parents']['types']:
-                    IDcollesc.append(theidesc); Formationcollesc.append(Formationesc[j])
-                    indexesc_rm.append(j)
+                #if 13 in colldata[theidesc]['parents']['types']:
+                IDcollesc.append(theidesc); Formationcollesc.append(Formationesc[j])
+                indexesc_rm.append(j)
 
         new_IDs=np.delete(IDs, index_rm)
         new_IDescs=np.delete(IDescs, indexesc_rm)
@@ -1060,24 +1062,30 @@ def find_allNS_atbirth(pathlist, start, end):
         print(len(new_IDs), len(new_IDescs))
 
 
-        CC=0; EIC=0; AIC=0; MIC=0; abnormal=0
+        CC=0; EIC=0; AIC=0; MIC=0; USSN=0; PPI=0; PISN=0; abnormal=0
         for n in range(len(new_Fm)):
-            if new_Fm[n]==4: CC+=1
-            elif new_Fm[n]==5: EIC+=1
-            elif new_Fm[n]==6: AIC+=1
-            elif new_Fm[n]==7: MIC+=1
+            if new_Fm[n]==1: CC+=1
+            elif new_Fm[n]==2: EIC+=1
+            elif new_Fm[n]==3: USSN+=1
+            elif new_Fm[n]==4: AIC+=1
+            elif new_Fm[n]==5: MIC+=1
+            elif new_Fm[n]==6: PPI+=1
+            elif new_Fm[n]==7: PISN+=1
             else: abnormal+=1
         
-        CCesc=0; EICesc=0; AICesc=0; MICesc=0; abnormalesc=0
+        CCesc=0; EICesc=0; AICesc=0; MICesc=0; USSNesc=0; PPIesc=0; PISNesc=0; abnormalesc=0
         for n in range(len(new_FMescs)):
-            if new_FMescs[n]==4: CCesc+=1
-            elif new_FMescs[n]==5: EICesc+=1
-            elif new_FMescs[n]==6: AICesc+=1
-            elif new_FMescs[n]==7: MICesc+=1
+            if new_FMescs[n]==1: CCesc+=1
+            elif new_FMescs[n]==2: EICesc+=1
+            elif new_FMescs[n]==3: USSNesc+=1
+            elif new_FMescs[n]==4: AICesc+=1
+            elif new_FMescs[n]==5: MICesc+=1
+            elif new_FMescs[n]==6: PPIesc+=1
+            elif new_FMescs[n]==7: PISNesc+=1
             else: abnormalesc+=1
 
 
-        fallns.write('%d %d %d %d %d %d %d %d %d\n'%(i, CC, EIC, AIC, MIC, CCesc, EICesc, AICesc, MICesc))
+        fallns.write('%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n'%(i, CC, EIC, AIC, MIC, USSN, PPI, PISN, CCesc, EICesc, AICesc, MICesc, USSNesc, PPIesc, PISNesc))
 
         print(i)
 
@@ -1291,15 +1299,16 @@ def find_Nns_primd(sourcedir):
 
 
  
-def find_primordialbin(pathlist, msplist):   #Find NS Primordial binaries
-    datamsp=np.genfromtxt(msplist)
-    id0msp=datamsp[:,1]; id1msp=datamsp[:,2]; modelno=datamsp[:,0]
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
+def find_primordialbin(pathlist, psrlist, savepath):   #Find NS Primordial binaries
+    datapsr=np.genfromtxt(psrlist)
+    id0psr=datapsr[:,12]; id1psr=datapsr[:,13]; modelno=datapsr[:,0]
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    sourcedir = ['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir_test14/8e5rv1rg8z0.002_tc_poly/']
     model_pri=[]; id0_pri=[]; id1_pri=[]
     for i in range(len(modelno)):
         no=int(modelno[i])
         filepath=sourcedir[no]
-        filestr=filepath+'/'+'initial'
+        filestr=filepath+'initial'
         t_conv = conv('t',filestr+'.conv.sh')
 
         data = np.genfromtxt(filestr+'.snap0000.dat.gz', usecols=(7,10,11))
@@ -1307,13 +1316,13 @@ def find_primordialbin(pathlist, msplist):   #Find NS Primordial binaries
         for j in range(len(binflag)):
             if binflag[j]==1:
                 id0=data[:,1][j]; id1=data[:,2][j]
-                if (id0msp[i]==id0 and id1msp[i]==id1) or (id1msp[i]==id0 and id0msp[i]==id1):
-                    model_pri.append(no); id0_pri.append(id0msp[i]); id1_pri.append(id1msp[i])
+                if (id0psr[i]==id0 and id1psr[i]==id1) or (id1psr[i]==id0 and id0psr[i]==id1):
+                    model_pri.append(no); id0_pri.append(id0psr[i]); id1_pri.append(id1psr[i])
                     break
         #print i
 
 
-    np.savetxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/paper/data/primordial_MSPbinary.dat', np.c_[model_pri, id0_pri, id1_pri], fmt='%d %d %d', delimiter=' ', comments = '#')
+    np.savetxt(savepath, np.c_[model_pri, id0_pri, id1_pri], fmt='%d %d %d', delimiter=' ', comments = '#')
     #print model_pri, id0_pri, id1_pri
 
 
@@ -2671,17 +2680,17 @@ def get_allpsr_snapshot(snapshot, mspflag):
 
 
 ##Find all the pulsars at the last timestep in snapshot
-def get_allpsr_last(pathlist, mspfg, filename):
+def get_allpsr_last(pathlist, mspfg, filename, savepath):
     Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]
     #sourcedir=np.genfromtxt(pathlist, dtype=str)
     #paths=sourcedir[:,0]; status=[1,1,1,1,1,1,1,1,1,1]
-    paths=['/projects/b1095/syr904/cmc/47Tuc/rundir/MOCHA47Tuc']
+    paths=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir_test13/8e5rv1rg8z0.002_tc_poly/']
     status=[1]
     print(paths)
     for i in range(len(paths)):
         pref='initial'
         filepath=paths[i]
-        filestr=filepath+'/'+pref
+        filestr=filepath+pref
         t_conv=conv('t', filestr+'.conv.sh')
         l_conv=conv('l', filestr+'.conv.sh')
 
@@ -2706,7 +2715,7 @@ def get_allpsr_last(pathlist, mspfg, filename):
 
     #print(ID0, ID1)
 
-    np.savetxt('/projects/b1095/syr904/cmc/47Tuc/rundir/MOCHA47Tuc/'+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %f', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation', comments = '#')
+    np.savetxt(savepath+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %f', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation', comments = '#')
 
 
 ##Find all the pulsars between two time steps. Usually it's 9 to 14 Gyr. Include repeating pulsars

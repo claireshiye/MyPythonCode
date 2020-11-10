@@ -354,6 +354,186 @@ def get_merger_rate(filepath):
 
 
 
+##Calculate merger rate without weight and age distribution
+##Unfinished
+def get_merger_rate_simple(filepath):
+    ##Read merger data
+    esc_dns=np.genfromtxt(filepath+'Esc_DNS.dat')
+    esc_nsbh=np.genfromtxt(filepath+'Esc_NSBH.dat')
+    in_dns=np.genfromtxt(filepath+'Incluster_DNS.dat')
+    in_nsbh=np.genfromtxt(filepath+'Incluster_NSBH.dat')
+    gw_dns=np.genfromtxt(filepath+'GWcap_DNS.dat')
+    gw_nsbh=np.genfromtxt(filepath+'GWcap_NSBH.dat')
+
+    esc_all=[esc_dns, esc_nsbh]
+    in_all=[in_dns, in_nsbh]
+    gw_all=[gw_dns, gw_nsbh]
+
+
+    ##Combine the files
+    models=[]; tmergers=[]; types=[]; formflag=[]
+    models_pri=[]; tmergers_pri=[]; types_pri=[]
+    models_dyn=[]; tmergers_dyn=[]; types_dyn=[]
+    for i in range(2):
+        types.append([])
+        types[i]=list(np.full(len(esc_all[i][:,0]), 1))+list(np.full(len(in_all[i][:,0]), 2))+list(np.full(len(gw_all[i][:,0]), 3))
+        #print len(types[i])
+
+        models.append([])
+        models[i]=list(esc_all[i][:,0])+list(in_all[i][:,0])+list(gw_all[i][:,0])
+        #print len(models[i])
+
+        tmergers.append([])
+        tesc=esc_all[i][:,2]; tinsp=esc_all[i][:,3]
+        tmergers[i]=list(np.add(tesc, tinsp))+list(in_all[i][:,2])+list(gw_all[i][:,2])
+        #print len(tmergers[i])
+
+        formflag.append([])
+        formflag[i]=list(esc_all[i][:,11])+list(in_all[i][:,11])+list(np.full(len(gw_all[i][:,0]), 0))
+        models_pri.append([]); tmergers_pri.append([]); types_pri.append([])
+        models_dyn.append([]); tmergers_dyn.append([]); types_dyn.append([])
+        for x in range(len(formflag[i])):
+            if formflag[i][x]==1: 
+                models_pri[i].append(models[i][x])
+                tmergers_pri[i].append(tmergers[i][x])
+                types_pri[i].append(types[i][x])
+
+            else:
+                models_dyn[i].append(models[i][x])
+                tmergers_dyn[i].append(tmergers[i][x])
+                types_dyn[i].append(types[i][x])
+
+
+    ##Make the random draws
+    fname=['DNS', 'NSBH']
+    for j in range(2):
+        f=open(filepath+'random_draw_'+fname[j]+'.dat', 'a+', 0)
+        f.write('#1.Model, 2.Tmerger, 3.Types(1-esc, 2-incluster, 3-coll)\n')
+        for k in range(len(tmergers[j])):
+            modelno=int(models[j][k])
+            n=0
+            while n<500:
+                age = np.random.choice(dict_metallicity[str(metal_mod[modelno])][:,0])*1000.0
+                t_new=13721.-age+tmergers[j][k]
+                #print age, t_new
+                if t_new<13721.:
+                    f.write('%d %f %d\n'%(models[j][k], t_new, types[j][k]))
+                n+=1
+
+        f.close()
+
+
+        #f1=open(filepath+'random_draw_'+fname[j]+'_pri_more.dat', 'a+', 0)
+        #f2=open(filepath+'random_draw_'+fname[j]+'_dyn_more.dat', 'a+', 0)
+        #for l in range(len(tmergers_pri[j])):
+        #    modelno=int(models_pri[j][l])
+        #    n=0
+        #    while n<10000:
+        #        age = np.random.choice(dict_metallicity[str(metal_mod[modelno])][:,0])*1000.0
+        #        t_new=13721.-age+tmergers_pri[j][l]
+        #        #print age, t_new
+        #        if t_new<13721.:
+        #            f1.write('%d %f %d\n'%(models_pri[j][l], t_new, types_pri[j][l]))
+        #        n+=1
+
+        #f1.close()
+
+        #for m in range(len(tmergers_dyn[j])):
+        #    modelno=int(models_dyn[j][m])
+        #    n=0
+        #    while n<10000:
+        #        age = np.random.choice(dict_metallicity[str(metal_mod[modelno])][:,0])*1000.0
+        #        t_new=13721.-age+tmergers_dyn[j][m]
+        #        #print age, t_new
+        #        if t_new<13721.:
+        #            f2.write('%d %f %d\n'%(models_dyn[j][m], t_new, types_dyn[j][m]))
+        #       n+=1
+
+        #f2.close()
+
+
+    ##Read data
+    data_dns=np.genfromtxt(filepath+'random_draw_DNS_pri.dat')
+    data_nsbh=np.genfromtxt(filepath+'random_draw_NSBH_pri.dat')
+    data_all=[data_dns, data_nsbh]
+
+
+    ##Define time bins
+    steps=400
+    t_array=np.linspace(800., 13721., steps)
+    dt=(13721.-800.)/steps*1.e6   ##in years
+    rho0=0.33 ##Mpc^-3
+
+
+    ##Model weights
+    weights, noweights=get_weights()
+    n_random=500.
+    weights[:] = [x / n_random for x in weights]
+    modtot=np.sum(noweights)
+    print(modtot)
+    noweights[:] = [y / n_random/modtot for y in noweights]
+    #print modtot, noweights
+    #noweights=[1./n_random]
+    
+
+
+    ##Counting number of mergers in each bin
+    ##Also calculate the reshift and comoving distance at each bin
+    model_all=[]; tmerger_all=[]; count_all=[]
+
+    for i in range(2):
+        model_all.append([])
+        model_all[i]=data_all[i][:,0]
+
+        tmerger_all.append([])
+        tmerger_all[i]=data_all[i][:,1]
+
+
+        count_all.append([])
+        redshift=[]; Dcom=[]
+        for j in range(len(t_array)-1):
+            counts=0
+            for x in range(len(tmerger_all[i])):
+                modelno=int(model_all[i][x])
+                if t_array[j]<tmerger_all[i][x]<=t_array[j+1]:
+                    counts+=1.*noweights[modelno]
+
+            count_all[i].append(counts)
+
+
+            ##Calculate the redshifts and the comoving distances
+            redshift.append(uc.ttoredshift(t_array[j]/1000.))
+            Dcom.append(uc.ComovingDistance(redshift[j]).value)
+
+        #print count_all[i]
+
+    redshift.append(uc.ttoredshift(t_array[-1]/1000.))
+    Dcom.append(uc.ComovingDistance(redshift[-1]).value)
+
+    #print redshift, Dcom
+
+
+    ##Calculate the merger rate according to O'leary+2006 equation (13).
+    R_all=[]; R_density=[]
+    for i in range(2):
+        R_all.append([]); R_density.append([])
+        zmid=[]
+        for k in range(len(t_array)-1):
+            zmid.append((redshift[k+1]+redshift[k])/2.)
+            R=(count_all[i][k]/dt)*(4.*np.pi/3.)*rho0*(Dcom[k]**3-Dcom[k+1]**3)/(1+zmid[k])
+            Rden=(count_all[i][k]/dt)*rho0*(1000.**3)
+            #print R, Rden
+            R_all[i].append(R); R_density[i].append(Rden)
+
+        R_all[i]=list(reversed(R_all[i])); R_density[i]=list(reversed(R_density[i]))
+
+    zmid=list(reversed(zmid))
+
+    #np.savetxt(filepath+'rates_dns_pri_rho0.33_500draw.dat', np.c_[R_all[0], R_density[0], zmid], fmt='%f %f %f', header='Rates, Rate_density, Redshift', delimiter='', comments='#')
+    #np.savetxt(filepath+'rates_nsbh_pri_rho0.33_500draw.dat', np.c_[R_all[1], R_density[1], zmid], fmt='%f %f %f', header='Rates, Rate_density, Redshift', delimiter='', comments='#')
+
+
+    #return R_all, R_density, zmid
 
 
 

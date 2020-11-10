@@ -497,4 +497,35 @@ def find_mass_inradius(modelpath, snap2d_no, radius_arcsec, R_sun_kpc):
     print(Mtot_cut, Mtot)
 
 
+##Find number vs time in the escaped file for star type of choice
+def find_numesc(modelpath):
+    escfile = modelpath+'initial.esc.dat'
+    
+    tconv = conv('t', modelpath+'initial.conv.sh')
+
+    time_myr = []
+    with open(escfile, 'r') as fesc:
+        next(fesc)
+        for line in fesc:
+            dataesc=line.split()
+            if int(dataesc[14])!=1:
+                if int(dataesc[21])==13:
+                    time_myr.append(float(dataesc[1]))
+            else:
+                if int(dataesc[22])==13: 
+                    time_myr.append(float(dataesc[1]))
+                if int(dataesc[23])==13:
+                    time_myr.append(float(dataesc[1]))
+
+    #ct = Counter(time_myr)
+    #print(ct)
+    #t = []; num = []
+    #for i in range(len(ct)):
+    #    print(ct[i])
+    #    t.append(float(ct[0]))
+    #    num.append(ct[])
+
+    (unique, counts) = np.unique(time_myr, return_counts=True)
+    print(unique, counts)
+
 

@@ -134,7 +134,7 @@ def MSP_accretion(filepath, modelpath):
         print(i)
 
 
-##Find how a binary is disrupted
+##Find how a binary is disrupted or if it is disurupted
 def find_binary_disruipt(bin_id0, bin_id1, modelpath):
     filestr=modelpath+'initial'
     collfile=filestr+'.collision.log'
@@ -144,20 +144,40 @@ def find_binary_disruipt(bin_id0, bin_id1, modelpath):
     colldata=scripts1.readcollfile(collfile)
     sedata=scripts2.readmergefile(sefile)
 
+    snaps = dyn.get_snapshots(filestr)
+    lastsnap = snaps[-1]
 
-    check_disrupt=-100
+    check_disrupt = -100
+    time_disrupt = -100
+    type_disrupt = -100
 
-    for i in range(len(sedata)):
-        line=sedata[i].split()
-        #print(line)
-        if int(line[1])<3:
-            if (int(line[4])==int(bin_id0) and int(line[6])==int(bin_id1)) or (int(line[6])==int(bin_id0) and int(line[4])==int(bin_id1)):
-                check_disrupt='binmerge'
-                break
-        else:
-            if (int(line[4])==int(bin_id0) and int(line[6])==int(bin_id1)) or (int(line[6])==int(bin_id0) and int(line[4])==int(bin_id1)):
-                check_disrupt='bindisrupt'
-                break
+    with gzip.open(lastsnap, 'r') as flast:
+        next(flast)
+        next(flast)
+        for line in flast:
+            datalast = line.split()
+            if int(datalast[7]) == 1:
+                if (int(datalast[10])==bin_id0 and int(datalast[11])==bin_id1) or (int(datalast[11])==bin_id0 and int(datalast[10])==bin_id1):
+                    check_disrupt = 'binintact'
+                    time_disrupt = dyn.get_time(lastsnap)
+                    type_disrupt = '-'
+
+    if check_disrupt==-100:
+        for i in range(len(sedata)):
+            line=sedata[i].split()
+            #print(line)
+            if int(line[1])<3:
+                if (int(line[4])==int(bin_id0) and int(line[6])==int(bin_id1)) or (int(line[6])==int(bin_id0) and int(line[4])==int(bin_id1)):
+                    check_disrupt='binmerge'
+                    time_disrupt = float(line[0])
+                    type_disrupt = '-'
+                    break
+            else:
+                if (int(line[4])==int(bin_id0) and int(line[6])==int(bin_id1)) or (int(line[6])==int(bin_id0) and int(line[4])==int(bin_id1)):
+                    check_disrupt='bindisrupt'
+                    time_disrupt = float(line[0])
+                    type_disrupt = '-'
+                    break
 
     if check_disrupt==-100:
         for j in range(len(colldata)):
@@ -165,15 +185,17 @@ def find_binary_disruipt(bin_id0, bin_id1, modelpath):
             #print(line)
             if int(line[2])==2:
                 collids=[int(line[5]), int(line[7])]
-            if len(line)==13:
+            elif len(line)==13:
                 collids=[int(line[5]), int(line[7])]
-            if len(line)==16:
+            elif len(line)==16:
                 collids=[int(line[5]), int(line[7]), int(line[9])]
-            if len(line)==19:
+            elif len(line)==19:
                 collids=[int(line[5]), int(line[7]), int(line[9]),int(line[11])]
 
             if int(bin_id0) in collids and int(bin_id1) in collids:
                 check_disrupt='dyncollision'
+                time_disrupt = float(line[0])
+                type_disrupt = line[1]
                 break
 
     if check_disrupt==-100:
@@ -184,12 +206,17 @@ def find_binary_disruipt(bin_id0, bin_id1, modelpath):
                 if int(data[14])==1:
                     if (int(data[17])==bin_id0 and int(data[18])==bin_id1) or (int(data[18])==bin_id0 and int(data[17])==bin_id1):
                         check_disrupt='ejected'
+                        time_disrupt = float(data[1])
+                        type_disrupt = '-'
+
 
     if check_disrupt==-100:
         check_disrupt='dynexchange'
+        time_disrupt = '-'
+        type_disrupt = '-'
 
     print(check_disrupt)
-    return check_disrupt
+    return check_disrupt, time_disrupt, type_disrupt
 
 
 ##Find how a binary is formed
