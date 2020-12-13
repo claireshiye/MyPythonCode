@@ -6,6 +6,7 @@ import subprocess
 import constants
 import scipy.integrate
 import json
+import dynamics as dyn
 
 def read_units(filestring):
 	"""reads from the supplied conv file and stores the physical units"""
@@ -55,6 +56,7 @@ def read_units(filestring):
 
 
 def convert_to_3d(r, vr, vt, SEEDY=100):
+##Azimuth and elevation angles(https://www.mathworks.com/help/phased/ug/spherical-coordinates.html)
         np.random.seed(SEEDY)
         if np.shape(r)==():  #single r, vr, and vt floats given
                 #print 'came here'
@@ -100,7 +102,9 @@ def make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1)):
 	#units = scripts.read_units(filestring)
 	lpc = units[0]['l_pc']
 	kms = 1e-5 * units[0]['l_cgs']/units[0]['nbt_cgs']
-	t_myr = scripts.find_t_myr(filestring, snapno) 
+	#t_myr = scripts.find_t_myr(filestring, snapno) 
+	t_myr = dyn.get_time(filestring+'.snap'+snapno+'.dat.gz')*units[0]['t_myr']
+	print(dyn.get_time(filestring+'.snap'+snapno+'.dat.gz'), units[0]['t_myr'])
 
 	writefilename=filestring+'.snap'+snapno+'.2Dproj.dat'
 	writefile=open(writefilename, 'w')
@@ -118,13 +122,13 @@ def make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1)):
 	r3d, v3d = convert_to_3d(r, vr, vt, SEEDY=SEEDY)
 	r2d, ind = project_and_radially_sort(r3d, PROJ=PROJ)
 	valid_line=0
-	print 'N:', len(ind)
+	print('N:', len(ind))
 	for i in range(len(ind)):
 		try:
 			for j in range(len(data[ind[i]])):
 				if str(data[ind[i],j])=='nan' or str(data[ind[i],j])=='inf':
 					valid_line = 0
-					print data[ind[i],:]
+					print(data[ind[i],:])
 					raise StopIteration()
 				else:
 					valid_line = 1
@@ -137,7 +141,7 @@ def make_2D_projection(filestring, snapno, units, SEEDY=100, PROJ=(0,1)):
 			else:
 				Ltot = data[ind[i],3]
 				Mtot = data[ind[i],8]
-			writefile.write("%g %g %g %g %g %g %g %g %g %g %g %g %d %d %d %g %g %g %g %g %g\n" %(r2d[ind[i]], Ltot, data[ind[i],1], data[ind[i],2], Ltot, data[ind[i],4], data[ind[i],5], data[ind[i],6], data[ind[i],7], Mtot, data[ind[i],9], data[ind[i],10], data[ind[i],13], data[ind[i],14], data[ind[i],15], r3d[0,ind[i]], r3d[1,ind[i]], r3d[2,ind[i]], v3d[0,ind[i]], v3d[1,ind[i]], v3d[2,ind[i]], ))
+			writefile.write("%f %f %d %d %f %d %d %f %f %f %f %f %ld %ld %ld %f %f %f %f %f %f\n" %(r2d[ind[i]], Ltot, data[ind[i],1], data[ind[i],2], Ltot, data[ind[i],4], data[ind[i],5], data[ind[i],6], data[ind[i],7], Mtot, data[ind[i],9], data[ind[i],10], int(data[ind[i],13]), int(data[ind[i],14]), int(data[ind[i],15]), r3d[0,ind[i]], r3d[1,ind[i]], r3d[2,ind[i]], v3d[0,ind[i]], v3d[1,ind[i]], v3d[2,ind[i]], ))
 	writefile.close()
 	return r, vr, vt, r3d, v3d
 
@@ -179,7 +183,7 @@ def get_obs_props(filestring, snapno, FAC=1.):
 				raise StopIteration()
 	except StopIteration:
 		N = i
-		print 'found rhl:', rhl, drhl, i, N
+		print('found rhl:', rhl, drhl, i, N)
 
 	#guess_sigma = np.sum(data[:N, 1])/ (np.pi*data[N-1,0]**2.)
 	#print N
@@ -198,7 +202,7 @@ def get_obs_props(filestring, snapno, FAC=1.):
 	p_opt, p_cov = fit_king_cum_curvefit(rselect, Lcumselect, p0guess=p0guess)
 	p_err = np.sqrt(np.diag(p_cov))
 	sigmac, sigmacerr, rc, rcerr = np.abs(p_opt[0]), np.abs(p_err[0]), np.abs(p_opt[1]), np.abs(p_err[1])
-	print 'sigmac:', sigmac, 'sigmacerr:', sigmacerr, 'rc:', rc, 'rcerr:', rcerr
+	print('sigmac:', sigmac, 'sigmacerr:', sigmacerr, 'rc:', rc, 'rcerr:', rcerr)
 	vselect1, vselect2, vselect3 = [], [], []
 	count = 0
 	#print count, data[count,0]

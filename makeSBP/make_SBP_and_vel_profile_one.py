@@ -13,11 +13,11 @@ import blackhole
 import extract_observed_prop as OBS
 
 
-path = '/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_elson_rv4_3e6/'
-N=3000000
-Z=0.0038
-rv=4
-rg=7.4
+path = '/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rvgrid/8e5_rvgrid_1.5/'
+N=800000
+Z=0.001
+rv=1.5
+rg=8
 
 string = 'initial'
 units=scripts.read_units(path+string)
@@ -34,7 +34,7 @@ time_array, snap_array = finder.find_snap_time_array(path,string)
 #print snap_array
 snapno_max_str = snap_array[-1]
 snapno_max = int(snapno_max_str)
-Delta = -5  #default -5000 for only making the last snapshot
+Delta = -2  #default -5000 for only making the last snapshot
 
 for k in range(len(time_array)-1,-1,Delta):
 	time = time_array[k]

@@ -41,11 +41,11 @@ def readdata_freire():
     Ps=[]; Pdots=[]; Bs=[]; Pb=[]; Pdotb=[]; Bb=[]  ##P unit ms, dpdt has a factor of 10^-20
     Ns=0; Nb=0.  ##Calculating the numbers of single and binary pulsars
     period=[]; ecc=[]
-    with open('/projects/b1011/syr904/projects/PULSAR/GCpsr.txt', 'rb') as f:
-        for _ in range(4):
-            next(f)
+    with open('/projects/b1095/syr904/projects/PULSAR/GC_psr.txt', 'r') as f:
+        next(f); next(f); next(f); next(f)
         for line in f:
             data=line.split()
+            print(data)
             if not data: continue
             if str(data[0][0])=='J' or data[0][0]=='B':
                 if str(data[5])=='i': Ns+=1
@@ -382,16 +382,17 @@ def gen_idhistory(sourcedir, folder):
         np.savetxt(sourcedir+'/'+folder+'/'+'history'+'/'+name+'_pulsar.dat', np.c_[pt, pm0, pm1, pid0, pid1, pk0, pk1, pp, pB, pa, pe], fmt ='%f %f %f %d %d %f %e %f %f', delimiter= ' ', header = '1.time, 2.m0, 3.m1, 4.id0, 5.id1, 6.k0, 7.k1, 8.P, 9.B, 10.a, 11.e', comments = '#')
 
     
-def get_snap_Nns(snapshot, dynlim):
-    nmtb=0; nmsp=0; npulsarsin=0; npulsarbin=0; nns=0; nnsdyn=0
-    mspid=[]; mspcomid=[]
+def get_snap_Nns(snapshot, Ntot, binfrac, mspflag):
+    dynlim = Ntot+binfrac*Ntot
+    nmtb=0; npsr=0; npulsarsin=0; npulsarbin=0; nns=0; nnsdyn=0
+    psrid=[]; psrcomid=[]
 
     #snaps=np.sort(glob(sourcedir+'/'+'initial.snap*.dat.gz'))
     #lastsnap=snaps[-1]
     ##print lastsnap
     with gzip.open(snapshot, 'r') as fsnap:
-        for _ in range(2):
-            next(fsnap)
+        next(fsnap)
+        next(fsnap)
         for line in fsnap:
             datasnap=line.split()
             if int(datasnap[7])!=1:
@@ -402,9 +403,12 @@ def get_snap_Nns(snapshot, dynlim):
                     deathcut=(spin**2)*(0.17*10**12)
                     if deathcut<=float(datasnap[60]): 
                         npulsarsin+=1
-                        if spin>0.03: 
-                            nmsp+=1; mspid.append(int(datasnap[0])); mspcomid.append(-100)
+                        if mspflag == 'msp' and spin<=0.03: 
+                            npsr+=1; psrid.append(int(datasnap[0])); psrcomid.append(-100)
                             ##print int(datasnap[0]), -100
+                        if mspflag == 'normalpsr' and spin>0.03:
+                            npsr+=1; psrid.append(int(datasnap[0])); psrcomid.append(-100)
+
             if int(datasnap[7])==1:
                 if int(datasnap[17])==13:
                     nns+=1
@@ -414,9 +418,14 @@ def get_snap_Nns(snapshot, dynlim):
                     if float(datasnap[44])>=1: nmtb+=1
                     if deathcut0<=float(datasnap[47]): 
                         npulsarbin+=1   
-                        if spin0>0.03: 
-                            nmsp+=1; mspid.append(int(datasnap[10])); mspcomid.append(int(datasnap[11]))
+                        if mspflag == 'msp' and spin0<=0.03: 
+                            npsr+=1; psrid.append(int(datasnap[10])); psrcomid.append(int(datasnap[11]))
                             ##print int(datasnap[10]), int(datasnap[11])
+
+                        if mspflag == 'normalpsr' and spin0>0.03:
+                            npsr+=1; psrid.append(int(datasnap[10])); psrcomid.append(int(datasnap[11]))
+
+
                 if int(datasnap[18])==13:
                     nns+=1
                     if int(datasnap[11])>dynlim: nnsdyn+=1
@@ -425,12 +434,16 @@ def get_snap_Nns(snapshot, dynlim):
                     if float(datasnap[43])>=1: nmtb+=1
                     if deathcut1<=float(datasnap[48]): 
                         npulsarbin+=1
-                        if spin1>0.03: 
-                            nmsp+=1; mspid.append(int(datasnap[11])); mspcomid.append(int(datasnap[10]))
+                        if mspflag == 'msp' and spin1<=0.03: 
+                            npsr+=1; psrid.append(int(datasnap[11])); psrcomid.append(int(datasnap[10]))
+                            ##print int(datasnap[10]), int(datasnap[11])
+
+                        if mspflag == 'normalpsr' and spin1>0.03:
+                            npsr+=1; psrid.append(int(datasnap[11])); psrcomid.append(int(datasnap[10]))
                             ##print int(datasnap[11]), int(datasnap[10])
     ##print len(mspid)
 
-    return npulsarsin, npulsarbin, nmsp, nmtb, mspid, mspcomid, nns, nnsdyn
+    return npulsarsin, npulsarbin, npsr, nmtb, psrid, psrcomid, nns, nnsdyn
 
 
 def get_allsnap_Nns(sourcedir):
@@ -452,16 +465,18 @@ def get_allsnap_Nns(sourcedir):
     return NP, NMSP, NMT, NBH, T
 
 
-def get_allmodel_MSPID(pathlist, start, end):
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
+def get_allmodel_MSPID(pathlist, start, end, psrflag):
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    sourcedir = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/MOCHA47Tuc_150maxmass_rv1.4']
+    ntot = 2e6; bfrac = 0.022
     MSPID=[]; MSPCOMID=[]; model=[]
     for i in range(start, end):
         filepath=sourcedir[i]
         pref='initial'
         filestr=filepath+'/'+pref
-        snaps=np.sort(glob(filestr+'.snap*.dat.gz'))
+        snaps=dyn.get_snapshots(filestr)
         lastsnap=snaps[-1]
-        Npulsarsin, Npulsarbin, Nmsp, Nmtb, Mspid, Mspcomid, Nns, Nnsdyn=get_snap_Nns(lastsnap, 800000)
+        Npulsarsin, Npulsarbin, Nmsp, Nmtb, Mspid, Mspcomid, Nns, Nnsdyn=get_snap_Nns(lastsnap, ntot, bfrac, psrflag)
         MSPID=MSPID+Mspid; MSPCOMID=MSPCOMID+Mspcomid
         temp=list(np.full_like(Mspid, fill_value=i))
         model=model+temp
@@ -469,7 +484,7 @@ def get_allmodel_MSPID(pathlist, start, end):
 
     #print len(model), len(MSPID)
 
-    np.savetxt('/projects/b1095/syr904/projects/PULSAR2/newruns/normalpsrid.dat', np.c_[model, MSPID, MSPCOMID], fmt='%d %d %d', header='Model ID0 ID1', comments='#', delimiter= ' ')
+    np.savetxt(filepath+'/'+psrflag+'_id_last.dat', np.c_[model, MSPID, MSPCOMID], fmt='%d %d %d', header='Model ID0 ID1', comments='#', delimiter= ' ')
 
 
 def get_allmodel_MSPID_10to12Gyr(pathlist, start, end):
@@ -595,11 +610,11 @@ def printout_Nbh_Npulsar_9to14Gyr(start, end, pathlist):
 
 
 def print_Nns_snap(pathlist, start, end):
-    #sourcedir=np.genfromtxt(pathlist, dtype='str')
+    sourcedir=np.genfromtxt(pathlist, dtype='str')
     #status=sourcedir[:,1]; 
     #sourcedir=sourcedir[:,0]
 
-    sourcedir=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir_test14/8e5rv1rg8z0.002_tc_poly/']
+    #sourcedir=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_150maxmass_rv1.4/']
     
     for i in range(start, end):
         pref='initial'
@@ -2486,10 +2501,12 @@ def get_id_position_BP(theid, snapshot):
 
 def get_id_allmodel_position(idlist, pathlist):
     dataid=np.genfromtxt(idlist)
-    model=dataid[:,0]; id0=dataid[:,1]; id1=dataid[:,2]
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    #model=dataid[:,0]; id0=dataid[:,1]; id1=dataid[:,2]
+    model=[0]; id0=[148017]; id1=[2006972]
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    sourcedir = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/MOCHA47Tuc_150maxmass_rv1.4']
     rposition=[]; rc=[]; B=[]; P=[]; Nbh=[]; Ntot=[]
-    f=open('/projects/b1095/syr904/projects/PULSAR2/newruns/normalpsr_last.dat', 'a+', 0)
+    f=open('/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/MOCHA47Tuc_150maxmass_rv1.4/normalpsr_last.dat', 'a+')
     f.write('#1.Model 2.ID0 3.ID1 4.r(pc) 5.B(G) 6.P(sec) 7.rc(pc) 8.Nbh 9.Ntot 10.dmdt0 11.dmdt1 12.rolrad0 13.rolrad1 14.m0 15.m1 16.k0 17.k1 18.a(AU) 19.ecc 20.Formation 21.L(mJy*kpc^2)\n')
     for i in range(len(model)):
         num=int(model[i])
@@ -2681,13 +2698,14 @@ def get_allpsr_snapshot(snapshot, mspflag):
 
 ##Find all the pulsars at the last timestep in snapshot
 def get_allpsr_last(pathlist, mspfg, filename, savepath):
-    Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]
-    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    paths = sourcedir; status=np.full_like(paths, 1)
     #paths=sourcedir[:,0]; status=[1,1,1,1,1,1,1,1,1,1]
-    paths=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir_test13/8e5rv1rg8z0.002_tc_poly/']
-    status=[1]
+    #paths=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir_test13/8e5rv1rg8z0.002_tc_poly/']
     print(paths)
     for i in range(len(paths)):
+        Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]
+        
         pref='initial'
         filepath=paths[i]
         filestr=filepath+pref
@@ -2710,12 +2728,12 @@ def get_allpsr_last(pathlist, mspfg, filename, savepath):
 
         print(i)
 
-    RADIUS=np.array(RADIUS)*l_conv
-    print('what?')
+        RADIUS=np.array(RADIUS)*l_conv
+        print('what?')
 
     #print(ID0, ID1)
-
-    np.savetxt(savepath+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %f', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation', comments = '#')
+        savepath = paths[i]
+        np.savetxt(savepath+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %f', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation', comments = '#')
 
 
 ##Find all the pulsars between two time steps. Usually it's 9 to 14 Gyr. Include repeating pulsars
@@ -3065,12 +3083,15 @@ def XrayLum(M_A, M_D, A, K1):  ##Equation (29) in Rappaport et al 1982
 
 def get_r_v(psrfile, pathlist):
     data=np.genfromtxt(psrfile)
-    model=data[:,0]; id0=data[:,12]; id1=data[:,13]; k0=data[:,14]; k1=data[:,15]
+    #model=data[:,0]; id0=data[:,1]; id1=data[:,2]; k0=data[:,15]; k1=data[:,16]
+    model=[0]; id0=[148017]; id1=[2006972]; k0=[13]; k1=[10]
     ##Be careful of DNSs because they're shown in two different lines in the file if both of them are pulsars.
 
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
-    paths=sourcedir[:,0]; status=sourcedir[:,1]
-    r2D=[]; vz=[]; r3D=[]; vt=[]; Mr2D=[]
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    #paths=sourcedir[:,0]; status=sourcedir[:,1]
+    paths = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/MOCHA47Tuc_150maxmass_rv1.4']
+    status=[1]
+    r2D=[]; r3D=[]; Mr2D=[]; Mr3D =[]; rx=[]; ry=[]; rz=[]; vx=[]; vy=[]; vz=[]
     for i in range(len(id0)):
         pref='initial'
         num=int(model[i])
@@ -3080,40 +3101,51 @@ def get_r_v(psrfile, pathlist):
         snaps=dyn.get_snapshots(filestr)
         lastproj=snapproj[-1]
         lastsnap=snaps[-1]
-        Mtot=0
+
+        l_conv = conv('l', filestr+'.conv.sh')
+
+        Mtot2D=0
+        Mtot3D=0
 
         if k0[i]==13: theid=int(id0[i])
         if k1[i]==13: theid=int(id1[i])
 
         check=0
         with gzip.open(lastproj, 'r') as fproj:
-            for _ in range(2):
-                next(fproj)
+            next(fproj)
+            next(fproj)
             for line in fproj:
                 dataproj=line.split()
-                Mtot+=float(dataproj[9])
+                Mtot2D+=float(dataproj[9])
                 if int(float(dataproj[12]))==theid or int(float(dataproj[13]))==theid or int(float(dataproj[14]))==theid:
-                    Mtot=Mtot-float(dataproj[9])
-                    r2D.append(float(dataproj[0])); vz.append(float(dataproj[20])); Mr2D.append(Mtot)
+                    Mtot2D=Mtot2D-float(dataproj[9])
+                    r2D.append(float(dataproj[0])); Mr2D.append(Mtot2D)
+                    vz.append(float(dataproj[20])); vy.append(float(dataproj[19])); vx.append(float(dataproj[18]))
+                    rz.append(float(dataproj[17])); ry.append(float(dataproj[16])); rx.append(float(dataproj[15]))
                     check=1
                     break
+
         if check==0:
-            r2D.append(-100); vz.append(-100); Mr2D.append(-100)
+            r2D.append(-100); Mr2D.append(-100)
+            vz.append(-100); vy.append(-100); vx.append(-100)
+            rz.append(-100); ry.append(-100); rx.append(-100)
                 
         with gzip.open(lastsnap, 'r') as fsnap:
-            for _ in range(2):
-                next(fsnap)
+            next(fsnap)
+            next(fsnap)
             for line in fsnap:
                 datasnap=line.split()
+                Mtot3D+=float(datasnap[1])
                 if int(datasnap[0])==theid or int(datasnap[10])==theid or int(datasnap[11])==theid:
-                    r3D.append(float(datasnap[2])); vt.append(float(datasnap[4]))
+                    Mtot3D=Mtot3D-float(datasnap[1])
+                    r3D.append(float(datasnap[2])*l_conv); Mr3D.append(Mtot3D)
                     break
                     #print i
 
         print(i)
-        print(len(model), len(r2D), len(vz), len(r3D), len(vt), len(Mr2D))
+        print(len(model), len(r2D), len(vz), len(r3D), len(Mr2D))
 
-    np.savetxt('/projects/b1095/syr904/projects/PULSAR2/newruns/finaldata/normalpsr_accel_maingrid.dat', np.c_[model, id0, id1, r2D, vz, r3D, vt, Mr2D], fmt ='%d %d %d %f %f %f %f %f', delimiter = ' ', header = '1.model, 2.id0, 3.id1, 4.r2D(pc), 5.vl(km/s), 6.r3D(codeunit), 7.vt(codeunit), 8. Mtot(<r2D)(Msun)', comments = '#')
+    np.savetxt(paths[0]+'/normalpsr_accel_last.dat', np.c_[model, id0, id1, k0, k1, r2D, r3D, Mr2D, Mr3D, rx, ry, rz, vx, vy, vz], fmt ='%d %d %d %d %d %f %f %f %f %f %f %f %f %f %f', delimiter = ' ', header = '1.model, 2.id0, 3.id1, 4.k0, 5.k1, 6.r2D(pc), 7.r3D(pc), 8. Mtot(<r2D)(Msun), 9.Mtot(<r3D)(Msun), 10.rx(pc), 11.ry(pc), 12.rz(pc), 13.vx(km/s), 14.vy(km/s), 15.vz(km/s)', comments = '#')
 
                         
 def add_acceleration(r_2d, v_l, pdot0, p0, mr2d, a, e, m0, m1):
@@ -3151,7 +3183,7 @@ def add_acceleration(r_2d, v_l, pdot0, p0, mr2d, a, e, m0, m1):
 
 
 
-def add_acceleration_GCpotential(r_2d, v_l, pdot0, p0, mr2d, a, e, m0, m1):
+def add_acceleration_GCpotential_max(r_2d, v_l, pdot0, p0, mr2d):
     maxal=1.1*Gconst*(mr2d*Msun)/(np.pi*(r_2d*PC)**2)
     p=(1+v_l*10**5/clight)*p0
     #p=(1-abs(v_l)*10**5/clight)*p0
@@ -3159,14 +3191,29 @@ def add_acceleration_GCpotential(r_2d, v_l, pdot0, p0, mr2d, a, e, m0, m1):
     pdotmax=p*(pdot0/p0+maxal/clight)
     pdotmin=p*(pdot0/p0-maxal/clight)
 
-    return  pdotmin, pdotmax, p
+    return  maxal, pdotmin, pdotmax, p
+
+def add_acceleration_GCpotential_3D(r_3d, v_l, pdot0, p0, mr3d, r_x, r_y, r_z):
+    los_angle = r_z/(r_x*r_x+r_y*r_y+r_z*r_z)**0.5
+    maxal_3d = (Gconst*(mr3d*Msun)/(r_3d*PC)**2)*los_angle
+
+    p=(1+v_l*10**5/clight)*p0
+    #p=(1-abs(v_l)*10**5/clight)*p0
+    ##print p, maxal
+    pdotmax=p*(pdot0/p0+maxal_3d/clight)
+    pdotmin=p*(pdot0/p0-maxal_3d/clight)
+
+    return  maxal_3d, pdotmin, pdotmax, p
+
 
 
 def get_acceleration(acclfile, psrfile):
     dataacc=np.genfromtxt(acclfile)
     datapsr=np.genfromtxt(psrfile)
 
-    model=dataacc[:,0]; id0=dataacc[:,1]; id1=dataacc[:,2]; r2d=dataacc[:,3]; vl=dataacc[:,4]; Mr2d=dataacc[:,7]
+    model=dataacc[:,0]; id0=dataacc[:,1]; id1=dataacc[:,2]
+    r2d=dataacc[:,5]; Mr2d=dataacc[:,7]
+    vl=dataacc[:,14]
     
     A=datapsr[:,17]; ecc=datapsr[:,18]; M0=datapsr[:,13]; M1=datapsr[:,14]; P=datapsr[:,5]; B=datapsr[:,4]
 
@@ -3176,7 +3223,7 @@ def get_acceleration(acclfile, psrfile):
     pminus=[]; pplus=[]; pdotminus=[]; pdotplus=[]; pdotl=[]; pdotu=[]; paccl=[]
     for i in range(len(id0)):
         #Pmin, Pmax, Pdotmin, Pdotmax=add_acceleration(r2d[i], vl[i], Pdot[i], P[i], Mr2d[i], A[i], ecc[i], M0[i], M1[i])
-        Pdotmin, Pdotmax, Paccl=add_acceleration_GCpotential(r2d[i], vl[i], Pdot[i], P[i], Mr2d[i], A[i], ecc[i], M0[i], M1[i])
+        Maxal, Pdotmin, Pdotmax, Paccl=add_acceleration_GCpotential_max(r2d[i], vl[i], Pdot[i], P[i], Mr2d[i])
         ##print Pmin, Pmax, Pdotmin, Pdotmax
         ##print Pdotmin, Pdotmax
         #pminus.append(P[i]-Pmin); pplus.append(Pmax-P[i])

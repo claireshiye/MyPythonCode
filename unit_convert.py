@@ -94,3 +94,13 @@ def SD_converter(Epsilon, Rsun):
     """takes the surface brightness (1/pc^2) and converts to surface brightness (1/arcsec^2)"""
     SD_arcsec = Epsilon/pc_to_arcsec(1, Rsun)**2
     return SD_arcsec
+
+
+def dms2degree(dms_value):
+    dms_str = dms_value.split(':')
+    if dms_str[0][0]=='-':
+        degree = float(dms_str[0])-float(dms_str[1])/60.-float(dms_str[2])/3600.
+    else:
+    	degree = float(dms_str[0])+float(dms_str[1])/60.+float(dms_str[2])/3600.
+
+    return degree

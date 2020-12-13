@@ -217,10 +217,11 @@ def find_t_myr(filestring, snapno):
     """goes in the given snapshot and finds the physical time corresponding to that snap"""
     snapfile = filestring+'.snap'+snapno+'.dat.gz'
 
-    f=gzip.open(snapfile,'rb')
+    f=gzip.open(snapfile,'r')
     line=f.readline()
     a=line.split()
     b=a[1]
+    print(b)
     c=b.split('=')
     t=float(c[1])
     d=read_units(filestring)

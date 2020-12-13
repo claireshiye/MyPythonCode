@@ -12,6 +12,7 @@ import unit_convert as uc
 import ecc_calc as gwcalc
 import LISA_calculations as lisa
 import ns_history as nh
+import useful_function as uf
 
 yearsc=31557600.
 twopi=6.283185307179586
@@ -35,6 +36,7 @@ def find_tc_properties(filepath):
     t_des=[]; type_des=[]; rperi_des=[]; idf_des=[]; mf_des=[]; kf_des=[]
     id0_des=[]; id1_des=[]; m0_des=[]; m1_des=[]; k0_des=[]; k1_des=[]; r0_des=[]; r1_des=[]
     v_inf_des=[]
+    mc0_des=[]; mc1_des=[]; rc0_des=[]; rc1_des=[]
 
     n_tc_merged = 0; n_giant_coll = 0
     with open(tcfile, 'r') as ftc:
@@ -65,7 +67,8 @@ def find_tc_properties(filepath):
                 k0_des.append(int(numstr[2])); k1_des.append(int(numstr[5]))
                 r0_des.append(float(numstr[6])); r1_des.append(float(numstr[7]))
                 rperi_des.append(float(numstr[8])); v_inf_des.append(float(numstr[9]))
-
+                #mc0_des = list(np.full_like(id0_des, -100)); mc1_des = mc0_des
+                #rc0_des = mc0_des; rc1_des = mc0_des
                 continue
 
             if data[2][-1] == 'd' and data[1] == 'SS_COLL_Giant': 
@@ -85,6 +88,8 @@ def find_tc_properties(filepath):
                 k0_des.append(int(numstr[2])); k1_des.append(int(numstr[5]))
                 r0_des.append(float(numstr[6])); r1_des.append(float(numstr[7]))
                 rperi_des.append(float(numstr[8])); v_inf_des.append(float(numstr[9]))
+                mc0_des.append(float(numstr[10])); mc1_des.append(float(numstr[11]))
+                rc0_des.append(float(numstr[12])); rc1_des.append(float(numstr[13]))
 
                 continue
 
@@ -121,7 +126,7 @@ def find_tc_properties(filepath):
 
     Prop_init = {'time':t, 'type':types, 'id0': id0i, 'id1': id1i, 'm0': m0i, 'm1': m1i, 'k0': k0i, 'k1': k1i, 'r0': r0i, 'r1': r1i, 'rperi': rperi, 'vinf': v_inf}
     Prop_finl = {'id0': id0f, 'id1': id1f, 'm0': m0f, 'm1': m1f, 'k0': k0f, 'k1': k1f, 'r0': r0f, 'r1': r1f, 'sma': a, 'ecc': e}
-    Prop_des = {'time':t_des, 'type':type_des, 'id0': id0_des, 'id1': id1_des, 'm0': m0_des, 'm1': m1_des, 'k0': k0_des, 'k1': k1_des, 'r0': r0_des, 'r1': r1_des, 'rperi': rperi_des, 'vinf': v_inf_des}
+    Prop_des = {'time':t_des, 'type':type_des, 'id0': id0_des, 'id1': id1_des, 'm0': m0_des, 'm1': m1_des, 'k0': k0_des, 'k1': k1_des, 'r0': r0_des, 'r1': r1_des, 'rperi': rperi_des, 'vinf': v_inf_des, 'mc0': mc0_des, 'mc1': mc1_des, 'rc0': rc0_des, 'rc1': rc1_des}
 
     print('n_giant_coll:', n_giant_coll, 'n_tc_merged:', n_tc_merged)
 
@@ -229,6 +234,68 @@ def find_NS_XX_last(filepath, savepath, lowlim, highlim):
                     fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, time, int(datalast[11]), int(datalast[10]), float(datalast[9]), float(datalast[8]), int(datalast[18]), int(datalast[17]), float(datalast[13]), float(datalast[12]), float(datalast[44]), float(datalast[43]), float(datalast[48]), float(twopi*yearsc/float(datalast[46])), tcflag))
 
     fmsb.close()
+
+
+##Check if the pulsars at the last snapshot is formed from tidal capture
+def check_psr_tc_last(filepath):
+    datamsp = np.genfromtxt(filepath+'msp_last.dat')
+    #datapsr = np.genfromtxt(filepath+'normalpsr_last.dat')
+
+    datansms = np.genfromtxt(filepath+'NS_MS_last.dat')
+    datanswd = np.genfromtxt(filepath+'NS_WD_last.dat')
+
+    msp_id0 = datamsp[:,12]; msp_id1 = datamsp[:,13]
+    msp_k1 = datamsp[:,15]
+
+    nsms_id0 = datansms[:,2]; nsms_id1 = datansms[:,3]; nsmsflag = datansms[:,14]
+    nswd_id0 = datanswd[:,2]; nswd_id1 = datanswd[:,3]; nswdflag = datanswd[:,14]
+
+    prop_init, prop_finl, prop_des=find_tc_properties(filepath)
+    tc_id0 = prop_init['id0']; tc_id1 = prop_init['id1']
+
+    msp_tcflag = []
+    for i in range(len(msp_id0)):
+        if msp_id1[i]!=-100 and msp_k1[i]<=1:
+            for j in range(len(nsms_id0)):
+                if msp_id0[i]==nsms_id0[j] and msp_id1[i]==nsms_id1[j]:
+                    msp_tcflag.append(int(nsmsflag[j]))
+                    break
+        
+        if msp_id1[i]!=-100 and 10<=msp_k1[i]<=12:
+            for j in range(len(nswd_id0)):
+                if msp_id0[i]==nswd_id0[j] and msp_id1[i]==nswd_id1[j]:
+                    msp_tcflag.append(int(nswdflag[j]))
+                    break
+
+        if msp_id1[i]!=-100 and msp_k1[i]>=13:
+            msp_tcflag.append(3)
+            for j in range(len(tc_id0)):
+                if (msp_id0[i]==tc_id0[j] and msp_id1[i]==tc_id1[j]) or (msp_id1[i]==tc_id0[j] and msp_id0[i]==tc_id1[j]):
+                    msp_tcflag[i]==1
+                    break
+                elif msp_id0[i]==tc_id0[j] or msp_id0[i]==tc_id1[j]:
+                    msp_tcflag[i]==2
+                    break
+
+        if msp_id1[i]==-100:
+            msp_tcflag.append(3)
+            for j in range(len(tc_id0)):
+                if msp_id0[i]==tc_id0[j] or msp_id0[i]==tc_id1[j]:
+                    msp_tcflag[i]==2
+                    break
+                
+    return msp_tcflag
+
+
+##Check if the pulsars at the last snapshot is formed from tidal capture in multiple models
+def check_psr_tc_models(pathlist):
+    paths = np.genfromtxt(pathlist, dtype=str)
+
+    for kk in range(len(paths)):
+        print(kk)
+        tc_flags = check_psr_tc_last(paths[kk])
+        uf.add_column(paths[kk]+'msp_last.dat', paths[kk]+'msp_last.dat', tc_flags)
+
 
 
 ##Find NS-MS star binaries at all times and check if they are formed in tidal capture
