@@ -34,32 +34,32 @@ time_array, snap_array = finder.find_snap_time_array(path,string)
 #print snap_array
 snapno_max_str = snap_array[-1]
 snapno_max = int(snapno_max_str)
-Delta = -2  #default -5000 for only making the last snapshot
+Delta = -3  #default -5000 for only making the last snapshot
 
 for k in range(len(time_array)-1,-1,Delta):
     time = time_array[k]
     snapno = snap_array[k]
-    print('time=', time, 'snapno=', snapno,)
+    print 'time=', time, 'snapno=', snapno,
     if time < 10000:
-        print('stop!')
+        print 'stop!'
         break
     try:
         f = open(path+'initial.snap'+snapno+'.vel_dispersion_giants_25.dat','r')
-        print(snapno, 'is done')
+        print snapno, 'is done'
         continue
     except:
         try:
             OBS.make_2D_projection(path+'initial', snapno, units)
             os.system('gzip '+path+'initial.snap'+snapno+'.2Dproj.dat')
-            print('made 2D projection')
+            print 'made 2D projection'
             ###### make cluster params file
             f2 = open(path+'initial.snap'+snapno+'.cluster_params.dat','w')
             f5 = gzip.open(path+'initial.snap'+snapno+'.dat.gz','r')
             lines5 = f5.readlines()
             props = OBS.get_obs_props(path+'initial', snapno, FAC=1.)
-            print('props=', props)
+            print 'props=', props
             rc = props['rc']
-            print('rc=', rc)
+            print 'rc=', rc
 
             ##Initialization
             count_obj=0; count=0; BHnonBH=0; BBH=0; NSnonNS=0; BNS=0    
@@ -115,27 +115,27 @@ for k in range(len(time_array)-1,-1,Delta):
                         BH += 1
                     if k >= 2 and k <= 9:
                         G += 1
-            print('end of loop')
+            print 'end of loop'
             number_density = count/(rc**3.)
             number_density2 = count_obj/(rc**3.)
             #print 'number_density', number_density
 
-            print("#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2", file = f2)
-            print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
-            print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
+            print>>f2, "#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2"
+            print>>f2, time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg
+            print>>f2, time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg
             f2.close()
             f5.close()
-            print('cluster_params done')    
+            print 'cluster_params done' 
     
             ###############
-            print('made params file')
-            blackhole.get_sbp_from_2D_projection(path+string, snapno)
-            print(snapno, 'made SBP')
+            print 'made params file'
+            #blackhole.get_sbp_from_2D_projection(path+string, snapno)
+            blackhole.get_sbp_from_2D_projection_ncut(path+string, snapno)
+            print snapno, 'made SBP'
             finder2.velocity_dispersion(path,string, snapno, ALL=0, Bin_no=100)
-            print('Made vel dispersion for',snapno)
+            print 'Made vel dispersion for',snapno
         except:
-            print(snapno, 'failed')
-
+            print snapno, 'failed'
 
 
 

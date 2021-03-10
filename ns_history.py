@@ -13,7 +13,7 @@ import scripts3
 import scripts1
 import scripts2
 import ns
-import ns_tidalcapture as tc
+import ns_tidalcapture as ntc
 #from scipy import stats
 
 yearsc=31557600.
@@ -56,6 +56,113 @@ def find_histories():
             find_star_history(int(tc_sin[:,2][j]), '/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir/8e5rv0.5rg8z0.002/')
 
         print(j)
+
+
+##Find how accretion-induced collapse NSs are formed
+def find_aic_accretion(pathlist, psrfile):
+    paths = np.genfromtxt(pathlist, dtype=str)
+    data_msp = np.genfromtxt(psrfile)
+    models = data_msp[:,0]; ID0 = data_msp[:,12]; ID1 = data_msp[:,13]
+    K0 = data_msp[:,14]; K1 = data_msp[:,15]; sn = data_msp[:,18]; tcflag = data_msp[:,19]
+
+    n_ce = 0; n_dwd = 0; n_star = 0
+    n_tot = 0
+
+    f = open('/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rvgrid/standard_models_tcon/aic_ns_accretion.dat', 'a+')
+    for kk in range(len(paths)):
+        binint = scripts3.read_binint(paths[kk]+'initial.binint.log')
+        #print('binint read')
+
+        prop_init, prop_finl, prop_des = ntc.find_tc_properties_final(paths[kk])
+        tcid0 = prop_init['id0']; tcid1 = prop_init['id1']
+        tck0 = prop_init['k0']; tck1 = prop_init['k1']
+        tck0_fnl = prop_finl['k0']; tck1_fnl = prop_finl['k1']
+        #print('tcfile read')
+
+        for ii in range(len(models)):
+            if int(models[ii]) == kk:
+                check = 0
+                id_ns = int(ID0[ii]); id_comp = int(ID1[ii])
+                if sn[ii] == 4:
+                    n_tot+=1
+                    if tcflag[ii] == 81 or tcflag[ii] == 91:
+                
+                        for xx in range(len(tcid0)):
+                            if int(tcid0[xx]) == id_ns and int(tcid1[xx]) == id_comp:
+                                if tck0[xx] == 13.:
+                                    break
+                                elif tck0[xx] == 12.:
+                                    if 2.<=tck1[xx]<=9. and 10.<=tck1_fnl[xx]<=12.:
+                                        n_ce+=1; n_dwd+=1
+                                        print(ii, models[ii], id_ns, id_comp, 'DWD, Need CE accretion', file = f)
+                                        check = 1
+                                        break
+                                    elif 2.<=tck1[xx]<=9. and tck1_fnl[xx]==7.:
+                                        n_star +=1
+                                        print(ii, models[ii], id_ns, id_comp, 'Maybe mass transfer', file = f)
+                                        check = 1
+                                        break
+                                else:
+                                    break
+
+                            elif int(tcid1[xx]) == id_ns and int(tcid0[xx]) == id_comp:
+                                #print('yes')
+                                if tck1[xx] == 13.:
+                                    break
+                                elif tck1[xx] == 12.:
+                                    if 2.<=tck0[xx]<=9. and 10.<=tck0_fnl[xx]<=12.:
+                                        n_ce+=1; n_dwd+=1
+                                        print(ii, models[ii], id_ns, id_comp, 'DWD, Need CE accretion', file = f)
+                                        check = 1
+                                        break
+                                elif 2.<=tck0[xx]<=9. and tck0_fnl[xx]==7.:
+                                        n_star +=1
+                                        print(ii, models[ii], id_ns, id_comp, 'Maybe mass transfer', file = f)
+                                        check = 1
+                                        break
+                                else:
+                                    break
+
+                    else:
+                        for yy in range(len(binint)):
+                            outputs = binint[yy]['output']
+                            for m in range(len(outputs)):
+                                if int(outputs[m]['no'])==2 and not outputs[m]['merge']['ids']:
+                                    if int(outputs[m]['ids'][0])==id_ns and int(outputs[m]['ids'][1]) == id_comp:
+                                        if int(outputs[m]['startype'][0])==12 and 10<=int(outputs[m]['startype'][1])<=12:
+                                            n_dwd +=1
+                                            print(ii, models[ii], id_ns, id_comp, 'DWD', file = f) 
+                                            check = 1
+
+                                    if int(outputs[m]['ids'][1])==id_ns and int(outputs[m]['ids'][0]) == id_comp:
+                                        if int(outputs[m]['startype'][1])==12 and 10<=int(outputs[m]['startype'][0])<=12:
+                                            n_dwd +=1
+                                            print(ii, models[ii],id_ns, id_comp, 'DWD', file = f) 
+                                            check = 1
+
+                                if int(outputs[m]['no'])==3 and not outputs[m]['merge']['ids']:
+                                    if int(outputs[m]['ids'][0])==id_ns and int(outputs[m]['ids'][1]) == id_comp:
+                                        if int(outputs[m]['startype'][0])==12 and 10<=int(outputs[m]['startype'][1])<=12:
+                                            n_dwd +=1
+                                            print(ii, models[ii], id_ns, id_comp, 'DWD', file = f) 
+                                            check = 1
+
+                                    if int(outputs[m]['ids'][1])==id_ns and int(outputs[m]['ids'][0]) == id_comp:
+                                        if int(outputs[m]['startype'][1])==12 and 10<=int(outputs[m]['startype'][0])<=12:
+                                            n_dwd +=1
+                                            print(ii, models[ii], id_ns, id_comp, 'DWD', file = f) 
+                                            check = 1
+
+                            if check == 1:
+                                break
+
+
+                    if check == 0:
+                        print(ii, models[ii], ID0[ii], ID1[ii], "Can't find", file = f)
+
+    print(n_tot, n_ce, n_dwd, n_star)
+    f.close()
+
 
 
 ##How many pulsar-wd binaries that could have become psr-ms binaries but not?

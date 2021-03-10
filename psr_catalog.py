@@ -43,7 +43,7 @@ def readdata_freire():
 
     ntot=0
 
-    with open('/projects/b1095/syr904/projects/PULSAR/GC_psr.txt', 'rb') as f:
+    with open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr.txt', 'rb') as f:
         for _ in range(4):
             next(f)
         for line in f:

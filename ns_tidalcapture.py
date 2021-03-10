@@ -26,16 +26,174 @@ Lsun=4.02*10**16 ##mJy*kpc^2
 
 
 ##Types of tidal captures in the tidal capture file
+def find_tc_properties_final(filepath):
+    filestr=filepath+'initial'
+    tcfile=filestr+'.tidalcapture.log'
+    t=[]; types=[]; id0i=[]; id1i=[]; m0i=[]; m1i=[]; k0i=[]; k1i=[]; r0i=[]; r1i=[]; rperi=[]
+    a=[]; e=[]; id0f=[]; id1f=[]; m0f=[]; m1f=[]; k0f=[]; k1f=[]; r0f=[]; r1f=[]
+    v_inf = []; r_cm = []
+    mc0=[]; mc1=[]; rc0=[]; rc1=[]
+
+    t_des=[]; type_des=[]; rperi_des=[]; idf_des=[]; mf_des=[]; kf_des=[]
+    id0_des=[]; id1_des=[]; m0_des=[]; m1_des=[]; k0_des=[]; k1_des=[]; r0_des=[]; r1_des=[]
+    v_inf_des=[]; r_cm_des = []
+    mc0_des=[]; mc1_des=[]; rc0_des=[]; rc1_des=[]
+
+    n_tc_merged = 0; n_giant_coll = 0
+    with open(tcfile, 'r') as ftc:
+        next(ftc)
+        for line in ftc:
+            data=line.split()
+            #print(data)
+            #numstr=re.findall(r"\d*\.\d+|\d+", data[2])
+
+
+            if data[0] == 'coll_CE_debug': continue
+            if data[1]=='SS_COLL_TC_P_FAILED' or data[1]=='SS_COLL_GW':
+                continue
+            if data[2][-1] == 'd' and data[1] == 'SS_COLL_TC_P': 
+                n_tc_merged+=1
+                numstr=re.split(',|\(|\)|->|\[|\]', data[2])
+                numstr=list(filter(None, numstr))
+                numstr=list(filter(lambda x: x!='+', numstr))
+                #print(numstr)
+
+                numstr9 = numstr[9].split('+')
+                numstr9=list(filter(None, numstr9))
+                #print(numstr9)
+                #numstr[9] = numstr[9][1:]
+                numstr90 = numstr9[0]; numstr91 = numstr9[1]
+
+                t_des.append(float(data[0])); type_des.append(data[1])
+                id0_des.append(int(numstr[0])); id1_des.append(int(numstr[3]))
+                m0_des.append(float(numstr[1])); m1_des.append(float(numstr[4]))
+                k0_des.append(int(numstr[2])); k1_des.append(int(numstr[5]))
+                r0_des.append(float(numstr[6])); r1_des.append(float(numstr[7]))
+                rperi_des.append(float(numstr[8]));
+                v_inf_des.append(float(numstr90)); r_cm_des.append(float(numstr91))
+                mc0_des.append(-100); mc1_des.append(-100)
+                rc0_des.append(-100); rc1_des.append(-100)
+
+                continue
+
+            if data[2][-1] == 'd' and data[1] == 'SS_COLL_Giant': 
+                n_giant_coll+=1
+                numstr=re.split(',|\(|\)|->|\[|\]', data[2])
+                numstr=list(filter(None, numstr))
+                numstr=list(filter(lambda x: x!='+', numstr))
+                #print(numstr)
+
+                numstr9 = numstr[9].split('+')
+                numstr9=list(filter(None, numstr9))
+                #print(numstr9)
+                #numstr[9] = numstr[9][1:]
+                numstr90 = numstr9[0]; numstr91 = numstr9[1]
+                #print(numstr[9])
+
+                t_des.append(float(data[0])); type_des.append(data[1])
+                id0_des.append(int(numstr[0])); id1_des.append(int(numstr[3]))
+                m0_des.append(float(numstr[1])); m1_des.append(float(numstr[4]))
+                k0_des.append(int(numstr[2])); k1_des.append(int(numstr[5]))
+                r0_des.append(float(numstr[6])); r1_des.append(float(numstr[7]))
+                rperi_des.append(float(numstr[8])) 
+                v_inf_des.append(float(numstr90)); r_cm_des.append(float(numstr91))
+                mc0_des.append(float(numstr[10])); mc1_des.append(float(numstr[11]))
+                rc0_des.append(float(numstr[12])); rc1_des.append(float(numstr[13]))
+
+                continue
+
+            if data[2][-1] != 'd' and data[1] == 'SS_COLL_TC_P':
+                numstr=re.split(',|\(|\)|->|\[|\]', data[2])
+                numstr=list(filter(None, numstr))
+                numstr=list(filter(lambda x: x!='+', numstr))
+                #print(numstr)
+
+                numstr9 = numstr[9].split('+')
+                numstr9=list(filter(None, numstr9))
+                #print(numstr9)
+                #numstr[9] = numstr[9][1:]
+                numstr90 = numstr9[0]; numstr91 = numstr9[1]
+                numstr[13] = numstr[13][1:]; numstr[14] = numstr[14][:-1]
+                #print(numstr)
+
+
+                #print(numstr)
+                ##Initial properties
+                t.append(float(data[0]))
+                types.append(data[1])
+                id0i.append(int(numstr[0])); id1i.append(int(numstr[3]))
+                m0i.append(float(numstr[1])); m1i.append(float(numstr[4]))
+                k0i.append(int(numstr[2])); k1i.append(int(numstr[5]))
+                r0i.append(float(numstr[6])); r1i.append(float(numstr[7]))
+                rperi.append(float(numstr[8]))
+                v_inf.append(float(numstr90)); r_cm.append(float(numstr91))
+                mc0.append(-100); mc1.append(-100)
+                rc0.append(-100); rc1.append(-100)
+
+                ##Final properties
+                id0f.append(int(numstr[10])); id1f.append(int(numstr[15]))
+                m0f.append(float(numstr[11])); m1f.append(float(numstr[16]))
+                k0f.append(int(numstr[12])); k1f.append(int(numstr[17]))
+                a.append(float(numstr[13])); e.append(float(numstr[14]))
+                r0f.append(float(numstr[18])); r1f.append(float(numstr[19]))
+
+
+            if data[2][-1] != 'd' and data[1] == 'SS_COLL_Giant':
+                numstr=re.split(',|\(|\)|->|\[|\]', data[2])
+                numstr=list(filter(None, numstr))
+                numstr=list(filter(lambda x: x!='+', numstr))
+                #print(numstr)
+
+                numstr9 = numstr[9].split('+')
+                numstr9=list(filter(None, numstr9))
+                #print(numstr9)
+                #numstr[9] = numstr[9][1:]
+                numstr90 = numstr9[0]; numstr91 = numstr9[1]
+                numstr[17] = numstr[17][1:]; numstr[18] = numstr[18][:-1]
+                #print(numstr)
+
+                #print(numstr)
+                ##Initial properties
+                t.append(float(data[0]))
+                types.append(data[1])
+                id0i.append(int(numstr[0])); id1i.append(int(numstr[3]))
+                m0i.append(float(numstr[1])); m1i.append(float(numstr[4]))
+                k0i.append(int(numstr[2])); k1i.append(int(numstr[5]))
+                r0i.append(float(numstr[6])); r1i.append(float(numstr[7]))
+                rperi.append(float(numstr[8]))
+                v_inf.append(float(numstr90)); r_cm.append(float(numstr91))
+                mc0.append(float(numstr[10])); mc1.append(float(numstr[11]))
+                rc0.append(float(numstr[12])); rc1.append(float(numstr[13]))
+
+                ##Final properties
+                id0f.append(int(numstr[14])); id1f.append(int(numstr[19]))
+                m0f.append(float(numstr[15])); m1f.append(float(numstr[20]))
+                k0f.append(int(numstr[16])); k1f.append(int(numstr[21]))
+                a.append(float(numstr[17])); e.append(float(numstr[18]))
+                r0f.append(float(numstr[22])); r1f.append(float(numstr[23]))
+
+    Prop_init = {'time':t, 'type':types, 'id0': id0i, 'id1': id1i, 'm0': m0i, 'm1': m1i, 'k0': k0i, 'k1': k1i, 'r0': r0i, 'r1': r1i, 'rperi': rperi, 'vinf': v_inf, 'mc0': mc0, 'mc1': mc1, 'rc0': rc0, 'rc1': rc1}
+    Prop_finl = {'id0': id0f, 'id1': id1f, 'm0': m0f, 'm1': m1f, 'k0': k0f, 'k1': k1f, 'r0': r0f, 'r1': r1f, 'sma': a, 'ecc': e}
+    Prop_des = {'time':t_des, 'type':type_des, 'id0': id0_des, 'id1': id1_des, 'm0': m0_des, 'm1': m1_des, 'k0': k0_des, 'k1': k1_des, 'r0': r0_des, 'r1': r1_des, 'rperi': rperi_des, 'vinf': v_inf_des, 'mc0': mc0_des, 'mc1': mc1_des, 'rc0': rc0_des, 'rc1': rc1_des}
+
+    #print('n_giant_coll:', n_giant_coll, 'n_tc_merged:', n_tc_merged)
+
+    return Prop_init, Prop_finl, Prop_des
+
+
+
+##Types of tidal captures in the tidal capture file
 def find_tc_properties(filepath):
     filestr=filepath+'initial'
     tcfile=filestr+'.tidalcapture.log'
     t=[]; types=[]; id0i=[]; id1i=[]; m0i=[]; m1i=[]; k0i=[]; k1i=[]; r0i=[]; r1i=[]; rperi=[]
     a=[]; e=[]; id0f=[]; id1f=[]; m0f=[]; m1f=[]; k0f=[]; k1f=[]; r0f=[]; r1f=[]
-    v_inf = []
+    v_inf = []; rcm = []
+    mc0=[]; mc1=[]; rc0=[]; rc1=[]
 
     t_des=[]; type_des=[]; rperi_des=[]; idf_des=[]; mf_des=[]; kf_des=[]
     id0_des=[]; id1_des=[]; m0_des=[]; m1_des=[]; k0_des=[]; k1_des=[]; r0_des=[]; r1_des=[]
-    v_inf_des=[]
+    v_inf_des=[]; rcm_des = []
     mc0_des=[]; mc1_des=[]; rc0_des=[]; rc1_des=[]
 
     n_tc_merged = 0; n_giant_coll = 0
@@ -81,6 +239,7 @@ def find_tc_properties(filepath):
                 #    expo=float(numstr.pop(14))
                 #    numstr[13]=str(float(numstr[13])**(-expo))
                 numstr[9] = numstr[9][1:]
+                #print(numstr[9])
 
                 t_des.append(float(data[0])); type_des.append(data[1])
                 id0_des.append(int(numstr[0])); id1_des.append(int(numstr[3]))
@@ -190,18 +349,20 @@ def find_tc_psr():
 
 
 
-##Find NS-XX star binaries at the last snapshot and check if they are formed in tidal capture
-def find_NS_XX_last(filepath, savepath, lowlim, highlim):
-    property_init, property_finl, property_des = find_tc_properties(filepath)
+##Find NS-XX star binaries at the last snapshot and check if they are formed in tidal capture/giant collision
+def find_NS_XX_last(filepath, savepath, lowlim, highlim, loopnum):
+    property_init, property_finl, property_des = find_tc_properties_final(filepath)
     ID0 = property_init['id0']; ID1 = property_init['id1']; T=property_init['time']
+    Types = property_init['type']
 
     filestr=filepath+'initial'
     snaps=dyn.get_snapshots(filestr)
     lastsnap=snaps[-1]
     t_conv=dyn.conv('t', filestr+'.conv.sh')
     time=dyn.get_time(lastsnap)*t_conv
-    model=1
-    
+    model=loopnum
+
+    #os.system('rm '+savepath)
     fmsb=open(savepath, 'a+')
     fmsb.write('#1.Model 2.Time 3.ID0 4.ID1 5.M0 6.M1 7.K0 8.K1 9.a(AU) 10.ecc 11.radrol0 12.radrol1 13.B(G) 14.P(sec) 15.tcflag\n')
 
@@ -212,28 +373,185 @@ def find_NS_XX_last(filepath, savepath, lowlim, highlim):
             if int(datalast[7])==1:
                 if int(datalast[17])==13 and lowlim<=int(datalast[18])<=highlim:
                     ID0ms=int(datalast[10]); ID1ms=int(datalast[11])
-                    if (ID0ms in ID0 and ID1ms in ID1) or (ID1ms in ID0 and ID0ms in ID1):
-                        tcflag=1
-                    elif ID0ms in ID0 or ID0ms in ID1:
-                        tcflag=2
-                    else:
-                        tcflag=3
+                    tcflag=4
+                    for ii in range(len(ID0)):    
+                        if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
+                            if Types[ii]=='SS_COLL_Giant':
+                                tcflag=81
+                                break
+                            if Types[ii]=='SS_COLL_TC_P':
+                                tcflag=91
+                                break
+                        elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
+                            if Types[ii]=='SS_COLL_Giant':
+                                tcflag=82
+                                break
+                            if Types[ii]=='SS_COLL_TC_P':
+                                tcflag=92
+                                break
 
                     fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, time, int(datalast[10]), int(datalast[11]), float(datalast[8]), float(datalast[9]), int(datalast[17]), int(datalast[18]), float(datalast[12]), float(datalast[13]), float(datalast[43]), float(datalast[44]), float(datalast[47]), float(twopi*yearsc/float(datalast[45])), tcflag))
 
 
                 if lowlim<=int(datalast[17])<=highlim and int(datalast[18])==13:
                     ID0ms=int(datalast[11]); ID1ms=int(datalast[10])
-                    if (ID0ms in ID0 and ID1ms in ID1) or (ID1ms in ID0 and ID0ms in ID1):
-                        tcflag=1
-                    elif ID0ms in ID0 or ID0ms in ID1:
-                        tcflag=2
-                    else:
-                        tcflag=3
-
-                    fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, time, int(datalast[11]), int(datalast[10]), float(datalast[9]), float(datalast[8]), int(datalast[18]), int(datalast[17]), float(datalast[13]), float(datalast[12]), float(datalast[44]), float(datalast[43]), float(datalast[48]), float(twopi*yearsc/float(datalast[46])), tcflag))
+                    tcflag=4
+                    for ii in range(len(ID0)):    
+                        if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
+                            if Types[ii]=='SS_COLL_Giant':
+                                tcflag=81
+                                break
+                            if Types[ii]=='SS_COLL_TC_P':
+                                tcflag=91
+                                break
+                        elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
+                            if Types[ii]=='SS_COLL_Giant':
+                                tcflag=82
+                                break
+                            if Types[ii]=='SS_COLL_TC_P':
+                                tcflag=92
+                                break
+                                
+                    fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, time, int(datalast[11]), int(datalast[10]), float(datalast[9]), float(datalast[8]), int(datalast[18]), int(datalast[17]), float(datalast[12]), float(datalast[13]), float(datalast[44]), float(datalast[43]), float(datalast[48]), float(twopi*yearsc/float(datalast[46])), tcflag))
 
     fmsb.close()
+
+
+##Print out all 13+X binaries from tidal capture and giant collisions
+def find_NS_XX_tc_giantcoll(pathlist, savepath):
+    #paths = np.genfromtxt(pathlist, dtype=str)
+    paths = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon/']
+    ftc = open(savepath + 'all_tc_NSXX.dat', 'a+')
+    fcoll = open(savepath + 'all_coll_NSXX.dat', 'a+')
+    ftc.write('#1.Model 2.Time(Myr) 3.ID0 4.ID1 5.K0_init 6.K1_init 7.M0_init 8.M1_init 9.R0_init 10.R1_init 11.R_peri 12.V_INF 13.K0_fnl 14.K1_fnl 15.M0_fnl 16.M1_fnl 17.SMA 18.ECC\n')
+    fcoll.write('#1.Model 2.Time(Myr) 3.ID0 4.ID1 5.K0_init 6.K1_init 7.M0_init 8.M1_init 9.R0_init 10.R1_init 11.R_peri 12.V_INF 13.K0_fnl 14.K1_fnl 15.M0_fnl 16.M1_fnl 17.SMA 18.ECC 19.Period(days)\n')
+
+    for ii in range(len(paths)):
+        t_conv = dyn.conv('t', paths[ii]+'initial.conv.sh')
+
+        prop_init, prop_finl, prop_des = find_tc_properties_final(paths[ii])
+
+        for xx in range(len(prop_finl['id0'])):
+            if prop_finl['k0'][xx]==13 and prop_init['type'][xx] == 'SS_COLL_TC_P':
+                period = uc.au_to_period(prop_finl['sma'][xx], prop_finl['m0'][xx], prop_finl['m0'][xx])
+                ftc.write('%d %f %d %d %d %d %f %f %f %f %f %f %d %d %f %f %f %f %f\n'%(ii, prop_init['time'][xx]*t_conv, prop_init['id0'][xx], prop_init['id1'][xx], 
+                      prop_init['k0'][xx], prop_init['k1'][xx], 
+                      prop_init['m0'][xx], prop_init['m1'][xx],
+                      prop_init['r0'][xx], prop_init['r1'][xx],
+                      prop_init['rperi'][xx], prop_init['vinf'][xx],
+                      prop_finl['k0'][xx], prop_finl['k1'][xx], 
+                      prop_finl['m0'][xx], prop_finl['m1'][xx],
+                      prop_finl['sma'][xx], prop_finl['ecc'][xx],
+                      period))
+            if prop_finl['k1'][xx]==13 and prop_init['type'][xx] == 'SS_COLL_TC_P':
+                period = uc.au_to_period(prop_finl['sma'][xx], prop_finl['m0'][xx], prop_finl['m0'][xx])
+                ftc.write('%d %f %d %d %d %d %f %f %f %f %f %f %d %d %f %f %f %f %f\n'%(ii, prop_init['time'][xx]*t_conv, prop_init['id1'][xx], prop_init['id0'][xx], 
+                      prop_init['k1'][xx], prop_init['k0'][xx], 
+                      prop_init['m1'][xx], prop_init['m0'][xx],
+                      prop_init['r1'][xx], prop_init['r0'][xx],
+                      prop_init['rperi'][xx], prop_init['vinf'][xx],
+                      prop_finl['k1'][xx], prop_finl['k0'][xx], 
+                      prop_finl['m1'][xx], prop_finl['m0'][xx],
+                      prop_finl['sma'][xx], prop_finl['ecc'][xx],
+                      period))
+
+            if prop_finl['k0'][xx]==13 and prop_init['type'][xx] == 'SS_COLL_Giant':
+                period = uc.au_to_period(prop_finl['sma'][xx], prop_finl['m0'][xx], prop_finl['m0'][xx])
+                fcoll.write('%d %f %d %d %d %d %f %f %f %f %f %f %d %d %f %f %f %f %f\n'%(ii, prop_init['time'][xx]*t_conv, prop_init['id0'][xx], prop_init['id1'][xx], 
+                      prop_init['k0'][xx], prop_init['k1'][xx], 
+                      prop_init['m0'][xx], prop_init['m1'][xx],
+                      prop_init['r0'][xx], prop_init['r1'][xx],
+                      prop_init['rperi'][xx], prop_init['vinf'][xx],
+                      prop_finl['k0'][xx], prop_finl['k1'][xx], 
+                      prop_finl['m0'][xx], prop_finl['m1'][xx],
+                      prop_finl['sma'][xx], prop_finl['ecc'][xx],
+                      period))
+            if prop_finl['k1'][xx]==13 and prop_init['type'][xx] == 'SS_COLL_Giant':
+                period = uc.au_to_period(prop_finl['sma'][xx], prop_finl['m0'][xx], prop_finl['m0'][xx])
+                fcoll.write('%d %f %d %d %d %d %f %f %f %f %f %f %d %d %f %f %f %f %f\n'%(ii, prop_init['time'][xx]*t_conv, prop_init['id1'][xx], prop_init['id0'][xx], 
+                      prop_init['k1'][xx], prop_init['k0'][xx], 
+                      prop_init['m1'][xx], prop_init['m0'][xx],
+                      prop_init['r1'][xx], prop_init['r0'][xx],
+                      prop_init['rperi'][xx], prop_init['vinf'][xx],
+                      prop_finl['k1'][xx], prop_finl['k0'][xx], 
+                      prop_finl['m1'][xx], prop_finl['m0'][xx],
+                      prop_finl['sma'][xx], prop_finl['ecc'][xx],
+                      period))
+
+        print(ii)
+
+    ftc.close()
+    fcoll.close()
+
+##find what happens to binaries, especially tc and giant collision binaries
+##Here inputfile is /projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rvgrid/standard_models_tcon/all_tc_NSXX.dat etc.
+def find_binary_interaction(inputfile, pathlist):
+    paths = np.genfromtxt(pathlist, dtype=str)
+    data = np.genfromtxt(inputfile)
+    models = data[:,0]; id0 = data[:,2]; id1 = data[:,3]
+
+    f = open('/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rvgrid/standard_models_tcon/coll_interactions.dat', 'a+')
+    print('#1.Model 2.ID0 3.ID1 4.Time(Myr) 5.Status', file = f)
+
+    for ii in range(len(paths)):
+        t_conv = dyn.conv('t', paths[ii]+'initial.conv.sh')
+        data_binint = scripts3.read_binint(paths[ii]+'initial.binint.log')
+        #print('binint read', file = f)
+
+        for xx in range(len(models)):
+            if models[xx] == ii:
+                id_ns = int(id0[xx]); id_comp = int(id1[xx])
+                check = 0
+
+                for yy in range(len(data_binint)-1, -1, -1):
+                    bininput = data_binint[yy]['input']
+                    binoutput = data_binint[yy]['output']
+                    time = data_binint[yy]['type']['time']*t_conv
+
+                    for m in range(len(bininput)):
+                        #print(bininput[m]['no'], bininput[m]['ids'])
+                        if int(bininput[m]['no'])==2 and ((int(bininput[m]['ids'][0])==id_ns and int(bininput[m]['ids'][1]) == id_comp) or (int(bininput[m]['ids'][0])==id_comp and int(bininput[m]['ids'][1]) == id_ns)):
+                            check = 1
+                            check_out = 0
+                            for n in range(len(binoutput)):
+                                if binoutput[n]['merge']['ids']:    
+                                    #print(binoutput[n]['merge']['merge'].index(1))
+                                    merge_index = int(binoutput[n]['merge']['merge'].index(1))
+
+                                if binoutput[n]['merge']['ids'] and (str(id_ns) in binoutput[n]['merge']['ids'][merge_index] and str(id_comp) in binoutput[n]['merge']['ids'][merge_index]):
+                                    print(ii, id_ns, id_comp, time, 'binary_merged', file = f)
+                                    check_out = 1
+                                    break
+
+                                elif binoutput[n]['merge']['ids'] and (str(id_ns) in binoutput[n]['merge']['ids'][merge_index] or str(id_comp) in binoutput[n]['merge']['ids'][merge_index]):
+                                    print(ii, id_ns, id_comp, time, 'one_merged', file = f)
+                                    check_out = 1
+                                    break
+
+                                elif int(binoutput[n]['no'])==2 and str(id_ns) in binoutput[n]['ids'] and str(id_comp) in binoutput[n]['ids']:
+                                    print(ii, id_ns, id_comp, time, binoutput[n], file = f)
+                                    check_out = 1
+                                    break
+
+                                elif int(binoutput[n]['no'])==3 and str(id_ns) in binoutput[n]['ids'][:2] and str(id_comp) in binoutput[n]['ids'][:2]:
+                                    print(ii, id_ns, id_comp, time, binoutput[n], file = f)
+                                    check_out = 1
+                                    break
+
+                            if check_out == 0:    
+                                print(ii, id_ns, id_comp, time, 'disrupted', file = f)
+                                break
+
+
+                    if check: break
+
+                if not check:
+                    print(ii, id_ns, id_comp, time, 'no_interactions', file = f)
+
+        print(ii)
+
+    f.close()
+
 
 
 ##Check if the pulsars at the last snapshot is formed from tidal capture
@@ -250,7 +568,7 @@ def check_psr_tc_last(filepath):
     nsms_id0 = datansms[:,2]; nsms_id1 = datansms[:,3]; nsmsflag = datansms[:,14]
     nswd_id0 = datanswd[:,2]; nswd_id1 = datanswd[:,3]; nswdflag = datanswd[:,14]
 
-    prop_init, prop_finl, prop_des=find_tc_properties(filepath)
+    prop_init, prop_finl, prop_des=find_tc_properties_final(filepath)
     tc_id0 = prop_init['id0']; tc_id1 = prop_init['id1']
 
     msp_tcflag = []
@@ -271,17 +589,17 @@ def check_psr_tc_last(filepath):
             msp_tcflag.append(3)
             for j in range(len(tc_id0)):
                 if (msp_id0[i]==tc_id0[j] and msp_id1[i]==tc_id1[j]) or (msp_id1[i]==tc_id0[j] and msp_id0[i]==tc_id1[j]):
-                    msp_tcflag[i]==1
+                    msp_tcflag[i]=1
                     break
                 elif msp_id0[i]==tc_id0[j] or msp_id0[i]==tc_id1[j]:
-                    msp_tcflag[i]==2
+                    msp_tcflag[i]=2
                     break
 
         if msp_id1[i]==-100:
             msp_tcflag.append(3)
             for j in range(len(tc_id0)):
                 if msp_id0[i]==tc_id0[j] or msp_id0[i]==tc_id1[j]:
-                    msp_tcflag[i]==2
+                    msp_tcflag[i]=2
                     break
                 
     return msp_tcflag
@@ -294,6 +612,7 @@ def check_psr_tc_models(pathlist):
     for kk in range(len(paths)):
         print(kk)
         tc_flags = check_psr_tc_last(paths[kk])
+        print()
         uf.add_column(paths[kk]+'msp_last.dat', paths[kk]+'msp_last.dat', tc_flags)
 
 
@@ -461,6 +780,107 @@ def find_msp_NSMS_9to14Gyr(savepath):
     #        f.write(data_all[i])
 
     #f.close()
+
+
+##Find NSs that exchange into a binary with low-mass main-sequence star companions.
+def find_NS_MS_exchange(pathlist, savepath):
+    paths = np.genfromtxt(pathlist, dtype=str)
+
+    f = open(savepath, 'a+')
+    f.write('#1.Model 2.Time(Myr) 3.ID0 4.ID1 5.M0 6.M1 7.K0 8.K1 9.SMA[AU] 10.ECC 11.Period[days]\n')
+
+    for ii in range(len(paths)):
+        filestr=paths[ii]+'initial'
+        t_conv=dyn.conv('t', filestr+'.conv.sh')
+
+        binintfile=filestr+'.binint.log'
+
+        binint=scripts3.read_binint(binintfile)
+        print('binint read')
+        for xx in range(len(binint)):
+            inputs=binint[xx]['input']
+            outputs=binint[xx]['output']
+            for m in range(len(outputs)):
+                if int(outputs[m]['no'])==2: 
+                    if int(outputs[m]['startype'][1])==13 and 0<=int(outputs[m]['startype'][0])<=1 and float(outputs[m]['m'][0])<=2.:
+                        nsid = int(outputs[m]['ids'][1]); compid = int(outputs[m]['ids'][0])
+                        mns = float(outputs[m]['m'][1]); mcomp = float(outputs[m]['m'][0])
+                        time = binint[xx]['type']['time']*t_conv
+
+                        for n in range(len(inputs)):
+                            if int(inputs[n]['no'])==1 and int(inputs[n]['ids'][0])== nsid and float(outputs[m]['a'][0])<=1.:
+                                period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][1]), int(outputs[m]['startype'][0]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                break
+                            elif int(inputs[n]['no'])==2:
+                                if nsid in inputs[n]['ids'] and compid in inputs[n]['ids']:
+                                    break
+                                elif nsid in inputs[n]['ids'] and float(outputs[m]['a'][0])<=1.:
+                                    period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                    f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][1]), int(outputs[m]['startype'][0]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                    break
+         
+
+                    if int(outputs[m]['startype'][0])==13 and 0<=int(outputs[m]['startype'][1])<=1 and float(outputs[m]['m'][1])<=2.:
+                        nsid = int(outputs[m]['ids'][0]); compid = int(outputs[m]['ids'][1])
+                        mns = float(outputs[m]['m'][0]); mcomp = float(outputs[m]['m'][1])
+                        time = binint[xx]['type']['time']*t_conv
+
+                        for n in range(len(inputs)):
+                            if int(inputs[n]['no'])==1 and int(inputs[n]['ids'][0])== nsid and float(outputs[m]['a'][0])<=1.:
+                                period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][0]), int(outputs[m]['startype'][1]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                break
+                            elif int(inputs[n]['no'])==2:
+                                if nsid in inputs[n]['ids'] and compid in inputs[n]['ids']:
+                                    break
+                                elif nsid in inputs[n]['ids'] and float(outputs[m]['a'][0])<=1.:
+                                    period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                    f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][0]), int(outputs[m]['startype'][1]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                    break
+
+
+                if int(outputs[m]['no'])==3:
+                    if int(outputs[m]['startype'][1])==13 and 0<=int(outputs[m]['startype'][0])<=1 and float(outputs[m]['m'][0])<=2.:
+                        nsid = int(outputs[m]['ids'][1]); compid = int(outputs[m]['ids'][0])
+                        mns = float(outputs[m]['m'][1]); mcomp = float(outputs[m]['m'][0])
+                        time = binint[xx]['type']['time']*t_conv
+
+                        for n in range(len(inputs)):
+                            if int(inputs[n]['no'])==1 and int(inputs[n]['ids'][0])== nsid:
+                                period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][1]), int(outputs[m]['startype'][0]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                break
+                            elif int(inputs[n]['no'])==2:
+                                if nsid in inputs[n]['ids'] and compid in inputs[n]['ids']:
+                                    break
+                                elif nsid in inputs[n]['ids']:
+                                    period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                    f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][1]), int(outputs[m]['startype'][0]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                    break
+         
+
+                    if int(outputs[m]['startype'][0])==13 and 0<=int(outputs[m]['startype'][1])<=1 and float(outputs[m]['m'][1])<=2.:
+                        nsid = int(outputs[m]['ids'][0]); compid = int(outputs[m]['ids'][1])
+                        mns = float(outputs[m]['m'][0]); mcomp = float(outputs[m]['m'][1])
+                        time = binint[xx]['type']['time']*t_conv
+
+                        for n in range(len(inputs)):
+                            if int(inputs[n]['no'])==1 and int(inputs[n]['ids'][0])== nsid:
+                                period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][0]), int(outputs[m]['startype'][1]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                break
+                            elif int(inputs[n]['no'])==2:
+                                if nsid in inputs[n]['ids'] and compid in inputs[n]['ids']:
+                                    break
+                                elif nsid in inputs[n]['ids']:
+                                    period = uc.au_to_period(float(outputs[m]['a'][0]), mns, mcomp)
+                                    f.write('%d %f %d %d %f %f %d %d %f %f %f\n'%(ii, time, nsid, compid, mns, mcomp, int(outputs[m]['startype'][0]), int(outputs[m]['startype'][1]), float(outputs[m]['a'][0]), float(outputs[m]['e'][0]), period))
+                                    break                  
+
+        print(ii)
+
+    f.close()
 
 
 ##Find the frequency of all collisions from single-single and from fewbody in the collision file

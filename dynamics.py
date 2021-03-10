@@ -300,8 +300,8 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
     model=[]; NBH=[]; MTOT=[]; RC=[]; RH=[]; NNS=[]; NDNS=[]; NNSBH=[]; st=[]
     RC_obs=[]; RHL_obs=[]; NPSR=[]; NMSP=[]
     sourcedir=np.genfromtxt(pathlist, dtype=str)
-    filepath=sourcedir[:,0]#; status=sourcedir[:,1]
-    status=[0,0,0,0,0,0,0,0,0,0]
+    filepath=sourcedir[:,0]; status=sourcedir[:,1]
+    #status=[0,0,0,0,0,0,0,0,0,0]
     #print filepath
 
     for i in range(start, end):
@@ -320,7 +320,7 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
 
 
         ##If the cluster dissolved, get the numbers for the last snapshot; if not, get the numbers within the last 3Gyr
-        if int(status[i])!=1:
+        if int(status[i])!='1':
             ##Numbers at the last snapshot
             Nbh, Ntot, Mtot=find_NBH_NTOT(filestr, -100, t_conv)
             Mtot, Rc, Rh, Rhoc=find_rcrh_mtotrho0(filestr, -100, t_conv)
@@ -343,7 +343,7 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
         print(i)
 
 
-    np.savetxt('/projects/b1095/syr904/cmc/47Tuc/rundir/clusterproperty_lastsnap.dat', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH, NPSR, NMSP, st], fmt='%d %d %f %f %f %f %f %d %d %d %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh 11.Npsr 12.Nmsp 13.Dissolved?', delimiter='', comments='#')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/catalog/clusterproperty_maingrid_last', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH, NPSR, NMSP, st], fmt='%d %d %f %f %f %f %f %d %d %d %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh 11.Npsr 12.Nmsp 13.Dissolved?', delimiter='', comments='#')
 
 
 

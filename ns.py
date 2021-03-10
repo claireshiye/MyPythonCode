@@ -18,6 +18,7 @@ import dynamics as dyn
 import scripts3
 import scripts1
 import scripts2
+import ns_tidalcapture as ntc
 #from scipy import stats
 
 yearsc=31557600.
@@ -614,7 +615,7 @@ def print_Nns_snap(pathlist, start, end):
     #status=sourcedir[:,1]; 
     #sourcedir=sourcedir[:,0]
 
-    #sourcedir=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc_size/MOCHA47Tuc_150maxmass_rv1.4/']
+    #sourcedir=['/projects/b1091/CMC_Grid_March2019/rundir/rv4/rg8/z0.002/1.6e6/']
     
     for i in range(start, end):
         pref='initial'
@@ -1738,7 +1739,7 @@ def get_nenc_msp(pathlist, mspfile):
             
 
 
-def get_mtb_numofencounter(sourcedir):
+def get_numofencounter(sourcedir):
     data = np.genfromtxt(sourcedir)
     pathlist=np.genfromtxt('/projects/b1011/syr904/projects/PULSAR/kickgrid_runs/kickgrid_path.dat', dtype='|S')
 
@@ -2701,13 +2702,15 @@ def get_allpsr_last(pathlist, mspfg, filename, savepath):
     sourcedir=np.genfromtxt(pathlist, dtype=str)
     paths = sourcedir; status=np.full_like(paths, 1)
     #paths=sourcedir[:,0]; status=[1,1,1,1,1,1,1,1,1,1]
-    #paths=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir_test13/8e5rv1rg8z0.002_tc_poly/']
+    #paths=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon/']
+    #status = [1]
     print(paths)
-    for i in range(len(paths)):
-        Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]
+    Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]; TCFLAG=[]
+    for kk in range(len(paths)):
+        #Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]; TCFLAG=[]
         
         pref='initial'
-        filepath=paths[i]
+        filepath=paths[kk]
         filestr=filepath+pref
         t_conv=conv('t', filestr+'.conv.sh')
         l_conv=conv('l', filestr+'.conv.sh')
@@ -2719,21 +2722,55 @@ def get_allpsr_last(pathlist, mspfg, filename, savepath):
 
         Bf, Spin, Id0, Id1, M0, M1, K0, K1, A, Ecc, Fc, Dmdt0, Dmdt1, Radrol0, Radrol1, R=get_allpsr_snapshot(lastsnap, mspfg)
 
-        Time=list(np.full_like(Id0, t, dtype=np.double)); Model=list(np.full_like(Id0, i)); Mst=list(np.full_like(Id0, int(status[i])))
+        prop_init, prop_finl, prop_des=ntc.find_tc_properties_final(filepath)
+        tc_id0 = prop_init['id0']; tc_id1 = prop_init['id1']; tc_type = prop_init['type']
+
+        tcflag = []
+        for i in range(len(Id0)):
+            tcflag.append(4)
+            for j in range(len(tc_id0)):
+                if Id1[i]!=-100:
+                    if (Id0[i]==tc_id0[j] and Id1[i]==tc_id1[j]) or (Id1[i]==tc_id0[j] and Id0[i]==tc_id1[j]):
+                        if tc_type[j]=='SS_COLL_Giant':
+                            tcflag[i]=81
+                            break
+                        if tc_type[j]=='SS_COLL_TC_P':
+                            tcflag[i]=91
+                            break
+
+                    elif Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
+                        if tc_type[j]=='SS_COLL_Giant':
+                            tcflag[i]=82
+                            break
+                        if tc_type[j]=='SS_COLL_TC_P':
+                            tcflag[i]=92
+                            break
+
+                else:
+                    if Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
+                        if tc_type[j]=='SS_COLL_Giant':
+                            tcflag[i]=83
+                            break
+                        if tc_type[j]=='SS_COLL_TC_P':
+                            tcflag[i]=93
+                            break
+
+
+        Time=list(np.full_like(Id0, t, dtype=np.double)); Model=list(np.full_like(Id0, kk)); Mst=list(np.full_like(Id0, int(status[kk])))
         #print(Time, Model, Mst)
 
         Md=Md+Model; T=T+Time; BF=BF+Bf; S=S+Spin; F=F+Fc; ID0=ID0+Id0; ID1=ID1+Id1; M_0=M_0+M0; M_1=M_1+M1; K_0=K_0+K0; K_1=K_1+K1; Aaxis=Aaxis+A; E=E+Ecc
         DMDT0=DMDT0+Dmdt0; DMDT1=DMDT1+Dmdt1; RAD0=RAD0+Radrol0; RAD1=RAD1+Radrol1; RADIUS=RADIUS+R
-        STATUS=STATUS+Mst
+        STATUS=STATUS+Mst; TCFLAG=TCFLAG+tcflag
 
-        print(i)
+        print(kk)
 
-        RADIUS=np.array(RADIUS)*l_conv
-        print('what?')
+    RADIUS=np.array(RADIUS)*l_conv
+    print('what?')
 
-    #print(ID0, ID1)
-        savepath = paths[i]
-        np.savetxt(savepath+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %f', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation', comments = '#')
+    #print(len(Md), len(T))
+    #savepath = paths[kk]
+    np.savetxt(savepath+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F, TCFLAG], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %d %d', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation 20.TCflag', comments = '#')
 
 
 ##Find all the pulsars between two time steps. Usually it's 9 to 14 Gyr. Include repeating pulsars
@@ -3083,14 +3120,14 @@ def XrayLum(M_A, M_D, A, K1):  ##Equation (29) in Rappaport et al 1982
 
 def get_r_v(psrfile, pathlist):
     data=np.genfromtxt(psrfile)
-    #model=data[:,0]; id0=data[:,1]; id1=data[:,2]; k0=data[:,15]; k1=data[:,16]
-    model=[0]; id0=[148017]; id1=[2006972]; k0=[13]; k1=[10]
+    model=data[:,0]; id0=data[:,12]; id1=data[:,13]; k0=data[:,14]; k1=data[:,15]
+    #model=[0]; id0=[148017]; id1=[2006972]; k0=[13]; k1=[10]
     ##Be careful of DNSs because they're shown in two different lines in the file if both of them are pulsars.
 
-    #sourcedir=np.genfromtxt(pathlist, dtype=str)
-    #paths=sourcedir[:,0]; status=sourcedir[:,1]
-    paths = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/MOCHA47Tuc_150maxmass_rv1.4']
-    status=[1]
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    paths=sourcedir[:,0]; status=sourcedir[:,1]
+    #paths = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/MOCHA47Tuc_150maxmass_rv1.4']
+    #status=[1]
     r2D=[]; r3D=[]; Mr2D=[]; Mr3D =[]; rx=[]; ry=[]; rz=[]; vx=[]; vy=[]; vz=[]
     for i in range(len(id0)):
         pref='initial'
@@ -3145,7 +3182,7 @@ def get_r_v(psrfile, pathlist):
         print(i)
         print(len(model), len(r2D), len(vz), len(r3D), len(Mr2D))
 
-    np.savetxt(paths[0]+'/normalpsr_accel_last.dat', np.c_[model, id0, id1, k0, k1, r2D, r3D, Mr2D, Mr3D, rx, ry, rz, vx, vy, vz], fmt ='%d %d %d %d %d %f %f %f %f %f %f %f %f %f %f', delimiter = ' ', header = '1.model, 2.id0, 3.id1, 4.k0, 5.k1, 6.r2D(pc), 7.r3D(pc), 8. Mtot(<r2D)(Msun), 9.Mtot(<r3D)(Msun), 10.rx(pc), 11.ry(pc), 12.rz(pc), 13.vx(km/s), 14.vy(km/s), 15.vz(km/s)', comments = '#')
+    np.savetxt('/projects/b1095/syr904/projects/PULSAR2/newruns/finaldata/msp_accel_maingrid_last.dat', np.c_[model, id0, id1, k0, k1, r2D, r3D, Mr2D, Mr3D, rx, ry, rz, vx, vy, vz], fmt ='%d %d %d %d %d %f %f %f %f %f %f %f %f %f %f', delimiter = ' ', header = '1.model, 2.id0, 3.id1, 4.k0, 5.k1, 6.r2D(pc), 7.r3D(pc), 8. Mtot(<r2D)(Msun), 9.Mtot(<r3D)(Msun), 10.rx(pc), 11.ry(pc), 12.rz(pc), 13.vx(km/s), 14.vy(km/s), 15.vz(km/s)', comments = '#')
 
                         
 def add_acceleration(r_2d, v_l, pdot0, p0, mr2d, a, e, m0, m1):
