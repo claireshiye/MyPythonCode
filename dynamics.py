@@ -18,10 +18,10 @@ import conversions
 savepath='/projects/b1095/syr904/projects/SGRB'
 
 
-def conv_dict(): return {'l':15, 't':19, 'm':7}    #?
+def conv_dict(): return {'l':15, 't':19, 'm':7, 'mstar':11}    #?
 
 
-def conv(unit,filepath):   # Returns the unit conversion multiplier given a simulation's *.conv.sh file and a unit (either 'l' or 't' or 'm')
+def conv(unit,filepath):   # Returns the unit conversion multiplier given a simulation's *.conv.sh file and a unit (either 'l' or 't' or 'm' or 'mstar')
     dict = conv_dict()
     from re import findall
     with open(filepath,'r') as f:
@@ -384,6 +384,46 @@ def find_clusterparameter_allmodel_last(pathlist, start, end):
 
 
     np.savetxt(savepath+'/newruns/finaldata/clusterproperty_nondissolved_last.dat', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH], fmt='%d %d %f %f %f %f %f %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh', delimiter='', comments='#')
+
+
+##Find Nbh, Mtot, Nns, Ndns initially
+def find_clusterparameter_allmodel_initial(pathlist, start, end, savepath):
+    model=[]; MTOT=[]; Rho_rh = []
+    N = []; Zmetal = []; Rv = []; Rg = []
+
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    filepath=sourcedir[:,0]; status=sourcedir[:,1]
+    status = list(map(int, status))
+    #print filepath
+
+    for i in range(start, end):
+        filestr=filepath[i]+'initial'
+        #filestr=filepath[i]+'initial'
+        t_conv=conv('t', filestr+'.conv.sh')
+        l_conv=conv('l', filestr+'.conv.sh')
+        m_conv=conv('m', filestr+'.conv.sh')
+        mstar_conv=conv('mstar', filestr+'.conv.sh')
+
+        filerho_lagrad=filestr+'.rho_lagrad.dat'
+        with open(filerho, 'r') as frho:
+            for line in frho:
+                data=line.split()
+                Rho_rh.append()
+
+        model.append(i); MTOT.append(m_conv)
+
+        s=filepath[i].split('/')
+        n_star=float(s[-2])
+        z=float(s[-3][1:])
+        rg=int(s[-4][2:])
+        rv=float(s[-5][2:])
+
+        N.append(n_star); Zmetal.append(z); Rv.append(rv); Rg.append(rg)
+
+        print(i)
+
+
+    np.savetxt(savepath+'clusterproperty_catalog_initial.dat', np.c_[model, MTOT, N, Zmetal, Rv, Rg, status], fmt='%d %e %e %f %f %f %d', header='1.Model 2.Mtot(Msun) 3.N 4.Zmetal 5.Rv 6.Rg', delimiter='', comments='#')
 
 
 

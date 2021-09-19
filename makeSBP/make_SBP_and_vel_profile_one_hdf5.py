@@ -20,6 +20,9 @@ import unit_convert as uc
 sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
 import cmctoolkit as cmct
 
+def read_keys(thekey):
+    return re.findall(r'\d+\.\d+|\d+', thekey)
+
 
 def conv_dict(): return {'l':15, 't':19, 'm':7, 'mstar':11}    #?
 
@@ -40,22 +43,6 @@ def get_time(filepath):      # Returns the cluster's age for a given snapshot
     if not findall(b'\d+[\.]?\d*',contents):        # Returns time = 0 for snapshot files without a time header
         print('snapshot empty'); return float(0)
     else: return float(findall(b'\d+[\.]?\d*',contents)[0])
-
-
-###Find the snapshots while excluding the 2Dproj snapshots
-def get_snapshots(filestring):
-    snaps=np.sort(glob(filestring+'.snap*.dat.gz'))
-    #print snaps
-    snap2d=np.sort(glob(filestring+'.snap*.2Dproj.dat.gz'))
-
-    index=[]
-    for m in range(len(snaps)):
-        for n in range(len(snap2d)):
-            if snaps[m]==snap2d[n]: index.append(m)
-
-    snaps = [x for y, x in enumerate(snaps) if y not in index]
-
-    return snaps
 
 
 def read_units(filestring):
@@ -106,58 +93,9 @@ def read_units(filestring):
     return units
 
 
-def find_max_snap(path,string):
-    snapstring = path+string
-    snapfiles = get_snapshots(snapstring)
 
-    snapno_max = len(snapfiles)-1
-    print(snapno_max)
-    if snapno_max < 10:
-        snapno_max_str = '000'+str(snapno_max)
-    if snapno_max < 100 and snapno_max >= 10:
-        snapno_max_str = '00'+str(snapno_max)
-    if snapno_max < 1000 and snapno_max >= 100:
-        snapno_max_str = '0'+str(snapno_max)
-    if snapno_max < 10000 and snapno_max >= 1000:
-        snapno_max_str = str(snapno_max)
-    if snapno_max >= 10000:
-        snapno_max_str = str(snapno_max)
-    return snapno_max_str
-
-
-
-def find_snap_time_array(path,string):
-    snapno_max = int(find_max_snap(path,string))
-    #print(snapno_max)
-    units=read_units(path+string)
-    km = units[0]['l_cgs']*1.0e-5
-    time_units = units[0]['t_myr']
-
-    t_array = []
-    s_array = []
-    for j in range(0,snapno_max+1):
-        if j < 10:
-            snapno = '000'+str(j)
-        if j < 100 and j >= 10:
-            snapno = '00'+str(j)
-        if j < 1000 and j >= 100:
-            snapno = '0'+str(j)
-        if j < 10000 and j >= 1000:
-            snapno = str(j)
-        if j >= 10000:
-            snapno = str(j)
-
-        time = get_time(path+string+'.snap'+snapno+'.dat.gz')
-        time = time*time_units      # DEFINE THE TIME OF THE SNAPFILE
-        t_array.append(time)
-        s_array.append(snapno)
-
-    #print(t_array, s_array)
-    return t_array, s_array
-
-
-
-def convert_to_3d(r, vr, vt, SEEDY=100):
+def convert_to_3d(r, vr, vt, SEEDY=10):
+    #np.random.seed(SEEDY)
     random.seed(SEEDY)
     #costheta = np.random.uniform(-1, 1)
     #sintheta = (1-costheta**2.)**0.5
@@ -212,48 +150,63 @@ def project_and_radially_sort(r3d, PROJ=(0,1)):
     return r2d, ind
 
 
-def make_2D_projection(filestring, snapno, units, writefilename, SEEDY=100, PROJ=(0,1)):
+def make_2D_projection(modelpath, thekey, units, writefilename, SEEDY=10, PROJ=(0,1)):
     #units = scripts.read_units(filestring)
+
+    snapno = read_keys(thekey)[0]; snaptime = float(read_keys(thekey)[1])
+    print(type(snapno))
+
     lpc = units[0]['l_pc']
     kms = 1e-5 * units[0]['l_cgs']/units[0]['nbt_cgs']
-    t_myr = get_time(filestring+'.snap'+snapno+'.dat.gz')*units[0]['t_myr']
-
-    #writefilename=filestring+'.snap'+snapno+'.2Dproj.dat'
-    writefile=open(writefilename, 'w')
-    writefile.write("#t=%g\n#1.r2D(pc) 2.Ltot(Lsun) 3.binflag 4.startype 5.L(Lsun) 6.startype0 7.startype1 8.L0(Lsun) 9.L1(Lsun) 10.Mtot(Msun) 11.M0(Msun) 12.M1(Msun) 13.id 14.id0 15.id1 16.rx(pc) 17.ry(pc) 18.rz(pc) 19.vx(km/s) 20.vy(km/s) 21.vz(km/s)\n" %(t_myr))
+    t_myr = snaptime*units[0]['t_myr']
 
     #read the snapfile
-    snapfile = filestring+'.snap'+snapno+'.dat.gz'
+    snapfile = cmct.Snapshot(fname=modelpath+'initial.snapshots.h5', 
+                             snapshot_name=thekey, conv=modelpath+'initial.conv.sh', 
+                             dist=4.52, # distance to cluster in kpc
+                             z=0.0038)
+
+    print('read_snapfile')
+
+
+    #writefilename=modelpath+'initial.snap'+snapno+'.2Dproj.dat'
+    writefile=open(writefilename, 'w+')
+    writefile.write("#t=%g\n#1.r2D(pc) 2.Ltot(Lsun) 3.binflag 4.startype 5.L(Lsun) 6.startype0 7.startype1 8.L0(Lsun) 9.L1(Lsun) 10.Mtot(Msun) 11.M0(Msun) 12.M1(Msun) 13.id 14.id0 15.id1 16.rx(pc) 17.ry(pc) 18.rz(pc) 19.vx(km/s) 20.vy(km/s) 21.vz(km/s)\n" %(t_myr))
+
+    print('write file')
+
     colnos = (2, 7, 14, 15, 17, 18, 19, 20, 1, 8, 9, 3, 4, 0, 10, 11)
     #0-r, 1-binflag, 2-startype, 3-L, 4-startype0, 5-startype1, 6-L0, 7-L1, 8-Mtot, 9-M0, 10-M1, 11-vr, 12-vt, 13-id, 14-id0, 15-id1
-    data = np.genfromtxt(snapfile, usecols=colnos)
+
     #data = np.genfromtxt(snapfile)
-    r = data[:,0]*lpc
-    vr = data[:,11]*kms
-    vt = data[:,12]*kms
+    r = snapfile.data['r']*lpc
+    vr = snapfile.data['vr']*kms
+    vt = snapfile.data['vt']*kms
     r3d, v3d = convert_to_3d(r, vr, vt, SEEDY=SEEDY)
     r2d, ind = project_and_radially_sort(r3d, PROJ=PROJ)
-    valid_line=0
     print('N:', len(ind))
+
+    #valid_line=0
+    valid_line=1
     for i in range(len(ind)):
-        try:
-            for j in range(len(data[ind[i]])):
-                if str(data[ind[i],j])=='nan' or str(data[ind[i],j])=='inf':
-                    valid_line = 0
-                    print(data[ind[i],:])
-                    raise StopIteration()
-                else:
-                    valid_line = 1
-        except StopIteration:
-            pass
+        #try:
+        #    for j in range(len(data[ind[i]])):
+        #        if str(data[ind[i],j])=='nan' or str(data[ind[i],j])=='inf':
+        #            valid_line = 0
+        #            print(data[ind[i],:])
+        #            raise StopIteration()
+        #        else:
+        #            valid_line = 1
+        #except StopIteration:
+        #    pass
         if valid_line==1:
-            if data[ind[i],1]==1.:
-                Ltot = data[ind[i],6]+data[ind[i],7]
-                Mtot = data[ind[i],9]+data[ind[i],10]
+            if snapfile.data['binflag'][ind[i]]==1.:
+                Ltot = snapfile.data['bin_star_lum0_LSUN'][ind[i]] + snapfile.data['bin_star_lum1_LSUN'][ind[i]]
+                Mtot = snapfile.data['m_MSUN'][ind[i]]
             else:
-                Ltot = data[ind[i],3]
-                Mtot = data[ind[i],8]
-            writefile.write("%g %g %g %g %g %g %g %g %g %g %g %g %d %d %d %g %g %g %g %g %g\n" %(r2d[ind[i]], Ltot, data[ind[i],1], data[ind[i],2], Ltot, data[ind[i],4], data[ind[i],5], data[ind[i],6], data[ind[i],7], Mtot, data[ind[i],9], data[ind[i],10], data[ind[i],13], data[ind[i],14], data[ind[i],15], r3d[0,ind[i]], r3d[1,ind[i]], r3d[2,ind[i]], v3d[0,ind[i]], v3d[1,ind[i]], v3d[2,ind[i]], ))
+                Ltot = snapfile.data['luminosity_LSUN'][ind[i]]
+                Mtot = snapfile.data['m_MSUN'][ind[i]]
+            writefile.write("%g %g %g %g %g %g %g %g %g %g %g %g %d %d %d %g %g %g %g %g %g\n" %(r2d[ind[i]], Ltot, snapfile.data['binflag'][ind[i]], snapfile.data['startype'][ind[i]], Ltot, snapfile.data['bin_startype0'][ind[i]], snapfile.data['bin_startype1'][ind[i]], snapfile.data['bin_star_lum0_LSUN'][ind[i]], snapfile.data['bin_star_lum1_LSUN'][ind[i]], Mtot, snapfile.data['m0_MSUN'][ind[i]], snapfile.data['m1_MSUN'][ind[i]], snapfile.data['id'][ind[i]], snapfile.data['id0'][ind[i]], snapfile.data['id1'][ind[i]], r3d[0,ind[i]], r3d[1,ind[i]], r3d[2,ind[i]], v3d[0,ind[i]], v3d[1,ind[i]], v3d[2,ind[i]]))
     writefile.close()
     return r, vr, vt, r3d, v3d
 
@@ -283,7 +236,6 @@ def get_obs_props(filestring, snapno, FAC=1.):
     #    except StopIteration:
     #        pass
     data = np.genfromtxt(filename, usecols=(0,1,9,18,19,20,))
-    print(len(data))
     Mtot = np.sum(data[:,2])
     Mave = np.mean(data[:,2])
     Lcum = np.cumsum(data[:,1])
@@ -485,158 +437,114 @@ def get_sbp_from_2D_projection_ncut(filestring, snapno, BINNO=50, LCUT=15, NCUT=
     return t_myr
 
 
-def velocity_dispersion_snap(path,string,snapno,ALL=0,Starinbin=200,mcut=0):
+##Something is wrong but i don't know what with this function. The velocity dispersions are not isotropic in the output.
+def velocity_dispersion_old(path,string,thekey,Starinbin=200,mcut=0):
+    snapno = read_keys(thekey)[0]; snaptime = float(read_keys(thekey)[1])
+
     units=read_units(path+string)
-    km = units[0]['l_cgs']*1.0e-5
-    time = units[0]['nbt_cgs']
-    f = open('RV_model.dat','w')
-    f1 = open('RV_model_sigma.dat','w')
-    if ALL == 1:
-        f4 = open(path+string+'.snap'+snapno+'.vel_dispersion_tight.dat','w')
-    if ALL == 0:
-        f4 = open(path+string+'.snap'+snapno+'.vel_dispersion_giants_vr_pm_'+str(Starinbin)+'_'+str(mcut)+'.dat','w')
-    f2 = open('RV_obs_sigma.dat','w')
-    f3 = open('giants.dat','w')
+    lpc = units[0]['l_pc']
+    kms = 1e-5 * units[0]['l_cgs']/units[0]['nbt_cgs']
+
+    f4 = open(path+string+'.snap'+snapno+'.vel_dispersion_vr_pm_'+str(Starinbin)+'_'+str(mcut)+'.dat','w+')
+
     print('#0)r2D(pc) 1)sigma_v(1D; km/s) 2)sigma_v_err(km/s) 3)sigma_pmr(1D; km/s) 4)sigma_pmr_err(km/s) 5)sigma_pmt(1D; km/s) 6)sigma_pmt_err(km/s) 7)sigma_pm(km/s) 8)sigma_pm_err(km/s) 9)sigma_pm2(km/s) 10)sigma_pm2_err(km/s)', file = f4)
 ####################
-    f55 = gzip.open(path+string+'.snap'+snapno+'.dat.gz','r')
-    lines55 = f55.readlines()
-    #data = np.genfromtxt(path+string+'.snap'+snapno+'.dat.gz')
+    snapfile = cmct.Snapshot(fname=path+'initial.snapshots.h5', 
+                             snapshot_name=thekey, conv=path+'initial.conv.sh', 
+                             dist=4.52, # distance to cluster in kpc
+                             z=0.0038)
+
+    print('read snap hdf5')
 #####################
 ###################
-    Vr = []; Vpm_r = []; Vpm_t = []; Vpm = []; Vpm2 = []
+    Vr = []; Vpm_r = []; Vpm_t = []; Vpm = []
     R = []
-    bin_count = 0
     count = 0
-    bin_array = []
-    for i in range(2,len(lines55)):
-        line55 = lines55[i]
-        data = line55.split()
-        for k in range(0,21):
-            data[k] = np.float(data[k])         
-        bin = 0
-        if ALL == 1:
-            if data[1] <= 1e6:  # Looks at all stars, not a cut.
-            #if data[i,3] <= 1.8 and data[i,3] >= -1.2:  # asks if in V-band mag range given by Caretta et al. 2009.
-                r_xyz = [data[15], data[16], data[17]]  #x,y,z components of r in pc
-                v_xyz = [data[18], data[19], data[20]]  #x,y,z components of velocity in km/s
+    print(len(snapfile.data['r']))
+
+    v_r = snapfile.data['vr']*kms # converts from code units to km/s
+    v_t = snapfile.data['vt']*kms
+    r_pc = snapfile.data['r']*lpc  #convert r from code units to pc
+
+    r_all, v_all = convert_to_3d(r_pc, v_r, v_t)
+
+    binflag = snapfile.data['binflag']
+    ktype = snapfile.data['startype']; k0 = snapfile.data['bin_startype0']; k1 = snapfile.data['bin_startype1']
+    m = snapfile.data['m_MSUN']; m0 = snapfile.data['m0_MSUN']; m1 = snapfile.data['m1_MSUN']
+
+    #print(v_all)
+
+    for i in range(len(r_all[0])):       
+        if binflag[i] == 1:
+            if mcut == 0 and (2 <= k0[i] <= 9 or 2 <= k1[i] <= 9):
+               #for k in range(0,70):
+                Vr.append(v_all[0,i])    # Use this if you want 1d vel dispersion
+                Vpm_r.append(v_all[1,i]); Vpm_t.append(v_all[2,i])
+                Vpm.append(np.sqrt(v_all[1,i]**2 + v_all[2,i]**2))
+                rd = np.sqrt(r_all[1,i]**2. + r_all[2,i]**2.)
+                R.append(rd)
                 count = count + 1
-                if data[2] == 1:
-                    bin_count = bin_count + 1
-                    bin = 1
-                bin_array.append(bin)
-                r = np.sqrt(r_xyz[0]**2. + r_xyz[1]**2.)
-                #R_temp = conversions.pc_to_arcsec(r,d_heliocentric)  #Converts radius in pc to arcsec
-                R.append(r)
-                Vr.append(data[20])     # Just use the z component as your LOS direction
-        if ALL == 0:
-            v_r = data[3]*km/time # converts from code units to km/s
-            v_t = data[4]*km/time
-            r_km = data[2]*km  #convert r from code units to km
-            if data[7] == 1:
-               #if data[i,17] >= 2 and data[i,17] <= 9:
-               #    for k in range(0,70):
-               #        r,v = convert_to_3d(r_km, v_r, v_t)
-               #        Vr.append(v[0])    # Use this if you want 1d vel dispersion
-               #        r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
-               #        R.append(r)
-               #        count = count + 1
-                
-               #if data[i,18] >= 2 and data[i,18] <= 9:
-               #    for k in range(0,70):
-               #        r,v = convert_to_3d(r_km, v_r, v_t)
-               #        Vr.append(v[0])    # Use this if you want 1d vel dispersion
-               #        r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
-               #        R.append(r)
-               #        count = count + 1     
 
-                if mcut == 0 and (2 <= data[17] <= 9 or 2 <= data[18] <= 9):
-                   #for k in range(0,70):
-                    r,v = convert_to_3d(r_km, v_r, v_t)
-                    Vr.append(v[0])    # Use this if you want 1d vel dispersion
-                    Vpm_r.append(v[1]); Vpm_t.append(v[2])
-                    Vpm.append(np.sqrt(v[1]**2 + v[2]**2))
-                    angle_pm = np.random.uniform(0, np.pi)
-                    Vpm2.append(v_t*np.cos(angle_pm))
-                    r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
-                    R.append(r)
-                    count = count + 1
-
-                elif (data[17]<10 and data[8]>=mcut) or (data[18]<10 and data[9]>=mcut):
-                    r,v = convert_to_3d(r_km, v_r, v_t)
-                    Vr.append(v[0])    # Use this if you want 1d vel dispersion
-                    Vpm_r.append(v[1]); Vpm_t.append(v[2])
-                    Vpm.append(np.sqrt(v[1]**2 + v[2]**2))
-                    angle_pm = np.random.uniform(0, np.pi)
-                    Vpm2.append(v_t*np.cos(angle_pm))
-                    r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
-                    R.append(r)
-                    count = count + 1
+            elif (k0[i]<10 and m0[i]>=mcut) or (k1[i]<10 and m1[i]>=mcut):
+                #print(snapfile.data['bin_startype0'][i], snapfile.data['m0_MSUN'][i], snapfile.data['binflag'][i])
+                Vr.append(v_all[0,i])    # Use this if you want 1d vel dispersion
+                Vpm_r.append(v_all[1,i]); Vpm_t.append(v_all[2,i])
+                Vpm.append(np.sqrt(v_all[1,i]**2 + v_all[2,i]**2))
+                rd = np.sqrt(r_all[1,i]**2. + r_all[2,i]**2.)
+                R.append(rd)
+                count = count + 1
 
 
+        else:
+            if mcut == 0 and 2 <= ktype[i] <= 9:
+                Vr.append(v_all[0,i])    # Use this if you want 1d vel dispersion
+                Vpm_r.append(v_all[1,i]); Vpm_t.append(v_all[2,i])
+                Vpm.append(np.sqrt(v_all[1,i]**2 + v_all[2,i]**2))
+                rd = np.sqrt(r_all[1,i]**2. + r_all[2,i]**2.)
+                R.append(rd)
+                count = count + 1
 
-            if data[7] != 1:
-                if mcut == 0 and 2 <= data[14] <= 9:
-                    for k in range(0,1):
-                    #for k in range(0,25):
-                        r,v = convert_to_3d(r_km, v_r, v_t)
-                        Vr.append(v[0])    # Use this if you want 1d vel dispersion
-                        Vpm_r.append(v[1]); Vpm_t.append(v[2])
-                        Vpm.append(np.sqrt(v[1]**2 + v[2]**2))
-                        angle_pm = np.random.uniform(0, np.pi)
-                        Vpm2.append(v_t*np.cos(angle_pm))
-                        r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
-                        R.append(r)
-                        count = count + 1
+            elif ktype[i]<10 and m[i]>=mcut:
+                #print(snapfile.data['startype'][i], snapfile.data['m_MSUN'][i], snapfile.data['binflag'][i])
+                Vr.append(v_all[0,i])    # Use this if you want 1d vel dispersion
+                Vpm_r.append(v_all[1,i]); Vpm_t.append(v_all[2,i])
+                Vpm.append(np.sqrt(v_all[1,i]**2 + v_all[2,i]**2))
+                rd = np.sqrt(r_all[1,i]**2. + r_all[2,i]**2.)
+                R.append(rd)
+                count = count + 1
 
-                elif data[14]<10 and data[1]>=mcut:
-                    r,v = convert_to_3d(r_km, v_r, v_t)
-                    Vr.append(v[0])    # Use this if you want 1d vel dispersion
-                    Vpm_r.append(v[1]); Vpm_t.append(v[2])
-                    Vpm.append(np.sqrt(v[1]**2 + v[2]**2))
-                    angle_pm = np.random.uniform(0, np.pi)
-                    Vpm2.append(v_t*np.cos(angle_pm))
-                    r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
-                    R.append(r)
-                    count = count + 1
-
+    print(Vr)
+    print('get vr vt done')
 ################################################
     mean_model = np.mean(Vr) #Find global mean of all model RVs
     mean_model_pmr = np.mean(Vpm_r)
     mean_model_pmt = np.mean(Vpm_t)
     mean_model_pm = np.mean(Vpm)
-    mean_model_pm2 = np.mean(Vpm2)
-    print('mean=',mean_model, mean_model_pm, mean_model_pm2)
-    array = np.zeros((len(Vr),6))
+    print('mean=',mean_model, mean_model_pm)
+    array = np.zeros((len(Vr),5))
     for i in range(0,len(Vr)):
         array[i,0] = R[i]
         array[i,1] = Vr[i]
         array[i,2] = Vpm_r[i]
         array[i,3] = Vpm_t[i]
         array[i,4] = Vpm[i]
-        array[i,5] = Vpm2[i]
     array = array[array[:,0].argsort()]  # sorts each measurement in order of radial position
-    for i in range(0,len(Vr)):
-        print(array[i,0], array[i,1], array[i,2], array[i,3], array[i,4], array[i,5], file = f) #Print each radius/LOS velocity pair in order of radial position   
 
 #####################################   
     sigma_vel_array = []
     sigma_pmr_array = []
     sigma_pmt_array = []
     sigma_pm_array = []
-    sigma_pm2_array = []
     R_array = []
     #mean_array = []
     #flag = 0
     sum_vel = 0
     sum_pmr = 0
     sum_pmt = 0
-    sum_pm = 0; sum_pm2 = 0
-    print(snapno, file = f1)
-        ## Define each bin as having 2000 stars. Every 2000 stars, start new bin
+    sum_pm = 0
 
     vel_array = []  # Makes an array with velocites of all stars within each bin
-    pmr_array = []; pmt_array = []; pm_array = []; pm2_array = []
+    pmr_array = []; pmt_array = []; pm_array = []
     r_array = []
     #bin_count = 0
     total_count = 0
@@ -646,7 +554,6 @@ def velocity_dispersion_snap(path,string,snapno,ALL=0,Starinbin=200,mcut=0):
             pmr_array.append(array[j,2])
             pmt_array.append(array[j,3])
             pm_array.append(array[j,4])
-            pm2_array.append(array[j,5])
             r_array.append(array[j,0])
             total_count = total_count + 1
         else:
@@ -657,7 +564,6 @@ def velocity_dispersion_snap(path,string,snapno,ALL=0,Starinbin=200,mcut=0):
                 sum_pmr = sum_pmr + (pmr_array[k]-mean_model_pmr)**2.
                 sum_pmt = sum_pmt + (pmt_array[k]-mean_model_pmt)**2.
                 sum_pm = sum_pm + (pm_array[k]-mean_model_pm)**2.
-                sum_pm2 = sum_pm2 + (pm2_array[k]-mean_model_pm2)**2.
                 count = count + 1.
             sigma_vel = np.sqrt(sum_vel/count)
             error_vel = np.sqrt(sigma_vel**2.0/(2.*count))
@@ -667,25 +573,136 @@ def velocity_dispersion_snap(path,string,snapno,ALL=0,Starinbin=200,mcut=0):
             error_pmt = np.sqrt(sigma_pmt**2.0/(2.*count))
             sigma_pm = np.sqrt(sum_pm/count)
             error_pm = np.sqrt(sigma_pm**2.0/(2.*count))
-            sigma_pm2 = np.sqrt(sum_pm2/count)
-            error_pm2 = np.sqrt(sigma_pm2**2.0/(2.*count))
 
-            print(r, sigma_vel, error_vel, sigma_pmr, error_pmr, sigma_pmt, error_pmt, sigma_pm, error_pm, sigma_pm2, error_pm2, file = f1)
-            print(r, sigma_vel, error_vel, sigma_pmr, error_pmr, sigma_pmt, error_pmt, sigma_pm, error_pm, sigma_pm2, error_pm2, file = f4)
+            print(r, sigma_vel, error_vel, sigma_pmr, error_pmr, sigma_pmt, error_pmt, sigma_pm, error_pm, file = f4)
             #print r, 'sigma=',sigma, 'error=',error, 'count=',count, 'N_binaries=',bin_count,'N_stars=',total_count,'binary fraction=',float(bin_count)/float(total_count)
             sigma_vel_array.append(sigma_vel)
             sigma_pmr_array.append(sigma_pmr)
             sigma_pmt_array.append(sigma_pmt)
             sigma_pm_array.append(sigma_pm)
-            sigma_pm2_array.append(sigma_pm2)
             R_array.append(np.mean(r_array))
-            sum_vel = 0; sum_pmr = 0; sum_pmt = 0; sum_pm = 0; sum_pm2 = 0
+            sum_vel = 0; sum_pmr = 0; sum_pmt = 0; sum_pm = 0
             #flag = 0
             #bin_count = 0
             total_count = 0
-            vel_array = []; pmr_array = []; pmt_array = []; pm_array = []; pm2_array = []
+            vel_array = []; pmr_array = []; pmt_array = []; pm_array = []
             r_array = []
-    print(' ', file = f1)
+
+    #return sigma_vel_array, sigma_pmr_array, sigma_pmt_array, R_array
+
+
+def velocity_dispersion_hdf5(modelpath, thekey, Starinbin=200, mcut=0, hdf5flag = 0):
+    snapno = read_keys(thekey)[0]; snaptime = float(read_keys(thekey)[1])
+
+    fvel = open(modelpath+'initial.snap'+snapno+'.vel_dispersion_vr_pm_'+str(Starinbin)+'_'+str(mcut)+'.dat','w+')
+    print('#0)r2D(pc) 1)sigma_v(1D; km/s) 2)sigma_v_err(km/s) 3)sigma_pmr(1D; km/s) 4)sigma_pmr_err(km/s) 5)sigma_pmt(1D; km/s) 6)sigma_pmt_err(km/s)', file = fvel)
+
+    if hdf5flag == 1:
+        snap_h5 = modelpath+'initial.snapshots.h5'
+        snap = cmct.Snapshot(fname=snap_h5, snapshot_name=thekey, conv=modelpath+'initial.conv.sh', 
+                            dist=4.52, # distance to cluster in kpc
+                            z=0.0038)
+        snap.make_2d_projection(seed=8675309)
+        VX = snap.data['vx[KM/S]']; VY = snap.data['vy[KM/S]']; VZ = snap.data['vz[KM/S]']
+        rd = snap.data['d[PC]']
+        ktype = snap.data['startype']; k0 = snap.data['bin_startype0']; k1 = snap.data['bin_startype1']
+        m = snap.data['m_MSUN']; m0 = snap.data['m0_MSUN']; m1 = snap.data['m1_MSUN']
+        binflag = snap.data['binflag']
+        print('read snap data')
+
+    if hdf5flag == 0:
+        binflag = []; VX = []; VY = []; VZ = []
+        rd = []
+        ktype = []; k0 = []; k1 = []
+        m = []; m0 = []; m1 = []
+        snap2d = modelpath+'initial.snap'+snapno+'.2Dproj.dat.gz'
+        with gzip.open(snap2d, 'r') as f2d:
+            next(f2d); next(f2d)
+            for line in f2d:
+                data = line.split()
+                binflag.append(int(data[2]))
+                VX.append(float(data[18])); VY.append(float(data[19])); VZ.append(float(data[20]))
+                rd.append(float(data[0]))
+                ktype.append(int(data[3])); k0.append(int(data[5])); k1.append(int(data[6]))
+                m.append(float(data[9])); m0.append(float(data[10])); m1.append(float(data[11]))
+
+        print('read snap data')
+    
+    vel_r = []; vel_pmr = []; vel_pmt = []
+    rpc = []
+    for xx in range(len(ktype)):
+        if binflag[xx] == 1:
+            if mcut == 0 and 2<=k0[xx]<=9 or 2<=k1[xx]<=9:
+                rpc.append(rd[xx])
+                vel_r.append(VX[xx]); vel_pmr.append(VY[xx]); vel_pmt.append(VZ[xx])
+
+            elif (k0[xx]<10 and m0[xx]>=mcut) or (k1[xx]<10 and m1[xx]>=mcut):
+                rpc.append(rd[xx])
+                vel_r.append(VX[xx]); vel_pmr.append(VY[xx]); vel_pmt.append(VZ[xx])
+
+        else:
+            if mcut == 0 and 2<=ktype[xx]<=9:
+                rpc.append(rd[xx])
+                vel_r.append(VX[xx]); vel_pmr.append(VY[xx]); vel_pmt.append(VZ[xx])
+
+            elif ktype[xx]<10 and m[xx]>=mcut:
+                rpc.append(rd[xx])
+                vel_r.append(VX[xx]); vel_pmr.append(VY[xx]); vel_pmt.append(VZ[xx])
+
+
+    array = np.zeros((len(vel_r),4))
+    for i in range(0,len(vel_r)):
+        array[i,0] = rpc[i]
+        array[i,1] = vel_r[i]
+        array[i,2] = vel_pmr[i]
+        array[i,3] = vel_pmt[i]
+    array = array[array[:,0].argsort()]  # sorts each measurement in order of radial position
+
+    mean_r = np.mean(vel_r); mean_pmr = np.mean(vel_pmr); mean_pmt = np.mean(vel_pmt)
+    print(mean_r, mean_pmr, mean_pmt)
+
+
+    sigma_r_array = []; sigma_pmr_array = []; sigma_pmt_array = []; R_array = []
+    velr_array = []; velpmr_array = []; velpmt_array = []
+    r_array = []
+    sum_r = 0; sum_pmr = 0; sum_pmt = 0
+
+    total_count = 0
+    for ii in range(0, len(array)):
+        if total_count <= Starinbin:
+            velr_array.append(array[ii,1])
+            velpmr_array.append(array[ii,2])
+            velpmt_array.append(array[ii,3])
+            r_array.append(array[ii,0])
+            total_count = total_count + 1
+        else:
+            count = 0.
+            for k in range(0,len(velr_array)):
+                r = np.mean(r_array)
+                sum_r = sum_r + (velr_array[k]-mean_r)**2.
+                sum_pmr = sum_pmr + (velpmr_array[k]-mean_pmr)**2.
+                sum_pmt = sum_pmt + (velpmt_array[k]-mean_pmt)**2.
+                count = count + 1.
+            sigma_r = np.sqrt(sum_r/count)
+            error_r = np.sqrt(sigma_r**2.0/(2.*count))
+            sigma_pmr = np.sqrt(sum_pmr/count)
+            error_pmr = np.sqrt(sigma_pmr**2.0/(2.*count))
+            sigma_pmt = np.sqrt(sum_pmt/count)
+            error_pmt = np.sqrt(sigma_pmt**2.0/(2.*count))
+
+            print(r, sigma_r, error_r, sigma_pmr, error_pmr, sigma_pmt, error_pmt, file = fvel)
+        
+            sigma_r_array.append(sigma_r)
+            sigma_pmr_array.append(sigma_pmr)
+            sigma_pmt_array.append(sigma_pmt)
+            R_array.append(np.mean(r_array))
+
+            sum_r = 0; sum_pmr = 0; sum_pmt = 0
+            total_count = 0
+            velr_array = []; velpmr_array = []; velpmt_array = []
+            r_array = []
+
+    #return sigma_r_array, sigma_pmr_array, sigma_pmt_array, R_array
 
 
 
@@ -785,10 +802,10 @@ def velocity_dispersion_2dsnap(path, snapno, Starinbin=200, mcut=0):
             r_array = []
 
     #return sigma_r_array, sigma_pmr_array, sigma_pmt_array, R_array
+    
 
 
-def main():
-    sourcepath = '/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon_fixbin_ic/'
+def main(sourcepath):
     N=3000000
     Z=0.0038
     rv=4
@@ -805,37 +822,47 @@ def main():
     M_total_units = units[0]['m_msun']
     pc = units[0]['l_pc']
 
-    print(sourcepath)
-    time_array, snap_array = find_snap_time_array(sourcepath,string)
-    print(snap_array)
 
+    snap_h5 = 'initial.snapshots.h5'
+    with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
+        snap_keys = snap_hdf.keys()
+
+
+    time_array = []; snap_array = []
+    for ii in range(len(snap_keys)):
+        temp_no, temp_t = read_keys(snap_keys[ii])
+        time_array.append(time_units*float(temp_t))
+        snap_array.append(temp_no)
+
+    time_sort, keys_sort = (list(t) for t in zip(*sorted(zip(time_array, snap_keys))))
+    time_sort, no_sort = (list(t) for t in zip(*sorted(zip(time_array,snap_array))))
+    #print(keys_sort)
+   
+    print(sourcepath)
     Delta = -2  #default -5000 for only making the last snapshot
 
-    for k in range(len(time_array)-1,-1,Delta):
-        time_snap = time_array[k]
-        no_snap = snap_array[k]
-        print('time=', time_snap, 'snapno=', no_snap)
-        if time_snap > 13000.: 
+    for k in range(len(time_sort)-1,-1,Delta):
+        time = time_sort[k]
+        no_snap = no_sort[k]
+        key_snap = keys_sort[k]
+        print('time=', time, 'snapno=', no_snap,)
+        if time > 9000.: 
             continue
-        if time_snap < 9000.:
+        if time < 8000.:
             print('stop!')
             break
         try:
-            f = open(sourcepath+'initial.snap'+no_snap+'.vel_dispersion_vr_pm_700_0.75.dat','r')
+            f = open(sourcepath+'initial.snap'+no_snap+'.vel_dispersion_vr_pm_700_0.85.dat','r')
             print(no_snap, 'is done')
             continue
         except:
             try:
-                print('start')
-                filename = sourcepath+'initial.snap'+no_snap+'.2Dproj.dat'
-                make_2D_projection(sourcepath+'initial', no_snap, units, filename)
+                make_2D_projection(sourcepath, key_snap, units, sourcepath+'initial.snap'+no_snap+'.2Dproj.dat')
                 os.system('gzip '+sourcepath+'initial.snap'+no_snap+'.2Dproj.dat')
                 print('made 2D projection')
 
                 ###### make cluster params file
                 #f2 = open(path+'initial.snap'+snapno+'.cluster_params.dat','w')
-                #f5 = gzip.open(path+'initial.snap'+snapno+'.dat.gz','r')
-                #lines5 = f5.readlines()
                 #props = get_obs_props(path+'initial', snapno, FAC=1.)
                 #print('props=', props)
                 #rc = props['rc']
@@ -899,7 +926,7 @@ def main():
                 #print('end of loop')
                 #number_density = count/(rc**3.)
                 #number_density2 = count_obj/(rc**3.)
-                ##print 'number_density', number_density
+                #print 'number_density', number_density
     
                 #print("#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2", file = f2)
                 #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
@@ -912,19 +939,15 @@ def main():
                 #print('made params file')
                 #get_sbp_from_2D_projection(path+string, snapno)
                 get_sbp_from_2D_projection_ncut(sourcepath+string, no_snap, BINNO=50, LCUT=12, NCUT=0.85)
-                #get_sbp_from_2D_projection_ncut(sourcepath+string, no_snap, BINNO=50, LCUT=12, NCUT=0.75)
-                print(no_snap, 'made SBP')
-
-                velocity_dispersion_2dsnap(sourcepath,no_snap, Starinbin=700, mcut = 0.85)
-                #velocity_dispersion_2dsnap(sourcepath,no_snap, Starinbin=500, mcut = 0)
+                print(key_snap, 'made SBP')
+                #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
+                #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
+                velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=700, mcut = 0.85)
+                velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=500, mcut = 0)
                 print('Made vel dispersion for',no_snap)
             except:
-                print(no_snap, 'failed')
+                print(key_snap, 'failed')
 
-
-
-def read_keys(thekey):
-    return re.findall(r'\d+\.\d+|\d+', thekey)
 
 
 ##Make all relevent profiles for the new CMC-COSMIC models using hdf5
@@ -1004,13 +1027,16 @@ def make_SBP_VDP_NDP_hdf5_smooth(modelpath, dgc):   ##dgc in kpc
 
     snap_no_sort, snap_time_sort = (list(t) for t in zip(*sorted(zip(snap_no, snap_time))))
 
-    np.savetxt(modelpath+'snap_keys.txt', np.c_[snap_no_sort, snap_time_sort], fmt = '%d %f', header = '1.snap_no 2.snap_time', comments = '#')
-
+    np.savetxt(modelpath+'snap_keys.txt', np.c_[snap_no_sort, snap_time_sort], fmt = '%d %.8f', header = '1.snap_no 2.snap_time', comments = '#')
 
 
 
 ##Make multiple different projections
-def make_different_projection_snap(modelpath, snap_no):
+def make_different_projection_snap(modelpath, snapno):
+    all_keys = np.genfromtxt(modelpath+'snap_keys.txt', dtype=str)
+    snaptime = all_keys[:,1][int(snapno)]
+    snapkey = '/'+snapno+'(t='+snaptime+')'
+
     string = 'initial'
     units=read_units(modelpath+string)
 
@@ -1024,11 +1050,18 @@ def make_different_projection_snap(modelpath, snap_no):
 
         print(projection)
 
-        filename = modelpath+'SNAP'+snap_no+'_'+str(ii)+'.2Dproj.dat'
-        make_2D_projection(modelpath+string, '0'+snap_no, units, filename, SEEDY=randomseed, PROJ=projection)
+        filename = modelpath+'SNAP'+snapno+'_'+str(ii)+'.2Dproj.dat'
+        make_2D_projection(modelpath, snapkey, units, filename, SEEDY=randomseed, PROJ=projection)
         os.system('gzip '+filename)
 
         print(ii)
+
+
+
+
+
+
+
 
 
 

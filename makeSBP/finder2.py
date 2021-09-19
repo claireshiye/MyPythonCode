@@ -297,7 +297,7 @@ def velocity_dispersion(path,string,snapno,ALL=1,Bin_no=25):
 	#data = np.genfromtxt(path+string+'.snap'+snapno+'.dat.gz')
 #####################
 ###################
-	Vr = []
+	Vr = []; Vpm_r = []; Vpm_t = []; Vpm = []
 	R = []
 	bin_count = 0
 	count = 0
@@ -345,64 +345,92 @@ def velocity_dispersion(path,string,snapno,ALL=1,Bin_no=25):
                         #                        count = count + 1			
 			if data[7] != 1:
 				if data[14] >= 2 and data[14] <= 9:
-                                        for k in range(0,1):
+                    for k in range(0,1):
 					#for k in range(0,25):
-                                                r,v = convert_to_3d(r_km, v_r, v_t)
-                                                Vr.append(v[0])    # Use this if you want 1d vel dispersion
-                                                r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
-                                                R.append(r)
-                                                count = count + 1
+                        r,v = convert_to_3d(r_km, v_r, v_t)
+                        Vr.append(v[0])    # Use this if you want 1d vel dispersion
+                        Vpm_r.append(v[1]); Vpm_t.append(v[2])
+                        Vpm.append(np.sqrt(v[1]**2 + v[2]**2))
+                        r = np.sqrt(r[1]**2. + r[2]**2.)/3.086e13  # convert r from km to pc
+                        R.append(r)
+                        count = count + 1
 ################################################
 	mean_model = np.mean(Vr[:]) #Find global mean of all model RVs
+	mean_model_pmr = np.mean(Vpm_r[:])
+	mean_model_pmt = np.mean(Vpm_t[:])
+	mean_model_pm = np.mean(Vpm[:])
 	print 'mean=',mean_model
-	array = np.zeros((len(Vr),2))
+	array = np.zeros((len(Vr),5))
 	for i in range(0,len(Vr)):
 		array[i,0] = R[i]
 		array[i,1] = Vr[i]
+		array[i,2] = Vpm_r[i]
+		array[i,3] = Vpm_t[i]
+		array[i,4] = Vpm[i]
 	array = array[array[:,0].argsort()]  # sorts each measurement in order of radial position
 	for i in range(0,len(Vr)):
-		print>>f, array[i,0], array[i,1] #Print each radius/LOS velocity pair in order of radial position	
+		print>>f, array[i,0], array[i,1], array[i,2], array[i,3], array[i,4] #Print each radius/LOS velocity pair in order of radial position	
 
 #####################################	
-	sigma_array = []	
+	sigma_vel_array = []
+	sigma_pmr_array = []
+	sigma_pmt_array = []
+	sigma_pm_array = []
 	R_array = []
-	R_array2 = []
-	mean_array = []
-	mean_array2 = []
-	sigma_array2 = []
-	flag = 0
-	sum = 0
+	#mean_array = []
+	#flag = 0
+	sum_vel = 0
+	sum_pmr = 0
+	sum_pmt = 0
+	sum_pm = 0
 	print>>f1, snapno,
         ## Define each bin as having 2000 stars. Every 2000 stars, start new bin
 
 	vel_array = []  # Makes an array with velocites of all stars within each bin
+	pmr_array = []; pmt_array = []; pm_array = []
 	r_array = []
-	bin_count = 0
+	#bin_count = 0
 	total_count = 0
 	for j in range(0,len(array)):   
 		if total_count <= Bin_no:
 		#if total_count <= 500:
 			vel_array.append(array[j,1])
+			pmr_array.append(array[j,2])
+			pmt_array.append(array[j,3])
+			pm_array.append(array[j,4])
 			r_array.append(array[j,0])
 			total_count = total_count + 1
 		else:
 			count = 0.
 			for k in range(0,len(vel_array)):
 				r = np.mean(r_array)
-				sum = sum + (vel_array[k]-mean_model)**2.
+				sum_vel = sum_vel + (vel_array[k]-mean_model)**2.
+				sum_pmr = sum_pmr + (pmr_array[k]-mean_model_pmr)**2.
+				sum_pmt = sum_pmt + (pmt_array[k]-mean_model_pmt)**2.
+				sum_pm = sum_pm + (pm_array[k]-mean_model_pm)**2.
 				count = count + 1.
-			sigma = np.sqrt(sum/count)
-			error = np.sqrt(sigma**2.0/(2.*count))
-			print>>f1, r, sigma, error,
-			print>>f4, r, sigma, error
+			sigma_vel = np.sqrt(sum_vel/count)
+			error_vel = np.sqrt(sigma_vel**2.0/(2.*count))
+            sigma_pmr = np.sqrt(sum_pmr/count)
+			error_pmr = np.sqrt(sigma_pmr**2.0/(2.*count))
+			sigma_pmt = np.sqrt(sum_pmt/count)
+			error_pmt = np.sqrt(sigma_pmt**2.0/(2.*count))
+			sigma_pm = np.sqrt(sum_pm/count)
+			error_pm = np.sqrt(sigma_pm**2.0/(2.*count))
+
+			print>>f1, r, sigma, error, sigma_pmr, error_pmr, sigma_pmt, error_pmt, sigma_pm, error_pm
+			print>>f4, r, sigma, error, sigma_pmr, error_pmr, sigma_pmt, error_pmt, sigma_pm, error_pm
 			#print r, 'sigma=',sigma, 'error=',error, 'count=',count, 'N_binaries=',bin_count,'N_stars=',total_count,'binary fraction=',float(bin_count)/float(total_count)
-			sigma_array.append(sigma)
+			sigma_vel_array.append(sigma_vel)
+			sigma_pmr_array.append(sigma_pmr)
+			sigma_pmt_array.append(sigma_pmt)
+			sigma_pm_array.append(sigma_pm)
 			R_array.append(np.mean(r_array))
-			sum = 0
-			flag = 0
-			bin_count = 0
+			sum_vel = 0; sum_pmr = 0; sum_pmt = 0; sum_pm = 0
+			#flag = 0
+			#bin_count = 0
 			total_count = 0
-			vel_array = []
+			vel_array = []; pmr_array = []; pmt_array = []; pm_array = []
 			r_array = []
 	print>>f1,' '
 

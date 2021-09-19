@@ -96,23 +96,37 @@ def find_formationtime_DNS_new(ids, filestring, flag):
     binintfile=filestring+'.binint.log'
     binintfile2=filestring+'2.binint.log'
 
-    snaps=dyn.get_snapshots(filestring)
     t_conv=dyn.conv('t', filestring+'.conv.sh')
-    firstsnap=snaps[0]
+
+    #snaps=dyn.get_snapshots(filestring)
+    #firstsnap=snaps[0]
+    sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
+    import cmctoolkit as cmct
+
+    path = filestring.rsplit('/', 1)[0]
+    firstsnap = cmct.Snapshot(fname=path+'/initial.snapshots.h5', 
+        snapshot_name='/0(t=0)', conv=path+'/initial.conv.sh', 
+                     dist=4.52, # distance to cluster in kpc
+                     z=0.0038)
+    id0_snap0 = firstsnap.data['id0']; id1_snap0 = firstsnap.data['id1']
+
 
     tform=-100; snapno=-100
     tinteract_last=0
     primordial=0; dynamics_eject=0; anydyn=0
-    with gzip.open(firstsnap, 'r') as ffirst:
-        next(ffirst)
-        next(ffirst)
-        for line in ffirst:
-            datafirst=line.split()
-            if int(datafirst[7])==1:
-                if (int(datafirst[10])==ids[0] and int(datafirst[11])==ids[1]) or (int(datafirst[10])==ids[1] and int(datafirst[11])==ids[0]):
-                    primordial=1
-                    break
-
+    #with gzip.open(firstsnap, 'r') as ffirst:
+    #    next(ffirst)
+    #    next(ffirst)
+    #    for line in ffirst:
+    #        datafirst=line.split()
+    #        if int(datafirst[7])==1:
+    #            if (int(datafirst[10])==ids[0] and int(datafirst[11])==ids[1]) or (int(datafirst[10])==ids[1] and int(datafirst[11])==ids[0]):
+    #                primordial=1
+    #                break
+    for ii in range(len(id0_snap0)):
+        if (ids[0] == int(id0_snap0[ii]) and ids[1] == int(id1_snap0[ii])) or (ids[0] == int(id1_snap0[ii]) and ids[1] == int(id0_snap0[ii])):
+            primordial = 1
+            break
 
 
     if os.path.isfile(binintfile2) and os.path.getsize(binintfile2) > 0:
@@ -463,12 +477,12 @@ def find_formationtime_BBH(ids, filestring):
 
 
 def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the cluster and escaped
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
-    status = np.ones(len(sourcedir))
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    #status = np.ones(len(sourcedir))
     #status=map(int, sourcedir[:,1]); 
     #sourcedir=sourcedir[:,0]
-    #sourcedir=['/projects/b1095/syr904/cmc/extreme_model/N8e5fbh100rv0.5_NSkick20_BHkick_300_IMF20/']
-    #status=[1]
+    sourcedir=['/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/']
+    status=[1]
 
     ##Mergers in the clusters
     model_coll=[]; model_merge=[]; status_coll=[]; status_merge=[]
@@ -648,7 +662,7 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
         Nsemerge.append(nsemerge)
 
 
-        fesc_merger=open('/projects/b1095/syr904/projects/IMF/Esc_'+typeflag+'.dat', 'a+')
+        fesc_merger=open('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/Esc_'+typeflag+'.dat', 'a+')
         #fescbns.write('#1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 11.Tform(Myr) 12.Primordial? 13.Dynamically_Ejected? 14.Status\n')
         ####For mergers that happen outside of the clusters####
         escfile=filestr+'.esc.dat'
@@ -740,12 +754,12 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
 
 
     ##Output files
-    np.savetxt('/projects/b1095/syr904/projects/IMF/GWcap_'+typeflag+'.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
+    np.savetxt('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/GWcap_'+typeflag+'.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
 
-    np.savetxt('/projects/b1095/syr904/projects/IMF/Incluster_'+typeflag+'.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, tform_semerge, primordial_bin, dynamics_ejection, status_merge], fmt='%d %f %f %d %d %d %f %f %f %f %f %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R 11.Tform(Myr) 12.Primordial 13.Dynamics? 14.Status(1-done; 2&3-dissolved)', comments='#')
+    np.savetxt('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/Incluster_'+typeflag+'.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, tform_semerge, primordial_bin, dynamics_ejection, status_merge], fmt='%d %f %f %d %d %d %f %f %f %f %f %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R 11.Tform(Myr) 12.Primordial 13.Dynamics? 14.Status(1-done; 2&3-dissolved)', comments='#')
     ##Turn off dyn_any for BBH
 
-    np.savetxt('/projects/b1095/syr904/projects/IMF/num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, status], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
+    np.savetxt('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, status], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
 
 
 

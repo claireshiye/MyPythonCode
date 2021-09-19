@@ -43,7 +43,7 @@ def readdata_freire():
 
     ntot=0
 
-    with open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr.txt', 'rb') as f:
+    with open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr_223.txt', 'rb') as f:
         for _ in range(4):
             next(f)
         for line in f:
@@ -67,6 +67,7 @@ def readdata_freire():
              
                 ##Extract orbital data
                 if str(data[5])!='i' and str(data[5])!='*':
+                    #print(data[0])
                     #if str(data[5][0])=='<' or str(data[7][0])=='<' or str(data[5][0])=='>' or str(data[7][0])=='>': 
                     #    continue
                     #else: 

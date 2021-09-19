@@ -155,78 +155,80 @@ def fit_king_cum_curvefit(r2d, Lcum, p0guess=[1e5, 1.]):
 	return p_opt, p_cov
 
 def get_obs_props(filestring, snapno, FAC=1.):
-	filename = filestring+'.snap'+snapno+'.2Dproj.dat.gz'
-	with gzip.open(filename, 'r') as f:
-		try:
-			for line in f:
-				if line.rfind("#t=")>-1:
-					t = float(line.split('=')[1].split()[0])
-					raise StopIteration()
-		except StopIteration:
-			pass
-	data = np.genfromtxt(filename, usecols=(0,1,9,18,19,20,))
-	Mtot = np.sum(data[:,2])
-	Mave = np.mean(data[:,2])
-	Lcum = np.cumsum(data[:,1])
-	Ltot = Lcum[-1]
-	halfL = 0.5*Ltot
-	try:
-		for i in range(len(data)-1):
-			L1, L2 = Lcum[i], Lcum[i+1]
-			r1, r2 = data[i,0], data[i+1,0]
-			if L1<=halfL<=L2:
-				rhl = r1 + (r2-r1)*(halfL-L1)/(L2-L1)
-				drhl = 0.5*(r2-r1)
-				raise StopIteration()
-	except StopIteration:
-		N = i
-		print 'found rhl:', rhl, drhl, i, N
+    filename = filestring+'.snap'+snapno+'.2Dproj.dat.gz'
+    with gzip.open(filename, 'r') as f:
+    	try:
+            for line in f:
+                if line.rfind("#t=")>-1:
+                    t = float(line.split('=')[1].split()[0])
+                    raise StopIteration()
+        except StopIteration:
+            pass
+    data = np.genfromtxt(filename, usecols=(0,1,9,18,19,20,))
+    Mtot = np.sum(data[:,2])
+    Mave = np.mean(data[:,2])
+    Lcum = np.cumsum(data[:,1])
+    Ltot = Lcum[-1]
+    halfL = 0.5*Ltot
 
-	#guess_sigma = np.sum(data[:N, 1])/ (np.pi*data[N-1,0]**2.)
-	#print N
-	guess_sigma = Lcum[N]/(np.pi*data[N-1,0]**2.)
-	guess_rc = 0.5*rhl
-	p0guess = [guess_sigma, guess_rc]
-	lim = rhl*FAC
-	rselect, Lcumselect, count = [], [], 0
-	while count<len(data) and data[count,0]<=lim:
-		rselect.append(data[count,0])
-		Lcumselect.append(Lcum[count])
-		count+=1
-		#print count
-	rselect = np.array(rselect)
-	Lcumselect = np.array(Lcumselect)
-	p_opt, p_cov = fit_king_cum_curvefit(rselect, Lcumselect, p0guess=p0guess)
-	p_err = np.sqrt(np.diag(p_cov))
-	sigmac, sigmacerr, rc, rcerr = np.abs(p_opt[0]), np.abs(p_err[0]), np.abs(p_opt[1]), np.abs(p_err[1])
-	print 'sigmac:', sigmac, 'sigmacerr:', sigmacerr, 'rc:', rc, 'rcerr:', rcerr
-	vselect1, vselect2, vselect3 = [], [], []
-	count = 0
-	#print count, data[count,0]
-	while data[count,0]<=rc and data[count,0]<=rhl:
-		vselect1.append(data[count,3])
-		vselect2.append(data[count,4])
-		vselect3.append(data[count,5])
-		count+=1
-		#print count
-	vselect1, vselect2, vselect3 = np.array(vselect1), np.array(vselect2), np.array(vselect3)
-	vsigma = [np.std(vselect1), np.std(vselect2), np.std(vselect3)]
-	vsigma = np.array(vsigma) 
-	vsigmac = np.mean(vsigma)
-	dvsigmac = np.std(vsigma)
+    try:
+    	for i in range(len(data)-1):
+    	    L1, L2 = Lcum[i], Lcum[i+1]
+            r1, r2 = data[i,0], data[i+1,0]
+            if L1<=halfL<=L2:
+        	    rhl = r1 + (r2-r1)*(halfL-L1)/(L2-L1)
+        	    drhl = 0.5*(r2-r1)
+        	    raise StopIteration()
 
-	props = {'t': t,
-		'rhl': rhl,
-		'drhl': drhl,
-		'rc': rc,
-		'drc': rcerr,
-		'sigmac': sigmac,
-		'dsigmac': sigmacerr,
-		'Ltot': Ltot,
-		'M/L': Mtot/Ltot,
-		'Mave': Mave,
-		'vsigmac_rv': vsigmac,
-		'dvsigmac_rv': dvsigmac
-		}
+    except StopIteration:
+        N = i
+        print('found rhl:', rhl, drhl, i, N)
 
-	return props
+    #guess_sigma = np.sum(data[:N, 1])/ (np.pi*data[N-1,0]**2.)
+    #print N
+    guess_sigma = Lcum[N]/(np.pi*data[N-1,0]**2.)
+    guess_rc = 0.5*rhl
+    p0guess = [guess_sigma, guess_rc]
+    lim = rhl*FAC
+    rselect, Lcumselect, count = [], [], 0
+    while count<len(data) and data[count,0]<=lim:
+    	rselect.append(data[count,0])
+    	Lcumselect.append(Lcum[count])
+    	count+=1
+    	#print count
+    rselect = np.array(rselect)
+    Lcumselect = np.array(Lcumselect)
+    p_opt, p_cov = fit_king_cum_curvefit(rselect, Lcumselect, p0guess=p0guess)
+    p_err = np.sqrt(np.diag(p_cov))
+    sigmac, sigmacerr, rc, rcerr = np.abs(p_opt[0]), np.abs(p_err[0]), np.abs(p_opt[1]), np.abs(p_err[1])
+    print('sigmac:', sigmac, 'sigmacerr:', sigmacerr, 'rc:', rc, 'rcerr:', rcerr)
+    vselect1, vselect2, vselect3 = [], [], []
+    count = 0
+    #print count, data[count,0]
+    while data[count,0]<=rc and data[count,0]<=rhl:
+        vselect1.append(data[count,3])
+        vselect2.append(data[count,4])
+        vselect3.append(data[count,5])
+        count+=1
+		
+    vselect1, vselect2, vselect3 = np.array(vselect1), np.array(vselect2), np.array(vselect3)
+    vsigma = [np.std(vselect1), np.std(vselect2), np.std(vselect3)]
+    vsigma = np.array(vsigma) 
+    vsigmac = np.mean(vsigma)
+    dvsigmac = np.std(vsigma)
+
+    props = {'t': t,
+    	'rhl': rhl,
+    	'drhl': drhl,
+    	'rc': rc,
+    	'drc': rcerr,
+    	'sigmac': sigmac,
+    	'dsigmac': sigmacerr,
+    	'Ltot': Ltot,
+    	'M/L': Mtot/Ltot,
+    	'Mave': Mave,
+    	'vsigmac_rv': vsigmac,
+    	'dvsigmac_rv': dvsigmac
+    	}
+
+    return props

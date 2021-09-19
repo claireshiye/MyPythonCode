@@ -938,7 +938,7 @@ def get_sbp_from_2D_projection_ncut(filestring, snapno, BINNO=50, LCUT=15, NCUT=
 	lr2d = np.log10(data[:,0])
 	lbinsize = (lr2d[-1]-lr2d[0])/float(BINNO)
 	print lbinsize
-        mtot=data[:,9]; m0=data[:,10]; m1=data[:,11]; biflag=data[:,2]; ksin=data[:,3]; k0=data[:,5]; k1=data[:,6]
+    mtot=data[:,9]; m0=data[:,10]; m1=data[:,11]; biflag=data[:,2]; ksin=data[:,3]; k0=data[:,5]; k1=data[:,6]
 	n2d_prev = 0
 	for i in range(1, BINNO+1):
 		lsum, lsumerr, n2d, n2derr = 0., 0., 0., 0.
@@ -953,17 +953,17 @@ def get_sbp_from_2D_projection_ncut(filestring, snapno, BINNO=50, LCUT=15, NCUT=
 				if lr2d[j]<lr_high and lr2d[j]>=lr_low:
 					lsum = lsum + data[j,1]
 					n2d = n2d + 1
-                                        if NCUT!=-1 and biflag[j]!=1 and ksin[j]<10 and mtot[j]>=NCUT:
-                                                nd += 1
-                                        if NCUT!=-1 and biflag[j]==1 and ((k0[j]<10 and m0[j]>=NCUT) or (k1[j]<10 and m1[j]>=NCUT)):
-                                                nd += 1
+                    if NCUT!=-1 and biflag[j]!=1 and ksin[j]<10 and mtot[j]>=NCUT:
+                        nd += 1
+                    if NCUT!=-1 and biflag[j]==1 and ((k0[j]<10 and m0[j]>=NCUT) or (k1[j]<10 and m1[j]>=NCUT)):
+                        nd += 1
 					if data[j,1]<LCUT:
 						lsumcut += data[j,1]
 						n2dcut += 1
-                                                if NCUT!=-1 and biflag[j]!=1 and ksin[j]<10 and mtot[j]>=NCUT:
-                                                        ndcut += 1 
-                                                if NCUT!=-1 and biflag[j]==1 and ((k0[j]<10 and m0[j]>=NCUT) or (k1[j]<10 and m1[j]>=NCUT)):
-                                                        ndcut += 1
+                        if NCUT!=-1 and biflag[j]!=1 and ksin[j]<10 and mtot[j]>=NCUT:
+                            ndcut += 1 
+                        if NCUT!=-1 and biflag[j]==1 and ((k0[j]<10 and m0[j]>=NCUT) or (k1[j]<10 and m1[j]>=NCUT)):
+                            ndcut += 1
                                                                                                                                           
 				else:
 					raise StopIteration()
@@ -973,13 +973,13 @@ def get_sbp_from_2D_projection_ncut(filestring, snapno, BINNO=50, LCUT=15, NCUT=
 		if n2d>2:
 			sbp, sbperr = lsum/area, lsum/float(n2d)**0.5/area	
 			snp, snperr = n2d/area, float(n2d)**0.5/area
-                        sdp, sdperr = nd/area, float(nd)**0.5/area
+            sdp, sdperr = nd/area, float(nd)**0.5/area
 			writefile.write('%g %g %g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbp, sbperr, snp, snperr, sdp, sdperr))
 			if n2dcut>2:
 				############3	
 				sbpcut, sbpcuterr = lsumcut/area, lsumcut/float(n2d)**0.5/area	
 				snpcut, snpcuterr = n2dcut/area, float(n2dcut)**0.5/area
-                                sdpcut, sdpcuterr = ndcut/area, float(ndcut)**0.5/area                              
+                sdpcut, sdpcuterr = ndcut/area, float(ndcut)**0.5/area                              
 				################
 				writefile1.write('%g %g %g %g %g %g %g %g %g\n' %(10**lr_low, 10**lr_mid, 10**lr_high, sbpcut, sbpcuterr, snpcut, snpcuterr, sdpcut, sdpcuterr))
 

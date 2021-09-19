@@ -112,7 +112,8 @@ def get_time(filepath):      # Returns the cluster's age for a given snapshot
     from re import findall
     with gzip.open(filepath,'r') as f: contents = f.readline()
     if not findall(b'\d+[\.]?\d*',contents):        # Returns time = 0 for snapshot files without a time header
-        print('snapshot empty'); return float(0)
+        print('snapshot empty')
+        return float(-100)
     else: return float(findall(b'\d+[\.]?\d*',contents)[0])
 
 
@@ -612,10 +613,10 @@ def printout_Nbh_Npulsar_9to14Gyr(start, end, pathlist):
 
 def print_Nns_snap(pathlist, start, end):
     sourcedir=np.genfromtxt(pathlist, dtype='str')
-    #status=sourcedir[:,1]; 
-    #sourcedir=sourcedir[:,0]
+    status=sourcedir[:,1]
+    sourcedir=sourcedir[:,0]
 
-    #sourcedir=['/projects/b1091/CMC_Grid_March2019/rundir/rv4/rg8/z0.002/1.6e6/']
+    #sourcedir=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon/']
     
     for i in range(start, end):
         pref='initial'
@@ -637,11 +638,15 @@ def print_Nns_snap(pathlist, start, end):
         except:
         #if True:
             print(sourcedir[i])
+            #fhandle=open('/projects/b1095/syr904/projects/WDs/initial.ns'+str(i)+'.dat', 'a+')
             fhandle=open(filestr+'.ns.dat', 'a+')
             fhandle.write('#1.Totaltime, 2.Nns,tot, 3.Nns,single, 4.Nns,binary, 5.Nns,mtb, 6.Npulsar, 7.Nmsp, 8.Nns-ns, 9.Nns-bh, 10.Nns-wd, 11.Nns-ms, 12.Nns-postms\n')
             for j in range(len(snaps)):
                 N_NS=0; N_NS_SIN=0; N_NS_BIN=0; N_NS_MTB=0; N_PULS=0; N_MSP=0; N_NSNS=0; N_NSBH=0; N_NSWD=0; N_NSMS=0; N_NSPOSTMS=0
                 T=get_time(snaps[j])
+                if T==-100.:
+                    continue
+
                 #print j
                 with gzip.open(snaps[j], 'r') as fsnap:
                     for _ in range(2):
@@ -672,7 +677,7 @@ def print_Nns_snap(pathlist, start, end):
                                 elif int(datasnap[18])==14: N_NSBH+=1
                                 else: N_NSPOSTMS+=1
 
-                            if int(datasnap[18])==13 and int(datasnap[17])!=13:
+                            if int(datasnap[18])==13:
                                 N_NS+=1; N_NS_BIN+=1
                                 spin1=twopi*yearsc/float(datasnap[46])
                                 deathcut1=(spin1**2)*(0.17*10**12)
@@ -683,7 +688,7 @@ def print_Nns_snap(pathlist, start, end):
 
                                 if int(datasnap[17])<2: N_NSMS+=1
                                 elif int(datasnap[17])>=10 and int(datasnap[17])<=12: N_NSWD+=1
-                                elif int(datasnap[17])==13: N_NSNS+=1
+                                elif int(datasnap[17])==13: print('already counted')
                                 elif int(datasnap[17])==14: N_NSBH+=1
                                 else: N_NSPOSTMS+=1
                 fhandle.write('%f %d %d %d %d %d %d %d %d %d %d %d\n'%(T, N_NS, N_NS_SIN, N_NS_BIN, N_NS_MTB, N_PULS, N_MSP, N_NSNS, N_NSBH, N_NSWD, N_NSMS, N_NSPOSTMS))
@@ -693,6 +698,109 @@ def print_Nns_snap(pathlist, start, end):
         
             #print(i)
 
+##Print ns.dat file using the morepulsar outputs instead of the snapshots
+def print_Nns_psrfile(pathlist, start, end):
+    #sourcedir=np.genfromtxt(pathlist, dtype='str')
+    #status=sourcedir[:,1]; 
+    #sourcedir=sourcedir[:,0]
+
+    sourcedir=['/projects/b1091/CMC_Grid_March2019/rundir/rv2/rg20/z0.02/3.2e6/']
+    
+    for i in range(start, end):
+        filepath = sourcedir[i]
+        psrfiles = glob(filepath+'*.morepulsars.dat')
+        allt = []
+        for xx in range(len(psrfiles)):
+            with open(psrfiles[xx], 'r') as fpsr:
+                next(fpsr)
+                for line in fpsr:
+                    data = line.split()
+                    allt.append(float(data[1]))
+                    break
+
+        psrfiles, allt = (list(t) for t in zip(*sorted(zip(psrfiles, allt))))
+        print(psrfiles, allt)
+
+
+        try:
+           fh = open(filepath+'initial.ns.dat', 'r')
+        except:
+        #if True:
+            print(sourcedir[i])
+            #fhandle=open('/projects/b1095/syr904/projects/WDs/initial.ns'+str(i)+'.dat', 'a+')
+            fhandle=open(filepath+'initial.ns.dat', 'a+')
+            fhandle.write('#1.Totaltime, 2.Nns,tot, 3.Nns,single, 4.Nns,binary, 5.Nns,mtb, 6.Npulsar, 7.Nmsp, 8.Nns-ns, 9.Nns-bh, 10.Nns-wd, 11.Nns-ms, 12.Nns-postms\n')
+            for j in range(len(psrfiles)):
+                N_NS=0; N_NS_SIN=0; N_NS_BIN=0; N_NS_MTB=0; N_PULS=0; N_MSP=0; N_NSNS=0; N_NSBH=0; N_NSWD=0; N_NSMS=0; N_NSPOSTMS=0
+                t_old = allt[j]
+                #print j
+                with open(psrfiles[j], 'r') as fpsr:
+                    next(fpsr)
+                    for line in fpsr:
+                        datapsr=line.split()
+                        #print(datapsr)
+                        t_curr = float(datapsr[1])
+                        if t_curr != t_old:
+                            T = t_old
+                            fhandle.write('%f %d %d %d %d %d %d %d %d %d %d %d\n'%(T, N_NS, N_NS_SIN, N_NS_BIN, N_NS_MTB, N_PULS, N_MSP, N_NSNS, N_NSBH, N_NSWD, N_NSMS, N_NSPOSTMS))
+                            N_NS=0; N_NS_SIN=0; N_NS_BIN=0; N_NS_MTB=0; N_PULS=0; N_MSP=0; N_NSNS=0; N_NSBH=0; N_NSWD=0; N_NSMS=0; N_NSPOSTMS=0
+                            t_old = t_curr
+
+                        if int(datapsr[2])!=1:
+                            if int(datapsr[11])==13: 
+                                N_NS+=1; N_NS_SIN+=1
+                                spin=float(datapsr[9])
+                                deathcut=(spin**2)*(0.17*10**12)
+                                if deathcut<float(datapsr[7]): 
+                                    N_PULS+=1
+                                    if spin<=0.03: N_MSP+=1
+
+                            if int(datapsr[12])==13: 
+                                N_NS+=1; N_NS_SIN+=1
+                                spin=float(datapsr[10])
+                                deathcut=(spin**2)*(0.17*10**12)
+                                if deathcut<float(datapsr[8]): 
+                                    N_PULS+=1
+                                    if spin<=0.03: N_MSP+=1
+
+                        if int(datapsr[2])==1:
+                            if int(datapsr[11])==13:
+                                N_NS+=1; N_NS_BIN+=1
+                                spin0=float(datapsr[9])
+                                deathcut0=(spin0**2)*(0.17*10**12)
+                                if float(datapsr[16])>=1: N_NS_MTB+=1
+                                if deathcut0<float(datapsr[7]): 
+                                    N_PULS+=1   
+                                    if spin0<=0.03: N_MSP+=1
+
+                                if int(datapsr[12])<2: N_NSMS+=1
+                                elif int(datapsr[12])>=10 and int(datapsr[12])<=12: N_NSWD+=1
+                                elif int(datapsr[12])==13: N_NSNS+=1
+                                elif int(datapsr[12])==14: N_NSBH+=1
+                                else: N_NSPOSTMS+=1
+
+                            if int(datapsr[12])==13:
+                                N_NS+=1; N_NS_BIN+=1
+                                spin1=float(datapsr[10])
+                                deathcut1=(spin1**2)*(0.17*10**12)
+                                if float(datapsr[15])>=1: N_NS_MTB+=1
+                                if deathcut1<float(datapsr[8]): 
+                                    N_PULS+=1
+                                    if spin1<=0.03: N_MSP+=1
+
+                                if int(datapsr[11])<2: N_NSMS+=1
+                                elif int(datapsr[11])>=10 and int(datapsr[12])<=12: N_NSWD+=1
+                                elif int(datapsr[11])==13: print('already counted')
+                                elif int(datapsr[11])==14: N_NSBH+=1
+                                else: N_NSPOSTMS+=1
+
+                T = t_old              
+                fhandle.write('%f %d %d %d %d %d %d %d %d %d %d %d\n'%(T, N_NS, N_NS_SIN, N_NS_BIN, N_NS_MTB, N_PULS, N_MSP, N_NSNS, N_NSBH, N_NSWD, N_NSMS, N_NSPOSTMS))
+                print(j)
+
+            fhandle.close()
+        
+            #print(i)
 
 def print_NSMTB_snap(pathlist, start, end):
     sourcedir=np.genfromtxt(pathlist, dtype='|S')
@@ -2698,17 +2806,76 @@ def get_allpsr_snapshot(snapshot, mspflag):
 
 
 ##Find all the pulsars at the last timestep in snapshot
-def get_allpsr_last(pathlist, mspfg, filename, savepath):
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
-    paths = sourcedir; status=np.full_like(paths, 1)
-    #paths=sourcedir[:,0]; status=[1,1,1,1,1,1,1,1,1,1]
-    #paths=['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon/']
-    #status = [1]
-    print(paths)
-    Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]; TCFLAG=[]
-    for kk in range(len(paths)):
-        #Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]; TCFLAG=[]
+def get_allpsr_atsnap(modelpath, mspfg, snapno):
+    T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; TCFLAG=[]
         
+    pref='initial'
+    filestr=modelpath+pref
+    t_conv=conv('t', filestr+'.conv.sh')
+    l_conv=conv('l', filestr+'.conv.sh')
+
+    snap = modelpath+'initial.snap0'+str(snapno)+'.dat.gz'
+
+    t=get_time(snap)*t_conv
+
+    Bf, Spin, Id0, Id1, M0, M1, K0, K1, A, Ecc, Fc, Dmdt0, Dmdt1, Radrol0, Radrol1, R=get_allpsr_snapshot(snap, mspfg)
+
+    prop_init, prop_finl, prop_des=ntc.find_tc_properties_final(modelpath)
+    tc_id0 = prop_init['id0']; tc_id1 = prop_init['id1']; tc_type = prop_init['type']
+
+    tcflag = []
+    for i in range(len(Id0)):
+        tcflag.append(4)
+        for j in range(len(tc_id0)):
+            if Id1[i]!=-100:
+                if (Id0[i]==tc_id0[j] and Id1[i]==tc_id1[j]) or (Id1[i]==tc_id0[j] and Id0[i]==tc_id1[j]):
+                    if tc_type[j]=='SS_COLL_Giant':
+                        tcflag[i]=81
+                        break
+                    if tc_type[j]=='SS_COLL_TC_P':
+                        tcflag[i]=91
+                        break
+
+                elif Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
+                    if tc_type[j]=='SS_COLL_Giant':
+                        tcflag[i]=82
+                        break
+                    if tc_type[j]=='SS_COLL_TC_P':
+                        tcflag[i]=92
+                        break
+
+            else:
+                if Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
+                    if tc_type[j]=='SS_COLL_Giant':
+                        tcflag[i]=83
+                        break
+                    if tc_type[j]=='SS_COLL_TC_P':
+                        tcflag[i]=93
+                        break
+
+
+    Time=list(np.full_like(Id0, t, dtype=np.double))
+    #print(Time, Model, Mst)
+
+    T=T+Time; BF=BF+Bf; S=S+Spin; F=F+Fc; ID0=ID0+Id0; ID1=ID1+Id1; M_0=M_0+M0; M_1=M_1+M1; K_0=K_0+K0; K_1=K_1+K1; Aaxis=Aaxis+A; E=E+Ecc
+    DMDT0=DMDT0+Dmdt0; DMDT1=DMDT1+Dmdt1; RAD0=RAD0+Radrol0; RAD1=RAD1+Radrol1; RADIUS=RADIUS+R
+    TCFLAG=TCFLAG+tcflag
+
+    RADIUS=np.array(RADIUS)*l_conv
+    print('done')
+
+    np.savetxt(modelpath+mspfg+str(snapno)+'.dat', np.c_[T, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F, TCFLAG], fmt ='%f %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %d %d', delimiter= ' ', header = '1.Time(Myr) 2.r(pc) 3.B(G) 4.P(sec) 5.dmdt0(Msun/yr) 6.dmdt1(Msun/yr) 7.rolrad0 8.rolrad1 9.m0(Msun) 10.m1(Msun) 11.ID0 12.ID1 13.k0 14.k1 15.a(AU) 16.ecc 17.Formation 18.TCflag', comments = '#')
+
+
+##Find all the pulsars between two time steps. Usually it's 9 to 14 Gyr. Include repeating pulsars
+def get_allpsr_timeinterval(pathlist, mspfg, filename, savepath, time_init, time_fnl):
+    #Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]; TCFLAG=[]
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    paths=sourcedir; status=np.full_like(paths, 1)
+    #paths=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir/NGC6626/tc_on']
+    #paths=np.genfromtxt(pathlist, dtype=str)
+
+    for kk in range(len(paths)):
         pref='initial'
         filepath=paths[kk]
         filestr=filepath+pref
@@ -2716,99 +2883,64 @@ def get_allpsr_last(pathlist, mspfg, filename, savepath):
         l_conv=conv('l', filestr+'.conv.sh')
 
         snaps=dyn.get_snapshots(filestr)
-        lastsnap=snaps[-1]
-
-        t=get_time(lastsnap)*t_conv
-
-        Bf, Spin, Id0, Id1, M0, M1, K0, K1, A, Ecc, Fc, Dmdt0, Dmdt1, Radrol0, Radrol1, R=get_allpsr_snapshot(lastsnap, mspfg)
 
         prop_init, prop_finl, prop_des=ntc.find_tc_properties_final(filepath)
         tc_id0 = prop_init['id0']; tc_id1 = prop_init['id1']; tc_type = prop_init['type']
 
-        tcflag = []
-        for i in range(len(Id0)):
-            tcflag.append(4)
-            for j in range(len(tc_id0)):
-                if Id1[i]!=-100:
-                    if (Id0[i]==tc_id0[j] and Id1[i]==tc_id1[j]) or (Id1[i]==tc_id0[j] and Id0[i]==tc_id1[j]):
-                        if tc_type[j]=='SS_COLL_Giant':
-                            tcflag[i]=81
-                            break
-                        if tc_type[j]=='SS_COLL_TC_P':
-                            tcflag[i]=91
-                            break
+        Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]; TCFLAG=[]
+        for jj in range(0, len(snaps), 2):
+            t=get_time(snaps[jj])*t_conv
+            #if t>=10000.:
+            if time_init <= t <= time_fnl:
+                Bf, Spin, Id0, Id1, M0, M1, K0, K1, A, Ecc, Fc, Dmdt0, Dmdt1, Radrol0, Radrol1, R=get_allpsr_snapshot(snaps[jj], mspfg)
 
-                    elif Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
-                        if tc_type[j]=='SS_COLL_Giant':
-                            tcflag[i]=82
-                            break
-                        if tc_type[j]=='SS_COLL_TC_P':
-                            tcflag[i]=92
-                            break
+                tcflag = []
+                for i in range(len(Id0)):
+                    tcflag.append(4)
+                    for j in range(len(tc_id0)):
+                        if Id1[i]!=-100:
+                            if (Id0[i]==tc_id0[j] and Id1[i]==tc_id1[j]) or (Id1[i]==tc_id0[j] and Id0[i]==tc_id1[j]):
+                                if tc_type[j]=='SS_COLL_Giant':
+                                    tcflag[i]=81
+                                    break
+                                if tc_type[j]=='SS_COLL_TC_P':
+                                    tcflag[i]=91
+                                    break
 
-                else:
-                    if Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
-                        if tc_type[j]=='SS_COLL_Giant':
-                            tcflag[i]=83
-                            break
-                        if tc_type[j]=='SS_COLL_TC_P':
-                            tcflag[i]=93
-                            break
+                            elif Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
+                                if tc_type[j]=='SS_COLL_Giant':
+                                    tcflag[i]=82
+                                    break
+                                if tc_type[j]=='SS_COLL_TC_P':
+                                    tcflag[i]=92
+                                    break
 
+                        else:
+                            if Id0[i]==tc_id0[j] or Id0[i]==tc_id1[j]:
+                                if tc_type[j]=='SS_COLL_Giant':
+                                    tcflag[i]=83
+                                    break
+                                if tc_type[j]=='SS_COLL_TC_P':
+                                    tcflag[i]=93
+                                    break
 
-        Time=list(np.full_like(Id0, t, dtype=np.double)); Model=list(np.full_like(Id0, kk)); Mst=list(np.full_like(Id0, int(status[kk])))
-        #print(Time, Model, Mst)
-
-        Md=Md+Model; T=T+Time; BF=BF+Bf; S=S+Spin; F=F+Fc; ID0=ID0+Id0; ID1=ID1+Id1; M_0=M_0+M0; M_1=M_1+M1; K_0=K_0+K0; K_1=K_1+K1; Aaxis=Aaxis+A; E=E+Ecc
-        DMDT0=DMDT0+Dmdt0; DMDT1=DMDT1+Dmdt1; RAD0=RAD0+Radrol0; RAD1=RAD1+Radrol1; RADIUS=RADIUS+R
-        STATUS=STATUS+Mst; TCFLAG=TCFLAG+tcflag
-
-        print(kk)
-
-    RADIUS=np.array(RADIUS)*l_conv
-    print('what?')
-
-    #print(len(Md), len(T))
-    #savepath = paths[kk]
-    np.savetxt(savepath+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F, TCFLAG], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %d %d', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation 20.TCflag', comments = '#')
-
-
-##Find all the pulsars between two time steps. Usually it's 9 to 14 Gyr. Include repeating pulsars
-def get_allpsr_timeinterval(pathlist, mspfg, filename, time_init, time_fnl):
-    Md=[]; T=[]; BF=[]; S=[]; F=[]; ID0=[]; ID1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; STATUS=[]
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
-    paths=sourcedir[:,0]; status=sourcedir[:,1]
-    #paths=['/projects/b1095/syr904/cmc/cmc-mpi-tidalcapture/rundir/NGC6626/tc_on']
-    #paths=np.genfromtxt(pathlist, dtype=str)
-
-    for i in range(len(paths)):
-        pref='initial'
-        filepath=paths[i]
-        filestr=filepath+pref
-        t_conv=conv('t', filestr+'.conv.sh')
-        l_conv=conv('l', filestr+'.conv.sh')
-
-        snaps=dyn.get_snapshots(filestr)
-
-        for j in range(len(snaps)):
-            t=get_time(snaps[j])*t_conv
-            if 9000.<=t<=14000.:
-                Bf, Spin, Id0, Id1, M0, M1, K0, K1, A, Ecc, Fc, Dmdt0, Dmdt1, Radrol0, Radrol1, R=get_allpsr_snapshot(snaps[j], mspfg)
-
-                Time=list(np.full_like(Id0, t, dtype=np.double)); Model=list(np.full_like(Id0, i)); Mst=list(np.full_like(Id0, int(status[i])))
-        #print(Time, Model, Mst)
+                Time=list(np.full_like(Id0, t, dtype=np.double)); Model=list(np.full_like(Id0, kk)); Mst=list(np.full_like(Id0, int(status[kk])))
+                #print(Time, Model, Mst)
 
                 Md=Md+Model; T=T+Time; BF=BF+Bf; S=S+Spin; F=F+Fc; ID0=ID0+Id0; ID1=ID1+Id1; M_0=M_0+M0; M_1=M_1+M1; K_0=K_0+K0; K_1=K_1+K1; Aaxis=Aaxis+A; E=E+Ecc
                 DMDT0=DMDT0+Dmdt0; DMDT1=DMDT1+Dmdt1; RAD0=RAD0+Radrol0; RAD1=RAD1+Radrol1; RADIUS=RADIUS+R
-                STATUS=STATUS+Mst
+                STATUS=STATUS+Mst; TCFLAG=TCFLAG+tcflag
 
-        print(i)
-
-    RADIUS=np.array(RADIUS)*l_conv
-    #print('what?')
+            print(jj)
 
 
-    np.savetxt('/projects/b1095/syr904/projects/PULSAR2/newruns/finaldata/'+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %f', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation', comments = '#')
+        print(paths[kk])
+
+        RADIUS=np.array(RADIUS)*l_conv
+        print('what?')
+
+        savepath = filepath
+        np.savetxt(savepath+filename, np.c_[Md, T, STATUS, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID0, ID1, K_0, K_1, Aaxis, E, F, TCFLAG], fmt ='%d %f %d %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %d %d', delimiter= ' ', header = '1.Model 2.Time(Myr) 3.Status 4.r(pc) 5.B(G) 6.P(sec) 7.dmdt0(Msun/yr) 8.dmdt1(Msun/yr) 9.rolrad0 10.rolrad1 11.m0(Msun) 12.m1(Msun) 13.ID0 14.ID1 15.k0 16.k1 17.a(AU) 18.ecc 19.Formation 20.TCflag', comments = '#')
 
 
 
@@ -3124,10 +3256,10 @@ def get_r_v(psrfile, pathlist):
     #model=[0]; id0=[148017]; id1=[2006972]; k0=[13]; k1=[10]
     ##Be careful of DNSs because they're shown in two different lines in the file if both of them are pulsars.
 
-    sourcedir=np.genfromtxt(pathlist, dtype=str)
-    paths=sourcedir[:,0]; status=sourcedir[:,1]
-    #paths = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/MOCHA47Tuc_150maxmass_rv1.4']
-    #status=[1]
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    #paths=sourcedir[:,0]; status=sourcedir[:,1]
+    paths = ['/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon']
+    status=[1]
     r2D=[]; r3D=[]; Mr2D=[]; Mr3D =[]; rx=[]; ry=[]; rz=[]; vx=[]; vy=[]; vz=[]
     for i in range(len(id0)):
         pref='initial'
@@ -3136,8 +3268,10 @@ def get_r_v(psrfile, pathlist):
         filestr=filepath+'/'+pref
         snapproj=np.sort(glob(filestr+'.snap*.2Dproj.dat.gz'))
         snaps=dyn.get_snapshots(filestr)
-        lastproj=snapproj[-1]
-        lastsnap=snaps[-1]
+        #lastproj=snapproj[-1]
+        #lastsnap=snaps[-1]
+        lastproj = '/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon/initial.snap0529.2Dproj.dat.gz'
+        lastsnap = '/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon/initial.snap0529.dat.gz'
 
         l_conv = conv('l', filestr+'.conv.sh')
 
@@ -3182,7 +3316,7 @@ def get_r_v(psrfile, pathlist):
         print(i)
         print(len(model), len(r2D), len(vz), len(r3D), len(Mr2D))
 
-    np.savetxt('/projects/b1095/syr904/projects/PULSAR2/newruns/finaldata/msp_accel_maingrid_last.dat', np.c_[model, id0, id1, k0, k1, r2D, r3D, Mr2D, Mr3D, rx, ry, rz, vx, vy, vz], fmt ='%d %d %d %d %d %f %f %f %f %f %f %f %f %f %f', delimiter = ' ', header = '1.model, 2.id0, 3.id1, 4.k0, 5.k1, 6.r2D(pc), 7.r3D(pc), 8. Mtot(<r2D)(Msun), 9.Mtot(<r3D)(Msun), 10.rx(pc), 11.ry(pc), 12.rz(pc), 13.vx(km/s), 14.vy(km/s), 15.vz(km/s)', comments = '#')
+    np.savetxt('/projects/b1095/syr904/cmc/47Tuc/rundir/47Tuc/best_fits/MOCHA47Tuc_elson_rv4_3e6_tcon/msp_accel_529.dat', np.c_[model, id0, id1, k0, k1, r2D, r3D, Mr2D, Mr3D, rx, ry, rz, vx, vy, vz], fmt ='%d %d %d %d %d %f %f %f %f %f %f %f %f %f %f', delimiter = ' ', header = '1.model, 2.id0, 3.id1, 4.k0, 5.k1, 6.r2D(pc), 7.r3D(pc), 8. Mtot(<r2D)(Msun), 9.Mtot(<r3D)(Msun), 10.rx(pc), 11.ry(pc), 12.rz(pc), 13.vx(km/s), 14.vy(km/s), 15.vz(km/s)', comments = '#')
 
                         
 def add_acceleration(r_2d, v_l, pdot0, p0, mr2d, a, e, m0, m1):

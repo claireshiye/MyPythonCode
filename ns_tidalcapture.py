@@ -350,23 +350,24 @@ def find_tc_psr():
 
 
 ##Find NS-XX star binaries at the last snapshot and check if they are formed in tidal capture/giant collision
-def find_NS_XX_last(filepath, savepath, lowlim, highlim, loopnum):
+def find_NS_XX_atsnap(filepath, lowlim, highlim, snapno, savename):
     property_init, property_finl, property_des = find_tc_properties_final(filepath)
     ID0 = property_init['id0']; ID1 = property_init['id1']; T=property_init['time']
     Types = property_init['type']
 
     filestr=filepath+'initial'
-    snaps=dyn.get_snapshots(filestr)
-    lastsnap=snaps[-1]
+    #snaps=dyn.get_snapshots(filestr)
+    #lastsnap=snaps[-1]
+    snap = filepath+'initial.snap0'+str(snapno)+'.dat.gz'
     t_conv=dyn.conv('t', filestr+'.conv.sh')
-    time=dyn.get_time(lastsnap)*t_conv
-    model=loopnum
-
+    l_conv = dyn.conv('l', filestr+'.conv.sh')
+    time=dyn.get_time(snap)*t_conv
+    
     #os.system('rm '+savepath)
-    fmsb=open(savepath, 'a+')
-    fmsb.write('#1.Model 2.Time 3.ID0 4.ID1 5.M0 6.M1 7.K0 8.K1 9.a(AU) 10.ecc 11.radrol0 12.radrol1 13.B(G) 14.P(sec) 15.tcflag\n')
+    fmsb=open(filepath+savename+str(snapno)+'.dat', 'w+')
+    fmsb.write('#1.ID0 2.ID1 3.M0 4.M1 5.K0 6.K1 7.a(AU) 8.ecc 9.radrol0 10.radrol1 11.B(G) 12.P(sec) 13.tcflag 14.SN 15.TC_time(Myr) 16.r(pc)\n')
 
-    with gzip.open(lastsnap, 'r') as flast:
+    with gzip.open(snap, 'r') as flast:
         next(flast); next(flast)
         for line in flast:
             datalast=line.split()
@@ -374,47 +375,195 @@ def find_NS_XX_last(filepath, savepath, lowlim, highlim, loopnum):
                 if int(datalast[17])==13 and lowlim<=int(datalast[18])<=highlim:
                     ID0ms=int(datalast[10]); ID1ms=int(datalast[11])
                     tcflag=4
+                    tctime=-100
                     for ii in range(len(ID0)):    
                         if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
                             if Types[ii]=='SS_COLL_Giant':
                                 tcflag=81
+                                tctime = T[ii]*t_conv
                                 break
                             if Types[ii]=='SS_COLL_TC_P':
                                 tcflag=91
+                                tctime = T[ii]*t_conv
                                 break
                         elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
                             if Types[ii]=='SS_COLL_Giant':
                                 tcflag=82
+                                tctime = T[ii]*t_conv
                                 break
                             if Types[ii]=='SS_COLL_TC_P':
                                 tcflag=92
+                                tctime = T[ii]*t_conv
                                 break
 
-                    fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, time, int(datalast[10]), int(datalast[11]), float(datalast[8]), float(datalast[9]), int(datalast[17]), int(datalast[18]), float(datalast[12]), float(datalast[13]), float(datalast[43]), float(datalast[44]), float(datalast[47]), float(twopi*yearsc/float(datalast[45])), tcflag))
+                    fmsb.write('%d %d %f %f %d %d %f %f %f %f %e %f %d %d %f %f\n'%(int(datalast[10]), int(datalast[11]), float(datalast[8]), float(datalast[9]), int(datalast[17]), int(datalast[18]), float(datalast[12]), float(datalast[13]), float(datalast[43]), float(datalast[44]), float(datalast[47]), float(twopi*yearsc/float(datalast[45])), tcflag, int(datalast[49]), tctime, float(datalast[2])*l_conv))
 
 
                 if lowlim<=int(datalast[17])<=highlim and int(datalast[18])==13:
                     ID0ms=int(datalast[11]); ID1ms=int(datalast[10])
                     tcflag=4
+                    tctime=-100
                     for ii in range(len(ID0)):    
                         if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
                             if Types[ii]=='SS_COLL_Giant':
                                 tcflag=81
+                                tctime = T[ii]*t_conv
                                 break
                             if Types[ii]=='SS_COLL_TC_P':
                                 tcflag=91
+                                tctime = T[ii]*t_conv
                                 break
                         elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
                             if Types[ii]=='SS_COLL_Giant':
                                 tcflag=82
+                                tctime = T[ii]*t_conv
                                 break
                             if Types[ii]=='SS_COLL_TC_P':
                                 tcflag=92
+                                tctime = T[ii]*t_conv
                                 break
                                 
-                    fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, time, int(datalast[11]), int(datalast[10]), float(datalast[9]), float(datalast[8]), int(datalast[18]), int(datalast[17]), float(datalast[12]), float(datalast[13]), float(datalast[44]), float(datalast[43]), float(datalast[48]), float(twopi*yearsc/float(datalast[46])), tcflag))
+                    fmsb.write('%d %d %f %f %d %d %f %f %f %f %e %f %d %d %f %f\n'%(int(datalast[11]), int(datalast[10]), float(datalast[9]), float(datalast[8]), int(datalast[18]), int(datalast[17]), float(datalast[12]), float(datalast[13]), float(datalast[44]), float(datalast[43]), float(datalast[48]), float(twopi*yearsc/float(datalast[46])), tcflag, int(datalast[50]),tctime, float(datalast[2])*l_conv))
 
     fmsb.close()
+
+
+##Find NS-XX star binaries at some time interval and check if they are formed in tidal capture/giant collision
+def find_NS_XX_timeinterval(filepath, savepath, lowlim, highlim, loopnum, time_init, time_fnl):
+    property_init, property_finl, property_des = find_tc_properties_final(filepath)
+    ID0 = property_init['id0']; ID1 = property_init['id1']; T=property_init['time']
+    Types = property_init['type']
+
+    filestr=filepath+'initial'
+    snaps=dyn.get_snapshots(filestr)
+    t_conv=dyn.conv('t', filestr+'.conv.sh')
+    model=loopnum
+
+    #os.system('rm '+savepath)
+    fmsb=open(savepath, 'a+')
+    fmsb.write('#1.Model 2.Time 3.ID0 4.ID1 5.M0 6.M1 7.K0 8.K1 9.a(AU) 10.ecc 11.radrol0 12.radrol1 13.B(G) 14.P(sec) 15.tcflag\n')
+
+    for kk in range(0, len(snaps), 2):
+        t=dyn.get_time(snaps[kk])*t_conv
+        if time_init <= t <= time_fnl:
+            with gzip.open(snaps[kk], 'r') as fsnap:
+                next(fsnap); next(fsnap)
+                for line in fsnap:
+                    data=line.split()
+                    if int(data[7])==1:
+                        if int(data[17])==13 and lowlim<=int(data[18])<=highlim:
+                            ID0ms=int(data[10]); ID1ms=int(data[11])
+                            tcflag=4
+                            for ii in range(len(ID0)):    
+                                if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
+                                    if Types[ii]=='SS_COLL_Giant':
+                                        tcflag=81
+                                        break
+                                    if Types[ii]=='SS_COLL_TC_P':
+                                        tcflag=91
+                                        break
+                                elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
+                                    if Types[ii]=='SS_COLL_Giant':
+                                        tcflag=82
+                                        break
+                                    if Types[ii]=='SS_COLL_TC_P':
+                                        tcflag=92
+                                        break
+
+                            fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, t, int(data[10]), int(data[11]), float(data[8]), float(data[9]), int(data[17]), int(data[18]), float(data[12]), float(data[13]), float(data[43]), float(data[44]), float(data[47]), float(twopi*yearsc/float(data[45])), tcflag))
+
+
+                        if lowlim<=int(data[17])<=highlim and int(data[18])==13:
+                            ID0ms=int(data[11]); ID1ms=int(data[10])
+                            tcflag=4
+                            for ii in range(len(ID0)):    
+                                if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
+                                    if Types[ii]=='SS_COLL_Giant':
+                                        tcflag=81
+                                        break
+                                    if Types[ii]=='SS_COLL_TC_P':
+                                        tcflag=91
+                                        break
+                                elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
+                                    if Types[ii]=='SS_COLL_Giant':
+                                        tcflag=82
+                                        break
+                                    if Types[ii]=='SS_COLL_TC_P':
+                                        tcflag=92
+                                        break
+                                
+                            fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, t, int(data[11]), int(data[10]), float(data[9]), float(data[8]), int(data[18]), int(data[17]), float(data[12]), float(data[13]), float(data[44]), float(data[43]), float(data[48]), float(twopi*yearsc/float(data[46])), tcflag))
+        print(kk)
+
+    fmsb.close()
+
+
+##Find NS-XX star binaries throughout time with certain companion mass and orbital period and check if they are formed in tidal capture/giant collision
+#def find_NS_XX_property_range(filepath, savepath, lowlim, highlim, loopnum):
+#    property_init, property_finl, property_des = find_tc_properties_final(filepath)
+#    ID0 = property_init['id0']; ID1 = property_init['id1']; T=property_init['time']
+#    Types = property_init['type']
+#
+#    filestr=filepath+'initial'
+#    t_conv=dyn.conv('t', filestr+'.conv.sh')
+#    model=loopnum
+#    psrfile = filestr+'.morepulsars.dat'
+#
+#    #os.system('rm '+savepath)
+#    fmsb=open(savepath, 'a+')
+#    fmsb.write('#1.Model 2.Time 3.ID0 4.ID1 5.M0 6.M1 7.K0 8.K1 9.a(AU) 10.ecc 11.radrol0 12.radrol1 13.B(G) 14.P(sec) 15.tcflag\n')
+#
+#    for kk in range(0, len(snaps), 2):
+#        with gzip.open(snaps[kk], 'r') as fsnap:
+#            next(fsnap); next(fsnap)
+#                for line in fsnap:
+#                    data=line.split()
+#                    if int(data[7])==1:
+#                        if int(data[17])==13 and lowlim<=int(data[18])<=highlim:
+#                            ID0ms=int(data[10]); ID1ms=int(data[11])
+#                            tcflag=4
+#                            for ii in range(len(ID0)):    
+#                                if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
+#                                    if Types[ii]=='SS_COLL_Giant':
+#                                        tcflag=81
+#                                        break
+#                                    if Types[ii]=='SS_COLL_TC_P':
+#                                        tcflag=91
+#                                        break
+#                                elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
+#                                    if Types[ii]=='SS_COLL_Giant':
+#                                        tcflag=82
+#                                        break
+#                                    if Types[ii]=='SS_COLL_TC_P':
+#                                        tcflag=92
+#                                        break
+#
+#                            fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, t, int(data[10]), int(data[11]), float(data[8]), float(data[9]), int(data[17]), int(data[18]), float(data[12]), float(data[13]), float(data[43]), float(data[44]), float(data[47]), float(twopi*yearsc/float(data[45])), tcflag))
+#
+#
+#                        if lowlim<=int(data[17])<=highlim and int(data[18])==13:
+#                            ID0ms=int(data[11]); ID1ms=int(data[10])
+#                            tcflag=4
+#                            for ii in range(len(ID0)):    
+#                                if (ID0ms==ID0[ii] and ID1ms==ID1[ii]) or (ID1ms==ID0[ii] and ID0ms==ID1[ii]):
+#                                    if Types[ii]=='SS_COLL_Giant':
+#                                        tcflag=81
+#                                        break
+#                                    if Types[ii]=='SS_COLL_TC_P':
+#                                        tcflag=91
+#                                        break
+#                                elif ID0ms==ID0[ii] or ID0ms==ID1[ii]:
+#                                    if Types[ii]=='SS_COLL_Giant':
+#                                        tcflag=82
+#                                        break
+#                                    if Types[ii]=='SS_COLL_TC_P':
+#                                        tcflag=92
+#                                        break
+#                                
+#                            fmsb.write('%d %f %d %d %f %f %d %d %f %f %f %f %e %f %d\n'%(model, t, int(data[11]), int(data[10]), float(data[9]), float(data[8]), int(data[18]), int(data[17]), float(data[12]), float(data[13]), float(data[44]), float(data[43]), float(data[48]), float(twopi*yearsc/float(data[46])), tcflag))
+#        print(kk)
+#
+#    fmsb.close()
 
 
 ##Print out all 13+X binaries from tidal capture and giant collisions
