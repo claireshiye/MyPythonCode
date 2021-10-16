@@ -394,6 +394,10 @@ def read_property_all(start, end, disrupfile, proptyfile, file_ver):
         else:
             Nmsp = 0.03; Lmsp = 3.5e34
             Nmsp_old = 0.03; Lmsp_old = 3.5e34
+            Mass = -100
+
+            t_conv = dyn.conv('t', thepath+'initial.conv.sh')
+            m_conv = dyn.conv('m', thepath+'initial.conv.sh')
 
             ##Extract mass of cluster
             with open(thepath+'initial.dyn.dat', 'r') as fdyn:
@@ -412,7 +416,7 @@ def read_property_all(start, end, disrupfile, proptyfile, file_ver):
             if Mass == -100:
                 Mass = float(datadyn[4])*m_conv; Mass_old = float(datadyn[4])*m_conv
 
-        if Mgc == 0 or Mgc_old == 0:
+        if Mass == 0 or Mass_old == 0:
             print(modelpath)
         prop[0].append(Nmsp); prop[1].append(Mgc); prop[2].append(Lmsp)
         prop_old[0].append(Nmsp_old); prop_old[1].append(Mgc_old); prop_old[2].append(Lmsp_old)
@@ -1123,7 +1127,7 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
     print(numgc_tot, massgc_tot)
     print(cumu_mass_bin)
 
-    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/cluster_analytical_initial_M_RG_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'.dat', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3]], fmt = '%f %f %f %f', header = '1.Mass(Msun) 2.RG_INITIAL(kpc) 3.RHO_RH(Msun/pc^3) 4.Ttid(Gyr)', comments = '#')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/cluster_analytical_initial_M_RG_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'.dat', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3]], fmt = '%f %f %f %f', header = '1.Mass(Msun) 2.RG_INITIAL(kpc) 3.RHO_RH(Msun/pc^3) 4.Ttid(Gyr)', comments = '#')
 
     ###################################################
     ##Inspiral
@@ -1136,6 +1140,8 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
         ##Initialize the spiral in
         rg_old = allsamps[1][kk]; t_old = 0.; m_old = allsamps[0][kk]; rho_halfm_old = allsamps[2][kk]
         mcut = 0.1*m_old
+        r0_tidal = r_tidal_initial(m_old, rg_old)
+        rt_cut = 0.2*r0_tidal
 
         ##Starting spiral in
         for zz in range(1, len(time_steps)):
@@ -1143,6 +1149,7 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
             delta_t = time_steps[zz]-t_old
             rg_new = df(delta_t, rg_old, m_old)
             m_new = dmdt(delta_t, m_old, rg_old)
+            rt_new = r_tidal_initial(m_old, rg_old)
 
             if m_new <= 1e5:
                 rho_halfm_new = 1000.  ##Msun/pc^3
@@ -1166,6 +1173,13 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
                 type_disrupt = 2
                 break
 
+            if rt_new < rt_cut:
+                check = 1
+                print('cluster mass negative', time_steps[zz], rg_new, rho_halfm_new)
+                rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new;m_disrupt = m_new
+                type_disrupt = 3
+                break
+
             #print(rg_new, m_new)
             bin_right = xga[xga>=rg_new][0]
             index_right = np.where(xga == bin_right)[0][0]
@@ -1175,14 +1189,14 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
                 check = 1
                 print('cluster disrupted', time_steps[zz], rg_new, rho_halfm_new)
                 rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
-                type_disrupt = 3
+                type_disrupt = 4
                 break
 
             t_old = time_steps[zz]; m_old = m_new; rg_old = rg_new; rho_halfm_old = rho_halfm_new
 
         if check == 0:
             rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new
-            type_disrupt = 4; m_disrupt = m_new
+            type_disrupt = 5; m_disrupt = m_new
 
         gc_disrupt[0].append(rg_disrupt); gc_disrupt[1].append(t_disrupt); gc_disrupt[2].append(rho_disrupt); gc_disrupt[3].append(type_disrupt); gc_disrupt[4].append(m_disrupt)
 
@@ -1290,17 +1304,23 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
                 ##Extract Lgamma
                 if msp_disrupt != 0:
                     data_lgamma = np.genfromtxt('/projects/b1095/syr904/projects/GCE/catalog/data_lgamma/'+file_name)
-                    if len(mass_index) == 0:
-                        lgamma = data_lgamma[:,2][-1]
-                    else:
-                        time_index = np.where(data_lgamma[:,1]>t_model_disrupt)[0]
-                        print(time_index)
-                        if len(time_index) == 0:
+                    if len(data_lgamma.shape) != 1:
+                        if len(mass_index) == 0:
                             lgamma = data_lgamma[:,2][-1]
-                            print(lgamma)
                         else:
-                            lgamma = data_lgamma[:,2][time_index[0]-1]
-                            print(lgamma)
+                            time_index = np.where(data_lgamma[:,1]>t_model_disrupt)[0]
+                            print(time_index)
+                            if len(time_index) == 0:
+                                lgamma = data_lgamma[:,2][-1]
+                                print(lgamma)
+                            else:
+                                lgamma = data_lgamma[:,2][time_index[0]-1]
+                                print(lgamma)
+                    else:
+                        lgamma = data_lgamma[2]
+
+                else:
+                    lgamma = 0
 
             else:
                 t_model_disrupt = -100
@@ -1344,7 +1364,7 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
         gc_disrupt[9].append(float(n_star)); gc_disrupt[10].append(float(rv)); gc_disrupt[11].append(float(rg)); gc_disrupt[12].append(float(z)) 
 
 
-    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/semi_analytic_model_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'.txt', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3], gc_disrupt[9], gc_disrupt[10], gc_disrupt[11], gc_disrupt[12], gc_disrupt[0], gc_disrupt[1], gc_disrupt[2], gc_disrupt[4], gc_disrupt[3], gc_disrupt[5], gc_disrupt[6], gc_disrupt[7], gc_disrupt[8]], fmt = '%f %f %f %f %e %f %f %f %f %f %f %f %d %e %f %f %d', header = '1.M_init(Msun) 2.Rgc_init(kpc) 3.Rho_rh_init(Msun/pc^3) 4.t_disrupt_init(Gyr) 5.N_star 6.RV 7.RG 8.Z 9.Rgc_distupt(kpc) 10.T_disrupt(Gyr) 11.Rho_rh_disrupt(Msun/pc^3), 12.M_disrupt(Msun) 13.Type_disrupt 14.Lgamma 15.MSP 16.T_model_disrupt(Myr), 17.Last_time_flag', comments = '#', delimiter = ' ')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/semi_analytic_model_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'.txt', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3], gc_disrupt[9], gc_disrupt[10], gc_disrupt[11], gc_disrupt[12], gc_disrupt[0], gc_disrupt[1], gc_disrupt[2], gc_disrupt[4], gc_disrupt[3], gc_disrupt[5], gc_disrupt[6], gc_disrupt[7], gc_disrupt[8]], fmt = '%f %f %f %f %e %f %f %f %f %f %f %f %d %e %f %f %d', header = '1.M_init(Msun) 2.Rgc_init(kpc) 3.Rho_rh_init(Msun/pc^3) 4.t_disrupt_init(Gyr) 5.N_star 6.RV 7.RG 8.Z 9.Rgc_distupt(kpc) 10.T_disrupt(Gyr) 11.Rho_rh_disrupt(Msun/pc^3), 12.M_disrupt(Msun) 13.Type_disrupt 14.Lgamma 15.MSP 16.T_model_disrupt(Myr), 17.Last_time_flag', comments = '#', delimiter = ' ')
 
 
 
