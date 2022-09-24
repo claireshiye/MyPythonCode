@@ -699,12 +699,14 @@ def print_Nns_snap(pathlist, start, end):
             #print(i)
 
 ##Print ns.dat file using the morepulsar outputs instead of the snapshots
-def print_Nns_psrfile(pathlist, start, end):
-    #sourcedir=np.genfromtxt(pathlist, dtype='str')
-    #status=sourcedir[:,1]; 
-    #sourcedir=sourcedir[:,0]
-
-    sourcedir=['/projects/b1091/CMC_Grid_March2019/rundir/rv2/rg20/z0.02/3.2e6/']
+def print_Nns_psrfile(pathlist, start, end, readflag):
+    if readflag == 1:
+        sourcedir=np.genfromtxt(pathlist, dtype='str')
+        status=sourcedir[:,1]; 
+        sourcedir=sourcedir[:,0]
+    else:
+        sourcedir=pathlist
+        status = [1]
     
     for i in range(start, end):
         filepath = sourcedir[i]

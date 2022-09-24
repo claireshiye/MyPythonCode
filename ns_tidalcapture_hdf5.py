@@ -188,7 +188,7 @@ def find_tc_properties(filepath):
 
 
 ##Find NS-XX star binaries at a snapshot and check if they are formed in tidal capture/giant collision
-def find_NS_XX_atsnap(filepath, lowlim, highlim, snapno, savename):
+def find_NS_XX_atsnap(filepath, lowlim, highlim, snapno, savename, thedist, themetal):
     property_init, property_finl, property_des = find_tc_properties(filepath)
     ID0 = property_init['id0']; ID1 = property_init['id1']; T=property_init['time']
     Types = property_init['type']
@@ -202,8 +202,8 @@ def find_NS_XX_atsnap(filepath, lowlim, highlim, snapno, savename):
     snap = cmct.Snapshot(fname=filepath+'initial.snapshots.h5', 
                         snapshot_name=thekey, 
                         conv=filepath+'initial.conv.sh', 
-                        dist=4.52, # distance to cluster in kpc
-                        z=0.0038)
+                        dist=thedist, # distance to cluster in kpc
+                        z=themetal)
 
     t_conv=dyn.conv('t', filestr+'.conv.sh')
     l_conv=dyn.conv('l', filestr+'.conv.sh')

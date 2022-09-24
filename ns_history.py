@@ -13,8 +13,11 @@ import scripts3
 import scripts1
 import scripts2
 import ns
-import ns_tidalcapture as ntc
+import ns_tidalcapture_hdf5 as ntc_hdf5
 #from scipy import stats
+
+sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
+import cmctoolkit as cmct
 
 yearsc=31557600.
 twopi=6.283185307179586
@@ -668,6 +671,116 @@ def find_msp_atbirth(pathlist):
         print(ii)
 
     np.savetxt('/projects/b1095/syr904/projects/GCE/catalog/msp_catalog_atbirth.dat', np.c_[MODEL, TMYR, ID0, ID1, M0, M1, K0, K1, MFIELD, SPIN, SMA, ECC, ST], fmt = '%d %f %d %d %f %f %d %d %e %f %f %f %d', header = '#1.Model 2.Time(Myr) 3.ID0 4.ID1 5.M0 6.M1 7.K0 8.K1 9.B(G) 10.Ps(sec) 11.SMA(AU) 12.ECC 13.Model_status')
+
+
+##Find MSPs at the time of their formation for one simulation and check if they are primordial 
+##or if they are from tidal capture
+def find_msp_atbirth_single(modelpath):
+    filestr = modelpath+'initial'
+    t_conv = ns.conv('t', filestr+'.conv.sh')
+
+    property_init, property_finl, property_des = ntc_hdf5.find_tc_properties(modelpath)
+    ID0_tc = property_init['id0']; ID1_tc = property_init['id1']; T_tc=property_init['time']
+    Types_tc = property_init['type']
+
+    snap0 = cmct.Snapshot(fname=modelpath+'initial.snapshots.h5', 
+                                snapshot_name='/0(t=0)', conv=modelpath+'initial.conv.sh', 
+                                dist=4.52, # distance to cluster in kpc
+                                z=0.0038)
+    binflag = np.array(snap0.data['binflag'])
+    id0_bin = np.array(snap0.data['id0'])[binflag==1]
+    id1_bin = np.array(snap0.data['id1'])[binflag==1]
+
+
+    id0 = []; id1 = []; spin = []; mfield = []; model = []; tmyr = []
+    m0 = []; m1 = []; sma = []; ecc = []; k0 = []; k1 = []; primordial = []
+    tcflag = []
+    with open(filestr+'.morepulsars.dat', 'r') as fpsr:
+        next(fpsr)
+        for line in fpsr:
+            data = line.split()
+            if int(data[2])!=1:
+                Pspin=float(data[9])  ##in sec
+                B=float(data[7])
+                deathcut=(Pspin**2)*(0.17*10**12)
+                if deathcut<B and Pspin<=0.03 and int(data[3]) not in id0:
+                    id0.append(int(data[3])); id1.append(-100)
+                    m0.append(float(data[5])); m1.append(-100)
+                    k0.append(int(data[11])); k1.append(-100)
+                    spin.append(float(data[9])); mfield.append(float(data[7]))
+                    sma.append(-100); ecc.append(-100)
+                    tmyr.append(float(data[1])*t_conv)
+                    primordial.append(-100)
+                    tcflag.append(-100)
+
+            else:
+                if int(data[11]) == 13:
+                    Pspin=float(data[9])  ##in sec
+                    B=float(data[7])
+                    deathcut=(Pspin**2)*(0.17*10**12)
+                    if deathcut<B and Pspin<=0.03 and int(data[3]) not in id0:
+                        id0.append(int(data[3])); id1.append(int(data[4]))
+                        m0.append(float(data[5])); m1.append(float(data[6]))
+                        k0.append(int(data[11])); k1.append(int(data[12]))
+                        spin.append(float(data[9])); mfield.append(float(data[7]))
+                        sma.append(float(data[13])); ecc.append(float(data[14]))
+                        tmyr.append(float(data[1])*t_conv)
+                        primordial.append(0)
+                        tcflag.append(0)
+
+                        for xx in range(len(id0_bin)):
+                            if int(data[3])==int(id0_bin[xx]) and int(data[4])==int(id1_bin[xx]):
+                                primordial[-1] = 1
+                            elif int(data[3])==int(id1_bin[xx]) and int(data[4])==int(id0_bin[xx]):
+                                primordial[-1] = 1
+
+                        for yy in range(len(ID0_tc)):
+                            if int(data[3])==int(ID0_tc[yy]) and int(data[4])==int(ID1_tc[yy]):
+                                if Types_tc[yy]=='SS_COLL_Giant':
+                                    tcflag[-1] = 1
+                                if Types_tc[yy]=='SS_COLL_TC_P':
+                                    tcflag[-1] = 2
+                            elif int(data[3])==int(ID1_tc[yy]) and int(data[4])==int(ID0_tc[yy]):
+                                if Types_tc[yy]=='SS_COLL_Giant':
+                                    tcflag[-1] = 1
+                                if Types_tc[yy]=='SS_COLL_TC_P':
+                                    tcflag[-1] = 2
+
+
+                if int(data[12]) == 13:
+                    Pspin=float(data[10])  ##in sec
+                    B=float(data[8])
+                    deathcut=(Pspin**2)*(0.17*10**12)
+                    if deathcut<B and Pspin<=0.03 and int(data[4]) not in id0:
+                        id0.append(int(data[4])); id1.append(int(data[3]))
+                        m0.append(float(data[6])); m1.append(float(data[5]))
+                        k0.append(int(data[12])); k1.append(int(data[11]))
+                        spin.append(float(data[10])); mfield.append(float(data[8]))
+                        sma.append(float(data[13])); ecc.append(float(data[14]))
+                        tmyr.append(float(data[1])*t_conv)
+                        primordial.append(0)
+                        tcflag.append(0)
+
+                        for xx in range(len(id0_bin)):
+                            if int(data[3])==int(id0_bin[xx]) and int(data[4])==int(id1_bin[xx]):
+                                primordial[-1] = 1
+                            elif int(data[3])==int(id1_bin[xx]) and int(data[4])==int(id0_bin[xx]):
+                                primordial[-1] = 1
+
+                        for yy in range(len(ID0_tc)):
+                            if int(data[3])==int(ID0_tc[yy]) and int(data[4])==int(ID1_tc[yy]):
+                                if Types_tc[yy]=='SS_COLL_Giant':
+                                    tcflag[-1] = 1
+                                if Types_tc[yy]=='SS_COLL_TC_P':
+                                    tcflag[-1] = 2
+                            elif int(data[3])==int(ID1_tc[yy]) and int(data[4])==int(ID0_tc[yy]):
+                                if Types_tc[yy]=='SS_COLL_Giant':
+                                    tcflag[-1] = 1
+                                if Types_tc[yy]=='SS_COLL_TC_P':
+                                    tcflag[-1] = 2
+
+
+    np.savetxt(modelpath+'allmsp_atbirth.dat', np.c_[tmyr, id0, id1, m0, m1, k0, k1, mfield, spin, sma, ecc, primordial, tcflag], fmt = '%f %d %d %f %f %d %d %e %f %f %f %d %d', header = '#1.Time(Myr) 2.ID0 3.ID1 4.M0 5.M1 6.K0 7.K1 8.B(G) 9.Ps(sec) 10.SMA(AU) 11.ECC 12.Primordial_flag 13.TC_flag')
 
 
 ##Find if MSPs are from primordial binaries or from dynamical interactions

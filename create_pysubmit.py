@@ -1,8 +1,8 @@
 import os
 
-
+interno = 600
 maxno = 6652
-i_range = int(maxno/600)
+i_range = int(maxno/interno)
 strnomax = str(i_range+1)
 for i in range(i_range):
     strno = str(i+1)
@@ -21,9 +21,9 @@ for i in range(i_range):
     print('#SBATCH --partition=ciera-std', file = f)
     print('', file = f)
     print('module load python/anaconda3.6', file = f)
-    start = str(i*300); end = str((i+1)*300)
-    print('python -c \"import cluster_sampling_v1 as csv1; csv1.main(5000,'+start+','+end+', \'cluster_sample_initial_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'_v'+str(i)+'\')\"', file = f)    
-    #print('python -c \"import cluster_sampling_v1 as csv1; csv1.read_property_all('+start+', '+end+', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_fastdf\', \'cluster_sample_property_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_fastdf\', \'_v'+str(i)+'\')\"', file = f)
+    start = str(i*interno); end = str((i+1)*interno)
+    #print('python -c \"import cluster_sampling_v1 as csv1; csv1.main(5000,'+start+','+end+', \'cluster_sample_initial_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'_v'+str(i)+'\')\"', file = f)    
+    print('python -c \"import cluster_sampling_v1 as csv1; csv1.read_property_all('+start+', '+end+', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'cluster_sample_property_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'_v'+str(i)+'\')\"', file = f)
     f.close()
     os.system('sbatch '+'pysubmit_v'+strno+'.sh')    
 
@@ -42,8 +42,8 @@ print('#SBATCH --account=b1094', file = f)
 print('#SBATCH --partition=ciera-std', file = f)
 print('', file = f)
 print('module load python/anaconda3.6', file = f)
-print('python -c \"import cluster_sampling_v1 as csv1; csv1.main(5000,'+end+','+str(maxno)+', \'cluster_sample_initial_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'_v'+str(i+1)+'\')\"', file = f)
-#print('python -c \"import cluster_sampling_v1 as csv1; csv1.read_property_all('+end+', '+str(maxno)+', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_fastdf\', \'cluster_sample_property_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_fastdf\', \'_v'+str(i+1)+'\')\"', file = f)
+#print('python -c \"import cluster_sampling_v1 as csv1; csv1.main(5000,'+end+','+str(maxno)+', \'cluster_sample_initial_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'_v'+str(i+1)+'\')\"', file = f)
+print('python -c \"import cluster_sampling_v1 as csv1; csv1.read_property_all('+end+', '+str(maxno)+', \'cluster_sample_disrupt_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'cluster_sample_property_M_RG_dissol0_fcl0.012_ffa0.006_xcut3.0_xmin0.01_massive_small\', \'_v'+str(i+1)+'\')\"', file = f)
 
 f.close()
 os.system('sbatch '+'pysubmit_v'+strnomax+'.sh')

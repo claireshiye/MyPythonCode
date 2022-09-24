@@ -298,7 +298,7 @@ def find_Nns_last(filestring):
 ##Find Nbh, Mtot, Nns, Ndns for a given time, thetime in Myr
 def find_clusterparameter_allmodel(pathlist, start, end, thetime):
     model=[]; NBH=[]; MTOT=[]; RC=[]; RH=[]; NNS=[]; NDNS=[]; NNSBH=[]; st=[]
-    RC_obs=[]; RHL_obs=[]; NPSR=[]; NMSP=[]
+    RC_obs=[]; RHL_obs=[]; NPSR=[]; NMSP=[]; t_final=[]
     sourcedir=np.genfromtxt(pathlist, dtype=str)
     filepath=sourcedir[:,0]; status=sourcedir[:,1]
     #status=[0,0,0,0,0,0,0,0,0,0]
@@ -327,6 +327,7 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
             Rc_obs, Rhl_obs, t_Gyr_obs, Mass_obs=find_obsrcrh(filestr, -100)
             Nns, Ndns, Nnsbh, Npsr, Nmsp=find_Nns(filestr, -100, t_conv)
             st.append(int(status[i]))
+            t_final.append(t_Gyr_obs)
 
         else:
             ##Numbers at a certain time
@@ -335,6 +336,7 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
             Nns, Ndns, Nnsbh, Npsr, Nmsp=find_Nns(filestr, thetime, t_conv)
             Rc_obs, Rhl_obs, t_Gyr_obs, Mass_obs=find_obsrcrh(filestr, thetime)
             st.append(int(status[i]))
+            t_final.append(t_Gyr_obs)         
 
 
         model.append(i); NBH.append(Nbh); MTOT.append(Mtot*m_conv); RC.append(Rc*l_conv); RH.append(Rh*l_conv); RC_obs.append(Rc_obs); RHL_obs.append(Rhl_obs)
@@ -343,7 +345,7 @@ def find_clusterparameter_allmodel(pathlist, start, end, thetime):
         print(i)
 
 
-    np.savetxt('/projects/b1095/syr904/projects/GCE/catalog/clusterproperty_maingrid_last', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH, NPSR, NMSP, st], fmt='%d %d %f %f %f %f %f %d %d %d %d %d %d', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh 11.Npsr 12.Nmsp 13.Dissolved?', delimiter='', comments='#')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/catalog/clusterproperty_maingrid_last.dat', np.c_[model, NBH, MTOT, RC, RH, RC_obs, RHL_obs, NNS, NDNS, NNSBH, NPSR, NMSP, st, t_final], fmt='%d %d %f %f %f %f %f %d %d %d %d %d %d %f', header='1.Model 2.Nbh 3.Mtot(Msun) 4.rc(pc) 5.rh(pc) 6.rc_obs(pc) 7.rhl_obs(pc) 8.Nns 9.Ndns 10.Nnsbh 11.Npsr 12.Nmsp 13.Dissolved? 14.t_final(Gyr)', delimiter='', comments='#')
 
 
 

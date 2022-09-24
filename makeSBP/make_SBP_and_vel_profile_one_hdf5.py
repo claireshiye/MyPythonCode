@@ -150,7 +150,7 @@ def project_and_radially_sort(r3d, PROJ=(0,1)):
     return r2d, ind
 
 
-def make_2D_projection(modelpath, thekey, units, writefilename, SEEDY=10, PROJ=(0,1)):
+def make_2D_projection(modelpath, thekey, units, writefilename, dist_sun, themetal, SEEDY=10, PROJ=(0,1)):
     #units = scripts.read_units(filestring)
 
     snapno = read_keys(thekey)[0]; snaptime = float(read_keys(thekey)[1])
@@ -163,8 +163,8 @@ def make_2D_projection(modelpath, thekey, units, writefilename, SEEDY=10, PROJ=(
     #read the snapfile
     snapfile = cmct.Snapshot(fname=modelpath+'initial.snapshots.h5', 
                              snapshot_name=thekey, conv=modelpath+'initial.conv.sh', 
-                             dist=4.52, # distance to cluster in kpc
-                             z=0.0038)
+                             dist=dist_sun, # distance to cluster in kpc
+                             z=themetal)
 
     print('read_snapfile')
 
@@ -707,14 +707,14 @@ def velocity_dispersion_hdf5(modelpath, thekey, Starinbin=200, mcut=0, hdf5flag 
 
 
 def velocity_dispersion_2dsnap(path, snapno, Starinbin=200, mcut=0):
-    fvel = open(path+'initial.snap'+snapno+'.vel_dispersion_vr_pm_'+str(Starinbin)+'_'+str(mcut)+'.dat','w+')
+    fvel = open(path+'.snap'+snapno+'.vel_dispersion_vr_pm_'+str(Starinbin)+'_'+str(mcut)+'.dat','w+')
     print('#0)r2D(pc) 1)sigma_v(1D; km/s) 2)sigma_v_err(km/s) 3)sigma_pmr(1D; km/s) 4)sigma_pmr_err(km/s) 5)sigma_pmt(1D; km/s) 6)sigma_pmt_err(km/s)', file = fvel)
 
     binflag = []; VX = []; VY = []; VZ = []
     rd = []
     ktype = []; k0 = []; k1 = []
     m = []; m0 = []; m1 = []
-    snap2d = path+'initial.snap'+snapno+'.2Dproj.dat.gz'
+    snap2d = path+'.snap'+snapno+'.2Dproj.dat.gz'
     with gzip.open(snap2d, 'r') as f2d:
         next(f2d); next(f2d)
         for line in f2d:
@@ -805,11 +805,11 @@ def velocity_dispersion_2dsnap(path, snapno, Starinbin=200, mcut=0):
     
 
 
-def main(sourcepath):
-    N=3000000
-    Z=0.0038
-    rv=4
-    rg=7.4
+def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tlimlow, tlimhigh in Myr
+    #N=2950000
+    #Z=0.0038
+    #rv=3.5
+    #rg=7.4
 
     string = 'initial'
     units=read_units(sourcepath+string)
@@ -822,131 +822,148 @@ def main(sourcepath):
     M_total_units = units[0]['m_msun']
     pc = units[0]['l_pc']
 
+    prefix = 'initial'
+    snap_h5 = prefix+'.snapshots.h5'
+    #with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
+    #    snap_keys = snap_hdf.keys()
 
-    snap_h5 = 'initial.snapshots.h5'
-    with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
-        snap_keys = snap_hdf.keys()
+    #time_array = []; snap_array = []
+    #for ii in range(2, len(snap_keys)):
+    #    temp_no, temp_t = read_keys(snap_keys[ii])
+    #    time_array.append(time_units*float(temp_t))
+    #    snap_array.append(temp_no)
+    #print(time_array)
 
+    #time_sort, keys_sort = (list(t) for t in zip(*sorted(zip(time_array,snap_keys))))
+    #time_sort, no_sort = (list(t) for t in zip(*sorted(zip(time_array,snap_array))))
 
-    time_array = []; snap_array = []
-    for ii in range(len(snap_keys)):
-        temp_no, temp_t = read_keys(snap_keys[ii])
-        time_array.append(time_units*float(temp_t))
-        snap_array.append(temp_no)
-
-    time_sort, keys_sort = (list(t) for t in zip(*sorted(zip(time_array, snap_keys))))
-    time_sort, no_sort = (list(t) for t in zip(*sorted(zip(time_array,snap_array))))
-    #print(keys_sort)
+    data_snapkey = np.genfromtxt(sourcepath+'snap_keys.txt', dtype = str)
+    temp_t = data_snapkey[:,1]
+    time_sort = np.array([float(s) for s in data_snapkey[:,1]])*time_units
+    no_sort = data_snapkey[:,0]
+    print(no_sort, time_sort)
    
     print(sourcepath)
-    Delta = -2  #default -5000 for only making the last snapshot
+    Delta = deltastep  #default -5000 for only making the last snapshot
 
     for k in range(len(time_sort)-1,-1,Delta):
         time = time_sort[k]
         no_snap = no_sort[k]
-        key_snap = keys_sort[k]
-        print('time=', time, 'snapno=', no_snap,)
-        if time > 9000.: 
+        #key_snap = keys_sort[k]
+        key_snap = '/'+no_snap+'(t='+temp_t[k]+')'
+        print('time=', time, 'snapno=', no_snap, 'key_snap=', key_snap)
+        if time > tlimhigh: 
             continue
-        if time < 8000.:
+        if time < tlimlow:
             print('stop!')
             break
         try:
-            f = open(sourcepath+'initial.snap'+no_snap+'.vel_dispersion_vr_pm_700_0.85.dat','r')
+            f = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','r')
+            #f = open(sourcepath+'initial.snap'+no_snap+'.vel_dispersion_vr_pm_50_0.dat','r')
+            #f = open(sourcepath+'initial.snap'+no_snap+'.test','r')
             print(no_snap, 'is done')
             continue
         except:
             try:
-                make_2D_projection(sourcepath, key_snap, units, sourcepath+'initial.snap'+no_snap+'.2Dproj.dat')
-                os.system('gzip '+sourcepath+'initial.snap'+no_snap+'.2Dproj.dat')
+                make_2D_projection(sourcepath, key_snap, units, sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat', thedist, Z)
+                os.system('gzip '+sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat')
                 print('made 2D projection')
 
                 ###### make cluster params file
-                #f2 = open(path+'initial.snap'+snapno+'.cluster_params.dat','w')
-                #props = get_obs_props(path+'initial', snapno, FAC=1.)
-                #print('props=', props)
-                #rc = props['rc']
-                #print('rc=', rc)
+                f2 = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','w')
+                props = get_obs_props(sourcepath+prefix, no_snap, FAC=1.)
+                print('props=', props)
+                rc = props['rc']
+                print('rc=', rc)
     
                 ##Initialization
-                #count_obj=0; count=0; BHnonBH=0; BBH=0; NSnonNS=0; BNS=0    
+                count_obj=0; count=0
+                #BHnonBH=0; BBH=0; NSnonNS=0; BNS=0    
                 #P=0; MS=0; G=0; WD=0; NS=0; BH=0
-    
-                #for j in range(2,len(lines5)):
-                #    line5 = lines5[j]
-                #    data = line5.split()
-                #    #print data
-                #    #for j in range(0,len(data)-2):
-                #    #    if data[j] != 'na':
-                #    #        data[j] = np.float(data[j])   # Convert strings to floats
-                #    r = float(data[2])*pc
-                #    if r <= rc:
-                #        count_obj += 1
-                #    if int(data[7]) == 1:
-                #        if r <= rc:
-                #            count += 2
-                #        k1 = int(data[17])
-                #        k2 = int(data[18])
-                #        M1 = float(data[8])
-                #        M2 = float(data[9])
-                #        ID1 = int(data[10])
-                #        ID2 = int(data[11])
-                #        a = float(data[12])
-                #        e = float(data[13])
-                #        if k1 == 14 and k2 != 14:
-                #            BHnonBH += 1
-                #        if k2 == 14 and k1 != 14:
-                #            BHnonBH += 1
-                #        if k1 == 14 and k2 == 14:
-                #            BBH += 1
-                #        if k1 == 13 and k2 < 13:
-                #            NSnonNS += 1
-                #        if k2 == 13 and k1 < 13:
-                #            NSnonNS += 1
-                #        if k1 == 13 and k2 == 13:
-                #            BNS += 1
-                #    else:
-                #        if r <= rc:
-                #            count += 1
-                #        M = float(data[1])
-                #        k = int(data[14])
-                #        if k == 0 and M == 0.001:
-                #            P += 1
-                #        if k <= 1 and M > 0.01:
-                #            MS += 1
-                #        if k>= 10 and k <= 12:
-                #            WD += 1
-                #        if k == 13:
-                #            NS += 1
-                #        if k == 14:
-                #            BH += 1
-                #        if k >= 2 and k <= 9:
-                #            G += 1
+                
+                thesnap = cmct.Snapshot(fname=sourcepath+snap_h5, snapshot_name=key_snap, 
+                    conv=sourcepath+'initial.conv.sh', 
+                    dist=thedist, # distance to cluster in kpc
+                    z=Z)
+                rsnap = thesnap.data['r']; binflag = thesnap.data['binflag']
+                mass = thesnap.data['m_MSUN']
+                mbin0 = thesnap.data['m0_MSUN']; mbin1 = thesnap.data['m1_MSUN']
+                ksin = thesnap.data['startype']
+                kbin0 = thesnap.data['bin_startype0']; kbin1 = thesnap.data['bin_startype1']
 
-                #print('end of loop')
-                #number_density = count/(rc**3.)
-                #number_density2 = count_obj/(rc**3.)
+                for j in range(2,len(rsnap)):
+                    r = float(rsnap[j])*pc
+                    if r <= rc:
+                        count_obj += 1
+                    if int(binflag[j]) == 1:
+                        if r <= rc:
+                            count += 2
+                        #k1 = int(kbin0[j])
+                        #k2 = int(kbin1[j])
+                        #M1 = float(mbin0[j])
+                        #M2 = float(mbin1[j])
+                        #if k1 == 14 and k2 != 14:
+                        #    BHnonBH += 1
+                        #if k2 == 14 and k1 != 14:
+                        #    BHnonBH += 1
+                        #if k1 == 14 and k2 == 14:
+                        #    BBH += 1
+                        #if k1 == 13 and k2 < 13:
+                        #    NSnonNS += 1
+                        #if k2 == 13 and k1 < 13:
+                        #    NSnonNS += 1
+                        #if k1 == 13 and k2 == 13:
+                        #    BNS += 1
+                    else:
+                        if r <= rc:
+                            count += 1
+                        #M = float(mass[j])
+                        #kstar = int(ksin[j])
+                        #if kstar == 0 and M == 0.001:
+                        #    P += 1
+                        #if kstar <= 1 and M > 0.01:
+                        #    MS += 1
+                        #if kstar>= 10 and k <= 12:
+                        #    WD += 1
+                        #if kstar == 13:
+                        #    NS += 1
+                        #if kstar == 14:
+                        #    BH += 1
+                        #if kstar >= 2 and k <= 9:
+                        #    G += 1
+
+                print('end of loop')
+                number_density = count/(rc**3.)
+                number_density2 = count_obj/(rc**3.)
                 #print 'number_density', number_density
     
-                #print("#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2", file = f2)
+                print("#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2", file = f2)
                 #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
                 #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
-                #f2.close()
+                print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
+                print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
+
+                f2.close()
                 #f5.close()
-                #print('cluster_params done')    
+                print('cluster_params done')    
         
                 ###############
-                #print('made params file')
-                #get_sbp_from_2D_projection(path+string, snapno)
-                get_sbp_from_2D_projection_ncut(sourcepath+string, no_snap, BINNO=50, LCUT=12, NCUT=0.85)
+                print('made params file')
+                ##get_sbp_from_2D_projection(path+string, snapno)
+                #get_sbp_from_2D_projection_ncut(sourcepath+string, no_snap, BINNO=50, LCUT=12, NCUT=0.85)
+                get_sbp_from_2D_projection_ncut(sourcepath+prefix, no_snap, BINNO=50, LCUT=12, NCUT=-1)
                 print(key_snap, 'made SBP')
-                #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
-                #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
-                velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=700, mcut = 0.85)
-                velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=500, mcut = 0)
+                ##velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
+                ##velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
+                #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=700, mcut = 0.85)
+                #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=500, mcut = 0)
+                velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=700, mcut = 0)
                 print('Made vel dispersion for',no_snap)
+
             except:
                 print(key_snap, 'failed')
+        #except:
+        #    continue
 
 
 
@@ -956,26 +973,32 @@ def make_SBP_VDP_NDP_hdf5_smooth(modelpath, dgc):   ##dgc in kpc
 
     t_conv = conv('t', modelpath+'initial.conv.sh')
 
-    with pd.HDFStore(snap_h5) as snaps:
-        snap_keys = snaps.keys()
+    #with pd.HDFStore(snap_h5) as snaps:
+    #    snap_keys = snaps.keys()
 
-    snap_no = []; snap_time = []
-    for ii in range(len(snap_keys)):
-        temp_key = read_keys(snap_keys[ii])
-        temp_no = int(temp_key[0])
-        temp_time = float(temp_key[1])
+    #snap_no = []; snap_time = []
+    all_keys = np.genfromtxt(modelpath+'snap_keys.txt', dtype=str)
 
-        snap_no.append(int(temp_key[0]))
-        snap_time.append(float(temp_key[1]))
+    string = 'initial'
+    units=read_units(modelpath+string)
+
+    for ii in range(len(all_keys[:,0])):
+        #temp_key = read_keys(snap_keys[ii])
+        #temp_no = int(temp_key[0])
+        #temp_time = float(temp_key[1])
+
+        #snap_no.append(int(temp_key[0]))
+        #snap_time.append(float(temp_key[1]))
 
         #if temp_time*t_conv < 10000. or temp_time*t_conv >13000. or temp_no%2!=0:
         #    continue
-
-        if temp_time*t_conv < 7000. or temp_time*t_conv >9000. or temp_no%2!=0:
+         
+        snap_key = '/'+all_keys[:,0][ii]+'(t='+all_keys[:,1][ii]+')'
+        if float(all_keys[:,1][ii])*t_conv < 8000. or float(all_keys[:,1][ii])*t_conv > 13000. or int(all_keys[:,0][ii])%2!=0:
             continue
 
         else:
-            temp_snap = cmct.Snapshot(fname=snap_h5, snapshot_name=snap_keys[ii], 
+            temp_snap = cmct.Snapshot(fname=snap_h5, snapshot_name=snap_key, 
                         conv=modelpath+'initial.conv.sh', 
                         dist=dgc, # distance to cluster in kpc
                         z=0.0038)
@@ -1014,20 +1037,20 @@ def make_SBP_VDP_NDP_hdf5_smooth(modelpath, dgc):   ##dgc in kpc
             star_profile_arcsec = star_profile/(uc.pc2arcsec(dgc, 1.)**2)
             star_e_profile_arcsec = star_e_profile/(uc.pc2arcsec(dgc, 1.)**2)
 
-            fsbp = modelpath+'SBP'+str(temp_no)+'_LCUT12.txt'
-            fvdp = modelpath+'VDP'+str(temp_no)+'_MCUT0d85.txt'
-            fndp = modelpath+'NDP'+str(temp_no)+'_MCUT0d85.txt'
+            fsbp = modelpath+'SBP'+all_keys[:,0][ii]+'_LCUT12_smooth.txt'
+            fvdp = modelpath+'VDP'+all_keys[:,0][ii]+'_MCUT0d85_smooth.txt'
+            fndp = modelpath+'NDP'+all_keys[:,0][ii]+'_MCUT0d85_smooth.txt'
 
-            np.savetxt(fsbp, np.c_[v_bincenter, v_profile], fmt = '%f %f', header = '1.r(arcsec) 2.miu_v(mag/arcsec^2) t='+str(temp_time), comments = '#')
-            np.savetxt(fvdp, np.c_[star_velbin_arcsec, star_veldisp_profile, star_e_veldisp_profile], fmt = '%f %f %f', header = '1.r(arcsec) 2.sigma_v(km/s) 3.sigma_v_err(km/s) t='+str(temp_time), comments = '#')
-            np.savetxt(fndp, np.c_[star_numbin_arcsec, star_profile_arcsec, star_e_profile_arcsec], fmt = '%f %f %f', header = '1.r(arcsec) 2.num(1/arcsec^2) 3.num_err(1/arcsec^2) t='+str(temp_time), comments = '#')
+            np.savetxt(fsbp, np.c_[v_bincenter, v_profile], fmt = '%f %f', header = '1.r(arcsec) 2.mu_v(mag/arcsec^2) t='+all_keys[:,1][ii], comments = '#')
+            np.savetxt(fvdp, np.c_[star_velbin_arcsec, star_veldisp_profile, star_e_veldisp_profile], fmt = '%f %f %f', header = '1.r(arcsec) 2.sigma_v(km/s) 3.sigma_v_err(km/s) t='+all_keys[:,1][ii], comments = '#')
+            np.savetxt(fndp, np.c_[star_numbin_arcsec, star_profile_arcsec, star_e_profile_arcsec], fmt = '%f %f %f', header = '1.r(arcsec) 2.num(1/arcsec^2) 3.num_err(1/arcsec^2) t='+all_keys[:,1][ii], comments = '#')
 
-            print(snap_keys[ii])
+            print(snap_key)
 
 
-    snap_no_sort, snap_time_sort = (list(t) for t in zip(*sorted(zip(snap_no, snap_time))))
+    #snap_no_sort, snap_time_sort = (list(t) for t in zip(*sorted(zip(snap_no, snap_time))))
 
-    np.savetxt(modelpath+'snap_keys.txt', np.c_[snap_no_sort, snap_time_sort], fmt = '%d %.8f', header = '1.snap_no 2.snap_time', comments = '#')
+    #np.savetxt(modelpath+'snap_keys.txt', np.c_[snap_no_sort, snap_time_sort], fmt = '%d %.8f', header = '1.snap_no 2.snap_time', comments = '#')
 
 
 

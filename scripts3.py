@@ -56,7 +56,7 @@ def read_segment(f,position):
                 .replace("Eint1=","").replace("Eint2=","").replace("Eint=","")\
                 .replace("id0=","").replace("id1=","").replace("id=","")\
                 .replace("a=","").replace("e=","")\
-                .replace("ktype1=","").replace("ktype2=","").replace("ktyp","")
+                .replace("ktype1=","").replace("ktype2=","").replace("ktype=","")
                 ##ktyp is not a typo, it only works this way I don't know why (Shi)
             values=parsed.split()
             #print values
@@ -73,6 +73,8 @@ def read_segment(f,position):
                     }
             
             elif values[0]=='single':
+                if len(values[6])>2:
+                    values[6] = (values[6].split('p'))[1]
                 input[i]={'type': values[0],
                     'no': int(values[1]),
                     'm': [float(values[2])],
@@ -179,7 +181,10 @@ def read_segment(f,position):
                         e+=[float(values[-3*(no-1) +(no-2+j)])]
                         #a+=[float(values[-2* (no-1) +j])]          ##For old models
                         #e+=[float(values[-(no-1) +j])]
-            if no==1: startype=[values[-1]]
+            if no==1: 
+                if len(values[-1])>2:
+                    values[-1] = (values[-1].split('p'))[1]
+                startype=[values[-1]]
             if no==2: startype=[values[-2], values[-1]]
             if no==3: startype=[values[-3], values[-2], values[-1]]
 

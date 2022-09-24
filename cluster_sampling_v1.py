@@ -7,39 +7,51 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import random
 from random import choices
+from scipy.interpolate import interp1d
 
 import dynamics as dyn
 
 twopi = 2*np.pi
 Gconst = 4.30091*10**(-3)   #pc*Msun^-1*(km/s)^2
-H = 69.6 #km/s*Mpc^-1
+H = 70 #km/s*Mpc^-1
 
+##Mass loss rate from PRIETO & GNEDIN, Figure 7.
+#data_ml = pd.read_excel('/projects/b1095/syr904/projects/GCE/Rate_Massloss.xlsx',
+#                       names=['time_gyr','m_frac'])
+#t_gyr = np.array(data_ml['time_gyr']); mloss = np.array(data_ml['m_frac'])
+###Interpolate the number of mass loss data
+#f = interp1d(t_gyr, mloss, kind='nearest')
+#t_interpld =  np.linspace(np.min(t_gyr), 11.5, 3000)
+#mloss_interpld = f(t_interpld)
+#mloss_diff = np.diff(mloss_interpld)
+#t_interpld = np.delete(t_interpld,0)
 
 ##Stellar mass density profile without dark matter halo
-def smdf(r, Mtot = 5.*1e10, Re = 4., ns = 2.2):  ##density in Msun/kpc^3
+def smdf(r, Mtot = 5.e10, Re = 4., ns = 2.2):  ##density in Msun/kpc^3
     ##stellar density
-    g2n = gamma(2*ns)
+    #g2n = gamma(2*ns)
     p = 1.0-0.6097/ns+0.05563/ns**2
     b = 2*ns-1./3.+0.009876/ns
     gn3p = gamma(ns*(3-p))
-    L = twopi*Re**2*ns*b**(-2*ns)*g2n
+    #L = twopi*Re**2*ns*b**(-2*ns)*g2n
 
-    rho_0 = (Mtot/L)*b**(ns*(1-p))*g2n/(2*Re*gn3p)
+    #rho_0 = (Mtot/L)*b**(ns*(1-p))*g2n/(2*Re*gn3p)
+    rho_0 = Mtot/(2*twopi*Re**3*ns*gn3p)*pow(b, (3-p)*ns)
     exponent = -b*(r/Re)**(1/ns)
     rho_star = rho_0*(r/Re)**(-p)*np.exp(exponent)
 
     return rho_star
 
 ##Galaxy density profile with dark matter halo
-def gdf(r, Mtot = 5.*1e10, Re = 4., ns = 2.2, Mdm=1.e12, rs=20.):  ##density in Msun/kpc^3
+def gdf(r, Mtot = 5.e10, Re = 4., ns = 2.2, Mdm=1.e12, rs=20.):  ##density in Msun/kpc^3
     ##stellar density
-    g2n = gamma(2*ns)
+    #g2n = gamma(2*ns)
     p = 1.0-0.6097/ns+0.05563/ns**2
     b = 2*ns-1./3.+0.009876/ns
     gn3p = gamma(ns*(3-p))
-    L = twopi*Re**2*ns*b**(-2*ns)*g2n
-
-    rho_0 = (Mtot/L)*b**(ns*(1-p))*g2n/(2*Re*gn3p)
+    #L = twopi*Re**2*ns*b**(-2*ns)*g2n
+    #rho_0 = (Mtot/L)*b**(ns*(1-p))*g2n/(2*Re*gn3p)
+    rho_0 = Mtot/(2*twopi*Re**3*ns*gn3p)*pow(b, (3-p)*ns)
     exponent = -b*(r/Re)**(1/ns)
     rho_star = rho_0*(r/Re)**(-p)*np.exp(exponent)
 
@@ -47,13 +59,14 @@ def gdf(r, Mtot = 5.*1e10, Re = 4., ns = 2.2, Mdm=1.e12, rs=20.):  ##density in 
     rho_crit = 3*(H**2/10**6)/(4*twopi*Gconst*0.001)
     r200 = (3*Mdm/(200*2*twopi*rho_crit))**(1./3.)
     conc = r200/rs
-    delta_c = (200./3.)*conc**3/(np.log(1+conc)-conc/(1+conc))
-
-    rho_0_dm = rho_crit*delta_c
-    rho_dm = rho_0_dm/(r/rs)/(1+r/rs)**2
+    #delta_c = (200./3.)*conc**3/(np.log(1+conc)-conc/(1+conc))
+    #rho_0_dm = rho_crit*delta_c
+    rho0_dm = Mdm/(2*twopi*rs**3*(np.log(1+conc)-conc/(1+conc)))
+    #print(rho0_dm)
+    rho_dm = rho0_dm/(r/rs)/(1+r/rs)**2
 
     ##Total
-    rho = rho_star+rho_dm
+    rho = rho_dm+rho_star
 
     return rho
 
@@ -79,21 +92,21 @@ def gdf_frommodel():  ##density in Msun/kpc^3
 
 
 ##Calculate circular velocity
-def circ_vel(ra, rho_func):  ##v_circ in km/s; ra in kpc
+def circ_vel(ra, Madd, rho_func):  ##v_circ in km/s; ra in kpc
     Mr = 2*twopi*integrate.quad(lambda x: rho_func(x)*x*x, 0, ra)[0]
-
+    Mr = Mr+Madd
     v_circ = np.sqrt(Gconst*Mr*0.001/ra)
+    #print(Mr, ra, v_circ)
 
     #print(Mr)
     return v_circ
 
 
 ##Calculate galaxy mass density at r_g
-def galaxy_rho_r(r_g, vel_func):   ##r_g in kpc; return value is Msun/pc^3
+def galaxy_rho_r(r_g, Mextra, vel_func):   ##r_g in kpc; return value is Msun/pc^3
     rg_pc = r_g*1000.
     #print(vel_func(r_g, gdf)**2/(twopi*Gconst*rg_pc**2))
-    return vel_func(r_g, gdf)**2/(twopi*Gconst*rg_pc**2)
-
+    return vel_func(r_g, Mextra, gdf)**2/(twopi*Gconst*rg_pc**2)
 
 
 ##Cluster mass function
@@ -113,8 +126,8 @@ def gc_mf_frommodel():
 
 
 ##Dynamical friction
-def df(dt, r_old, Mgc):  ##t_df in Gyr; r_old in kpc
-    t_df = 0.23*circ_vel(r_old, gdf)*r_old**2*(1e5/Mgc)  ##default 0.23, fast: 0.1755
+def df(dt, r_old, Mgc, Mextra):  ##t_df in Gyr; r_old in kpc
+    t_df = 0.23*circ_vel(r_old, Mextra, gdf)*r_old**2*(1e5/Mgc)  ##default 0.23, fast: 0.1755
     dr = -r_old*dt/(2*t_df)
 
     r_new = r_old+dr
@@ -124,19 +137,114 @@ def df(dt, r_old, Mgc):  ##t_df in Gyr; r_old in kpc
 
 
 ##Galaxy tidal field cluster disruption
-def t_tidal(Mgc, r_gd, vel_func):  ##r_gd in kpc, vel in km/s
-    Pr = 41.4*r_gd/vel_func(r_gd, gdf)
-    t_tid = 10*(Mgc/1e5)**(2/3)*Pr
-    return t_tid
+def t_tidal(Mgc, r_gd, Mextra, vel_func):  ##r_gd in kpc, vel in km/s
+    Pr = 41.4*r_gd/vel_func(r_gd, Mextra, gdf)
+    t_tid = 10*(Mgc/2e5)**(2/3)*Pr
+    return t_tid  ##in Gyr
 
 
-##Mass loss from stellar winds, dynamical ejection of stars through two-body relaxation and stripping of stars by the Galactic tidal field.
-def dmdt(dt, mold, rgd):
-    tidaltime = t_tidal(mold, rgd, circ_vel)
-    dm = -mold*dt/tidaltime
+##isolated cluster evaporation time
+def t_iso(Mgc):
+    return 17*Mgc/2e5  ##in Gyr
+
+
+##mass loss from stellar evolution
+def star_evolv(t_current, mulim, M_init, m_tot_kroupa):
+    alpha = [-1.3, -2.3]
+    m_break = 0.5
+    coeff_low = 1; coeff_high=m_break**(-alpha[1]+alpha[0])
+    m_to = (10/t_current)**0.4  ##solar mass
+    if m_to > 30:
+        m_se = 0.9*integrate.quad(lambda x: x*x**alpha[1], m_to, mulim)[0]
+        
+    elif m_to > 8 and mulim > 30:
+        m_se1 = 0.9*integrate.quad(lambda x: x*x**alpha[1], 30, mulim)[0]
+        m_se2 = integrate.quad(lambda x: (x-1.4)*x**alpha[1], m_to, 30)[0]
+        m_se = m_se1+m_se2
+
+    elif m_to > 8 and mulim <= 30:
+        m_se = integrate.quad(lambda x: (x-1.4)*x**alpha[1], m_to, mulim)[0]
+
+    elif m_to > 1 and mulim > 8:
+        m_se1 = integrate.quad(lambda x: (x-1.4)*x**alpha[1], 8, mulim)[0]
+        m_se2 = integrate.quad(lambda x: (x-(0.109*x+0.394))*x**alpha[1], m_to, 8)[0]
+        m_se = m_se1+m_se2
+
+    elif m_to >1 and mulim <=8:
+        m_se = integrate.quad(lambda x: (x-(0.109*x+0.394))*x**alpha[1], m_to, mulim)[0]
+
+    elif m_to >0.08 and mulim >1:
+        m_se = integrate.quad(lambda x: (x-(0.109*x+0.394))*x**alpha[1], 1, mulim)[0]
+
+    elif m_to >0.08 and mulim <=1:
+        m_se = 0
+
+    else:
+        print('error', m_to, mulim)
+
+    m_frac = coeff_high*m_se/m_tot_kroupa
+    m_ml = m_frac*M_init
+
+    return m_ml, m_to
+
+    #mass_bin = np.linspace(0.08, 150, 15000)
+    #mass_bin = mass_bin[:-2]
+    #m_step = 0.01
+    #M_tot = 0; N_bin = []; M_bin = []
+    #coeff = 1
+    #for xx in range(len(mass_bin)):
+    #    if mass_bin[xx]<=m_break:
+    #        m_temp = mass_bin[xx]
+    #        n_temp = m_temp**alpha[0]*m_step*coeff
+    #        mtot_temp = n_temp*m_temp
+    #        N_bin.append(n_temp)
+    #        M_bin.append(mtot_temp)
+#
+    #    else:
+    #        coeff*=m_break**(-alphas[1]+alphas[0])
+    #        m_temp = mass_bin[xx]
+    #        n_temp = m_temp**alpha[1]*m_step*coeff 
+    #        mtot_temp = n_temp*m_temp
+    #        N_bin.append(n_temp)
+    #        M_bin.append(mtot_temp)
+#
+    #M_tot = np.sum(M_bin)
+#
+    #f_normal=Mtot_ini/M_tot
+
+    ##MS lifetime
+    #Tms_bin = 10*mass_bin**(-2.5)  ##in Gyr
+
+    ###Mass loss
+    #mass_ms = mass_bin[Tms_bin>t_current]
+    #mass_to = mass_bin[Tms_bin<=t_current]
+    #T_ms = Tms_bin[Tms_bin>t_current]
+    #T_to = Tms_bin[Tms_bin<=t_current]
+    #Mms = M_bin[Tms_bin>t_current]
+    #Mto = M_bin[Tms_bin<=t_current]
+
+    #M_ml = 0
+    #if mass_to[0]>=30:
+    #    M_frac = np.sum(Mto)/M_tot
+    #    M_ml = 0.9*M_frac*Mtot_ini
+
+    #for xx in range(len(mass_to)):
+
+
+
+
+##Mass loss from stellar evolution, dynamical ejection of stars through two-body relaxation and stripping of stars by the Galactic tidal field.
+def dmdt(dt, mold, rgd, told, Mext_disrup):
+    #dm_starevolv= -mold*mloss_diff[t_interpld==told][0]
+
+    tidaltime = t_tidal(mold, rgd, Mext_disrup, circ_vel)
+    isotime = t_iso(mold)
+    t_evolv = min(tidaltime, isotime)
+
+    dm = -mold*dt/t_evolv
     mnew = dm+mold
 
-    return mnew
+    return mnew, -dm
 
 
 ##calculate the initial tidal radius of a cluster
@@ -162,6 +270,21 @@ def galaxy_profile():
 
     np.savetxt('/projects/b1095/syr904/projects/GCE/catalog/galaxy_profile.txt', np.c_[xga, gdf_array, vel_array, ga_rho_array], fmt = '%.8f %f %f %f', header = '1.rg(kpc) 2.rho(Msun/kpc^3) 3.vel(km/s) 4.rho(Msun/pc^3)', comments = '#')
 
+
+##Fitting formula for catalog models with rg=2
+def Nmsp_fitting(Minit, Tdisr):   ##Tdisr in Gyr
+    #modelmass = [1.197630e+05, 2.423500e+05, 4.848440e+05, 9.703820e+05]
+    Params = [[ 0.0177543 , -0.00893551], [-0.00303015,  0.00150571], [ 0.00020767, -0.00022359], [ 0.06783828, -0.15749236]]
+    base_mass = 0.5988e5  ##solar mass
+
+    As = []
+    N = Minit/base_mass
+    for aa in range(len(Params)):
+        As.append(Params[aa][0]*N+Params[aa][1])
+
+    Nmsp_curr = As[0]*Tdisr + As[1]*Tdisr**2 + As[2]*Tdisr**3 + As[3]
+
+    return Nmsp_curr
 
 
 
@@ -204,9 +327,6 @@ def VN_sampling(function, xmin, xmax, fmax, nums, fmin=0, batch=1000):
     return samples[:nums]
     #return samples_x, samples_y, rej_samples_x, rej_samples_y
 
-
-##MCMC
-#def MCMC():
 
 
 def plot_raw_distr(function, xmin, xmax, thelabel):
@@ -418,8 +538,8 @@ def read_property_all(start, end, disrupfile, proptyfile, file_ver):
 
         if Mass == 0 or Mass_old == 0:
             print(modelpath)
-        prop[0].append(Nmsp); prop[1].append(Mgc); prop[2].append(Lmsp)
-        prop_old[0].append(Nmsp_old); prop_old[1].append(Mgc_old); prop_old[2].append(Lmsp_old)
+        prop[0].append(Nmsp); prop[1].append(Mass); prop[2].append(Lmsp)
+        prop_old[0].append(Nmsp_old); prop_old[1].append(Mass_old); prop_old[2].append(Lmsp_old)
         print(ii)
 
     print('finished searching')
@@ -1043,7 +1163,7 @@ def main(sample_num, start, end, initfile, disrupfile, file_version):
 
 
 ##Analytical models following Fragione et al. 2018 but use the number of MSPs from the catalog models
-def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_close, frac_gc_far, xcut, sample_num):
+def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_close, frac_gc_far, xcut, sample_num, min_rhoh):
     ###################################################
     ##Initialization
     samps_dist = VN_sampling(smdf, xmin_samps, xmax_samps, smdf(xmin_samps), sample_num)
@@ -1053,13 +1173,14 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
 
     #samps_dist = np.sort(samps_dist)
 
-    bin_num = 400
+    bin_num = 500
     rg_bin = np.logspace(np.log10(xmin_samps), np.log10(xmax_samps), bin_num+1)
     cumu_mass_bin = []
     #rho_bin = []
     #rho_bin = smdf(rg_bin[:-1])
     check_xcut = 0
     for kk in range(len(rg_bin)-1):
+        ##Initial cumulative mass distribution
         rg_med = (rg_bin[kk]+rg_bin[kk+1])/2.
         #rho_bin.append(smdf(rg_med)*f_gc)
         if rg_med < xcut:
@@ -1090,15 +1211,15 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
 
         if check == 0: continue
 
-        rho_ga = galaxy_rho_r(samps_dist[ii], circ_vel)
+        rho_ga = galaxy_rho_r(samps_dist[ii], 0, circ_vel)
         if samps_mass[ii] <= 1e5:
-            rho_rh_0 = 1000.  ##Msun/pc^3
+            rho_rh_0 = min_rhoh  ##Msun/pc^3
         elif 1e5 < samps_mass[ii] < 1e6:
-            rho_rh_0 = 1000.*(samps_mass[ii]/1e5)**2
+            rho_rh_0 = min_rhoh*(samps_mass[ii]/1e5)**2
         else:
-            rho_rh_0 = 100000.
+            rho_rh_0 = min_rhoh*100
 
-        tid_time = t_tidal(samps_mass[ii], samps_dist[ii], circ_vel)
+        tid_time = t_tidal(samps_mass[ii], samps_dist[ii], 0, circ_vel)
      
         if rho_rh_0 > rho_ga:
             for yy in range(len(rg_bin)-1):
@@ -1123,84 +1244,169 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
 
         print(ii)
 
-    
+    print(cumu_mass_bin[-1])
     print(numgc_tot, massgc_tot)
-    print(cumu_mass_bin)
 
-    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/cluster_analytical_initial_M_RG_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'.dat', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3]], fmt = '%f %f %f %f', header = '1.Mass(Msun) 2.RG_INITIAL(kpc) 3.RHO_RH(Msun/pc^3) 4.Ttid(Gyr)', comments = '#')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/cluster_analytical_initial_M_RG_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'_min_rhoh'+str(int(min_rhoh))+'diffmap.dat', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3]], fmt = '%f %f %f %f', header = '1.Mass(Msun) 2.RG_INITIAL(kpc) 3.RHO_RH(Msun/pc^3) 4.Ttid(Gyr)', comments = '#')
+
+    ##Kroupa01 IMF; mmin=0.08, mmax=150
+    alpha = [-1.3, -2.3]
+    m_break = 0.5
+    coeff_low = 1; coeff_high=m_break**(-alpha[1]+alpha[0])
+    mlow = coeff_low*integrate.quad(lambda x: x*x**alpha[0], 0.08, m_break)[0]
+    mhigh = coeff_high*integrate.quad(lambda x: x*x**alpha[1], m_break, 150)[0]
+    m_tot = mlow+mhigh
 
     ###################################################
     ##Inspiral
-    data_gaprof = np.genfromtxt('/projects/b1095/syr904/projects/GCE/catalog/galaxy_profile.txt')
-    xga = data_gaprof[:,0]; rho_ga = data_gaprof[:,3]
+    #data_gaprof = np.genfromtxt('/projects/b1095/syr904/projects/GCE/catalog/galaxy_profile.txt')
+    #xga = data_gaprof[:,0]; rho_ga = data_gaprof[:,3]
 
-    time_steps = np.linspace(0.0, 11.5, 3000) ##Gyr
+    time_steps = np.linspace(0, 11.5, 3000) ##Gyr
     gc_disrupt = [[],[],[],[],[],[],[],[],[],[],[],[],[]]
+    Mtot_disrup = np.zeros(bin_num+1)
+    Mtot_disrup_nogas = np.zeros(bin_num+1)
+    Mtot_disrup[0]+=4e6
+    Mtot_cluster = np.zeros(bin_num+1)
+    rg_bin_new = np.logspace(np.log10(0.001), np.log10(xmax_samps), bin_num+1)
+    for ii in range(len(rg_bin_new)-1):
+        for jj in range(len(allsamps[1])):
+            if rg_bin_new[ii]<=allsamps[1][jj]<rg_bin_new[ii+1]:
+                Mtot_cluster[ii+1]+=allsamps[0][jj]
+
     for kk in range(numgc_tot):
         ##Initialize the spiral in
         rg_old = allsamps[1][kk]; t_old = 0.; m_old = allsamps[0][kk]; rho_halfm_old = allsamps[2][kk]
-        mcut = 0.1*m_old
+        tid_old = allsamps[3][kk]
+        mcut = 100#0.1*m_old
         r0_tidal = r_tidal_initial(m_old, rg_old)
-        rt_cut = 0.2*r0_tidal
+        #rt_cut = 0.2*r0_tidal
 
+        mup_lim = 150
         ##Starting spiral in
         for zz in range(1, len(time_steps)):
             check = 0
             delta_t = time_steps[zz]-t_old
-            rg_new = df(delta_t, rg_old, m_old)
-            m_new = dmdt(delta_t, m_old, rg_old)
-            rt_new = r_tidal_initial(m_old, rg_old)
+
+            Mcumu_disrup = np.cumsum(Mtot_disrup)
+            Mcumu_cluster = np.cumsum(Mtot_cluster)
+            Madd_disrup = 0
+            if rg_old<rg_bin_new[0]:
+                Madd_disrup = Mcumu_disrup[0]+Mcumu_cluster[0]
+            else:
+                for ii in range(len(rg_bin_new)-1): 
+                    if rg_bin_new[ii]<=rg_old<rg_bin_new[ii+1]:
+                        Madd_disrup = Mcumu_disrup[ii+1]+Mcumu_cluster[ii+1]
+            #print(Madd_disrup)
+
+            rg_new = df(delta_t, rg_old, m_old, Madd_disrup)
+
+            m_new, delta_m = dmdt(delta_t, m_old, rg_old, time_steps[zz], Madd_disrup)
+            m_se_ml, mass_turnoff = star_evolv(time_steps[zz], mup_lim, allsamps[0][kk], m_tot)
+            m_new = m_new-m_se_ml
+            mup_lim = mass_turnoff
+
+            ##Add loss mass to the galaxy mass
+            if rg_old<rg_bin_new[0]:
+                Mtot_disrup[0]+=delta_m+m_se_ml
+                Mtot_disrup_nogas[0]+=delta_m
+            else:
+                for ii in range(len(rg_bin_new)-1):
+                    if rg_bin_new[ii]<=rg_old<rg_bin_new[ii+1]:
+                        Mtot_disrup[ii+1]+=delta_m+m_se_ml
+                        Mtot_disrup_nogas[ii+1]+=delta_m
+
+            ##Subtract cluster mass from the galaxy mass
+            if rg_new<rg_bin_new[0]:
+                Mtot_cluster[0]+=m_new
+            else:
+                for ii in range(len(rg_bin_new)-1):
+                    if rg_bin_new[ii]<=rg_new<rg_bin_new[ii+1]:
+                        Mtot_cluster[ii+1]+=m_new
+
+                    if rg_bin_new[ii]<=rg_old<rg_bin_new[ii+1]:
+                        Mtot_cluster[ii+1]-=m_old
+
+
+            #rt_new = r_tidal_initial(m_old, rg_old)
 
             if m_new <= 1e5:
-                rho_halfm_new = 1000.  ##Msun/pc^3
+                rho_halfm_new = min_rhoh  ##Msun/pc^3
             elif 1e5 < m_new < 1e6:
-                rho_halfm_new = 1000.*(m_new/1e5)**2
+                rho_halfm_new = min_rhoh*(m_new/1e5)**2
             else:
-                rho_halfm_new = 100000.
+                rho_halfm_new = min_rhoh*100.
 
+            #if rt_new < rt_cut:
+            #    check = 1
+            #    print('cluster mass negative', time_steps[zz], rg_new, rho_halfm_new)
+            #    rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new;m_disrupt = m_new
+            #    type_disrupt = 3
+            #    break
 
-            if rg_new < 0.001:#rhm_curr:
+            #print(rg_new, m_new)
+            #print('rg_new=', rg_new)
+            #bin_right = xga[xga>=rg_new][0]
+            #index_right = np.where(xga == bin_right)[0][0]
+            #index_left = index_right - 1
+            #rho_ga_new_right = rho_ga[index_right]
+
+            rho_ga_new = galaxy_rho_r(rg_new,Madd_disrup,circ_vel)
+            if rho_halfm_new <= rho_ga_new:
                 check = 1
-                print('cluster reached center', time_steps[zz], rg_new, rho_halfm_new)
+                #print('cluster disrupted', time_steps[zz], rg_new, rho_halfm_new)
                 rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
                 type_disrupt = 1
                 break
 
-            if m_new < mcut:
-                check = 1
-                print('cluster mass negative', time_steps[zz], rg_new, rho_halfm_new)
-                rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new;m_disrupt = m_new
-                type_disrupt = 2
-                break
+            #if time_steps[zz] > tid_old:
+            #    check = 1
+            #    #print('cluster tidally disrupted', time_steps[zz], rg_new, rho_halfm_new)
+            #    rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
+            #    type_disrupt = 2
+            #    break
 
-            if rt_new < rt_cut:
+            if rg_new < 0.003:#rhm_curr:
                 check = 1
-                print('cluster mass negative', time_steps[zz], rg_new, rho_halfm_new)
-                rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new;m_disrupt = m_new
+                #print('cluster reached center', time_steps[zz], rg_new, rho_halfm_new)
+                rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
                 type_disrupt = 3
                 break
 
-            #print(rg_new, m_new)
-            bin_right = xga[xga>=rg_new][0]
-            index_right = np.where(xga == bin_right)[0][0]
-            index_left = index_right - 1
-            rho_ga_new_right = rho_ga[index_right]
-            if rho_halfm_new <= rho_ga_new_right:
+            if m_new < mcut:
                 check = 1
-                print('cluster disrupted', time_steps[zz], rg_new, rho_halfm_new)
+                #print('cluster mass negative', time_steps[zz], rg_new, rho_halfm_new)
                 rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
                 type_disrupt = 4
                 break
 
+
             t_old = time_steps[zz]; m_old = m_new; rg_old = rg_new; rho_halfm_old = rho_halfm_new
+            #tid_old = t_tidal(m_new, rg_new, circ_vel)
+
 
         if check == 0:
             rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new
-            type_disrupt = 5; m_disrupt = m_new
+            type_disrupt = 0; m_disrupt = m_new
+        else:
+            if rg_disrupt<rg_bin_new[0]:
+                Mtot_disrup[0]+=m_disrupt
+                Mtot_disrup_nogas[0]+=m_disrupt
+                Mtot_cluster[0]-=m_disrupt
+            else:
+                for ii in range(len(rg_bin_new)-1):
+                    if rg_bin_new[ii]<=rg_disrupt<rg_bin_new[ii+1]:
+                        Mtot_disrup[ii+1]+=m_disrupt
+                        Mtot_disrup_nogas[ii+1]+=m_disrupt
+                        Mtot_cluster[ii+1]-=m_disrupt
+
 
         gc_disrupt[0].append(rg_disrupt); gc_disrupt[1].append(t_disrupt); gc_disrupt[2].append(rho_disrupt); gc_disrupt[3].append(type_disrupt); gc_disrupt[4].append(m_disrupt)
 
+
         #print(rg_disrupt, t_disrupt, rho_disrupt)
+
+        #print(np.cumsum(Mtot_disrup))
 
 
         #############################################
@@ -1213,8 +1419,8 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
         
         behemoth_flag = 0; small_mass = 0
         for xx in range(len(rg_range)):
-                if rg_range[xx][0] <= allsamps[1][kk] < rg_range[xx][1]:
-                    rg = modelrg[xx]
+            if rg_range[xx][0] <= allsamps[1][kk] < rg_range[xx][1]:
+                rg = modelrg[xx]
 
         rv = modelrv[int(choices([0,1,2,3])[0])]
         z = modelz[int(choices([0,1,2])[0])]
@@ -1265,7 +1471,7 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
         if behemoth_flag == 0:
             if small_mass == 0:
                 file_name = 'model_rv'+rv+'_rg'+rg+'_z'+z+'_'+n_star+'.txt'
-                print(file_name)
+                #print(file_name)
                 data_rhodyn = np.genfromtxt('/projects/b1095/syr904/projects/GCE/catalog/data_rho_dyn/'+file_name)
 
                 thepath = '/projects/b1091/CMC_Grid_March2019/rundir/rv'+rv+'/rg'+rg+'/z'+z+'/'+n_star+'/'
@@ -1274,48 +1480,56 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
                 m_conv = dyn.conv('m', thepath+'initial.conv.sh')
                 mstar_conv = dyn.conv('mstar', thepath+'initial.conv.sh')
 
-                last_time = 0
-                mass_index = np.where(data_rhodyn[:,2]<=m_new)[0]
-                print(mass_index)
-                if len(mass_index) == 0:
-                    last_time = 1
-                    t_model_disrupt = data_rhodyn[:,0][-1]*t_conv
-                    #lgamma = data_lgamma[:,2][-1]
-                else:
-                    themass_index = mass_index[0]
-                    t_model_disrupt = data_rhodyn[:,0][themass_index-1]*t_conv
-                    print(t_model_disrupt)
-                    #time_index = np.where(data_lgamma[:,1]>t_model_disrupt)[0]
-                    #print(time_index)
-                    #lgamma = data_lgamma[:,2][time_index-1]
-                    #print(lgamma)
+                #last_time = 0
+                #mass_index = np.where(data_rhodyn[:,2]<=m_disrupt)[0]
+                #if len(mass_index) == 0:
+                #    last_time = 1
+                #    t_model_disrupt = data_rhodyn[:,0][-1]*t_conv
+                #    #t_model_disrupt = 11500.
+                #    #lgamma = data_lgamma[:,2][-1]
+                #else:
+                #    themass_index = mass_index[0]
+                #    t_model_disrupt = data_rhodyn[:,0][themass_index-1]*t_conv
+                #    #print(t_model_disrupt)
+                #    #time_index = np.where(data_lgamma[:,1]>t_model_disrupt)[0]
+                #    #print(time_index)
+                #    #lgamma = data_lgamma[:,2][time_index-1]
+                #    #print(lgamma)
                 
                 nstime_old = 0; msp_disrupt = 0; nmsp_old = 0
+                last_time = 1
                 with open(thepath+'initial.ns.dat', 'r') as fns:
                     next(fns)
                     for line in fns:
                         datans = line.split()
-                        if nstime_old>t_model_disrupt:
+                        #if nstime_old>=t_model_disrupt:
+                        if nstime_old>=t_disrupt:
                             msp_disrupt = nmsp_old
+                            last_time=0
                             break
 
                         nstime_old = float(datans[0])*t_conv; nmsp_old = int(datans[6])
+
+                    if last_time==1 and msp_disrupt==0:
+                        msp_disrupt = nmsp_old
+
 
                 ##Extract Lgamma
                 if msp_disrupt != 0:
                     data_lgamma = np.genfromtxt('/projects/b1095/syr904/projects/GCE/catalog/data_lgamma/'+file_name)
                     if len(data_lgamma.shape) != 1:
-                        if len(mass_index) == 0:
+                        if last_time == 1:
                             lgamma = data_lgamma[:,2][-1]
                         else:
-                            time_index = np.where(data_lgamma[:,1]>t_model_disrupt)[0]
-                            print(time_index)
+                            #time_index = np.where(data_lgamma[:,1]>=t_model_disrupt)[0]
+                            time_index = np.where(data_lgamma[:,1]>=t_disrupt)[0]
+                            #print(time_index)
                             if len(time_index) == 0:
                                 lgamma = data_lgamma[:,2][-1]
-                                print(lgamma)
+                                #print(lgamma)
                             else:
                                 lgamma = data_lgamma[:,2][time_index[0]-1]
-                                print(lgamma)
+                                #print(lgamma)
                     else:
                         lgamma = data_lgamma[2]
 
@@ -1336,37 +1550,289 @@ def analytical_main(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_clos
             m_conv = dyn.conv('m', '/projects/b1095/syr904/projects/GCE/behemoth/behemoth.conv.sh')
             mstar_conv = dyn.conv('mstar', '/projects/b1095/syr904/projects/GCE/behemoth/behemoth.conv.sh')
 
-            last_time = 0
-            mass_index = np.where(data_rhodyn[:,2]<=m_disrupt)[0]
-            if len(mass_index) == 0:
-                last_time = 1
-                t_model_disrupt = data_rhodyn[:,0][-1]*t_conv
-                lgamma = data_lgamma[:,2][-1]
-            else:
-                mass_index = mass_index[0]
-                t_model_disrupt = data_rhodyn[:,0][mass_index-1]*t_conv
-                time_index = np.where(data_lgamma[:,0]>t_model_disrupt)[0]
-                lgamma = data_lgamma[:,2][time_index[0]-1]
+            #last_time = 0
+            #mass_index = np.where(data_rhodyn[:,2]<=m_disrupt)[0]
+            #if len(mass_index) == 0:
+            #    last_time = 1
+            #    t_model_disrupt = data_rhodyn[:,0][-1]*t_conv
+            #    lgamma = data_lgamma[:,2][-1]
+            #else:
+            #    mass_index = mass_index[0]
+            #    t_model_disrupt = data_rhodyn[:,0][mass_index-1]*t_conv
+            #    time_index = np.where(data_lgamma[:,0]>=t_model_disrupt)[0]
+            #    lgamma = data_lgamma[:,2][time_index[0]-1]
 
             nstime_old = 0
+            last_time=1
             with open('/projects/b1095/syr904/projects/GCE/behemoth/behemoth.ns.dat', 'r') as fns:
                 next(fns)
                 for line in fns:
                     datans = line.split()
-                    if nstime_old>t_model_disrupt:
+                    #if nstime_old>=t_model_disrupt:
+                    if nstime_old>=t_disrupt:
                         msp_disrupt = nmsp_old
+                        last_time=0
                         break
 
                     nstime_old = float(datans[0])*t_conv; nmsp_old = int(datans[6])
+
+                if last_time==1 and msp_disrupt==0:
+                    msp_disrupt = nmsp_old
 
 
         gc_disrupt[5].append(lgamma); gc_disrupt[6].append(msp_disrupt); gc_disrupt[7].append(t_model_disrupt); gc_disrupt[8].append(last_time)
         gc_disrupt[9].append(float(n_star)); gc_disrupt[10].append(float(rv)); gc_disrupt[11].append(float(rg)); gc_disrupt[12].append(float(z)) 
 
+    print(Mcumu_disrup)
 
-    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/semi_analytic_model_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'.txt', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3], gc_disrupt[9], gc_disrupt[10], gc_disrupt[11], gc_disrupt[12], gc_disrupt[0], gc_disrupt[1], gc_disrupt[2], gc_disrupt[4], gc_disrupt[3], gc_disrupt[5], gc_disrupt[6], gc_disrupt[7], gc_disrupt[8]], fmt = '%f %f %f %f %e %f %f %f %f %f %f %f %d %e %f %f %d', header = '1.M_init(Msun) 2.Rgc_init(kpc) 3.Rho_rh_init(Msun/pc^3) 4.t_disrupt_init(Gyr) 5.N_star 6.RV 7.RG 8.Z 9.Rgc_distupt(kpc) 10.T_disrupt(Gyr) 11.Rho_rh_disrupt(Msun/pc^3), 12.M_disrupt(Msun) 13.Type_disrupt 14.Lgamma 15.MSP 16.T_model_disrupt(Myr), 17.Last_time_flag', comments = '#', delimiter = ' ')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/semi_analytic_model_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'_min_rhoh'+str(int(min_rhoh))+'diffmap.txt', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3], gc_disrupt[9], gc_disrupt[10], gc_disrupt[11], gc_disrupt[12], gc_disrupt[0], gc_disrupt[1], gc_disrupt[2], gc_disrupt[4], gc_disrupt[3], gc_disrupt[5], gc_disrupt[6], gc_disrupt[7], gc_disrupt[8]], fmt = '%f %f %f %f %e %f %f %f %f %f %f %f %d %e %f %f %d', header = '1.M_init(Msun) 2.Rgc_init(kpc) 3.Rho_rh_init(Msun/pc^3) 4.t_disrupt_init(Gyr) 5.N_star 6.RV 7.RG 8.Z 9.Rgc_distupt(kpc) 10.T_disrupt(Gyr) 11.Rho_rh_disrupt(Msun/pc^3), 12.M_disrupt(Msun) 13.Type_disrupt 14.Lgamma 15.MSP 16.T_model_disrupt(Myr), 17.Last_time_flag', comments = '#', delimiter = ' ')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/disrupt_mass_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'_min_rhoh'+str(int(min_rhoh))+'diffmap.txt', np.c_[rg_bin_new, np.cumsum(Mtot_disrup_nogas)], fmt='%f %e', comments = '#')
 
 
+
+##Analytical models following Fragione et al. 2018 but use the number of MSPs from the catalog models from the fitting formula for models with rg=2 kpc
+def analytical_main_fitting(xmin_samps, xmax_samps, mmin_samps, mmax_samps, frac_gc_close, frac_gc_far, xcut, sample_num, min_rhoh):
+    ###################################################
+    ##Initialization
+    samps_dist = VN_sampling(smdf, xmin_samps, xmax_samps, smdf(xmin_samps), sample_num)
+    samps_mass = VN_sampling(gc_mf, mmin_samps, mmax_samps, gc_mf(mmin_samps), sample_num)
+    samps_rv = np.random.randint(4, size=sample_num)
+    samps_z = np.random.randint(3, size=sample_num)
+
+    #samps_dist = np.sort(samps_dist)
+
+    bin_num = 500
+    rg_bin = np.logspace(np.log10(xmin_samps), np.log10(xmax_samps), bin_num+1)
+    cumu_mass_bin = []
+    #rho_bin = []
+    #rho_bin = smdf(rg_bin[:-1])
+    check_xcut = 0
+    for kk in range(len(rg_bin)-1):
+        ##Initial cumulative mass distribution
+        rg_med = (rg_bin[kk]+rg_bin[kk+1])/2.
+        #rho_bin.append(smdf(rg_med)*f_gc)
+        if rg_med < xcut:
+            Mr = frac_gc_close*2*twopi*integrate.quad(lambda x: smdf(x)*x*x, 0, rg_med)[0]
+            rg_med_prev = rg_med
+        else:
+            if check_xcut == 0:
+                xcut = rg_med_prev
+                Mr_cut = frac_gc_close*2*twopi*integrate.quad(lambda x: smdf(x)*x*x, 0, xcut)[0]
+                check_xcut = 1
+            Mr = Mr_cut + frac_gc_far*2*twopi*integrate.quad(lambda x: smdf(x)*x*x, xcut, rg_med)[0]
+
+        cumu_mass_bin.append(Mr)
+    
+    print('finished sampling')
+
+    allsamps = [[],[],[],[]]
+    numgc_tot = 0; massgc_tot = 0
+
+    mass_init = np.zeros(bin_num); mass_density_init = np.zeros(bin_num)
+    rg_randint = np.ones(bin_num)
+    for ii in range(len(samps_mass)):
+        check = 0
+
+        for xx in range(len(rg_bin)-1):
+            if rg_bin[xx] <= samps_dist[ii]< rg_bin[xx+1] and rg_randint[xx] == 1:
+                check = 1
+
+        if check == 0: continue
+
+        rho_ga = galaxy_rho_r(samps_dist[ii], 0, circ_vel)
+        if samps_mass[ii] <= 1e5:
+            rho_rh_0 = min_rhoh  ##Msun/pc^3
+        elif 1e5 < samps_mass[ii] < 1e6:
+            rho_rh_0 = min_rhoh*(samps_mass[ii]/1e5)**2
+        else:
+            rho_rh_0 = min_rhoh*100
+
+        tid_time = t_tidal(samps_mass[ii], samps_dist[ii], 0, circ_vel)
+     
+        if rho_rh_0 > rho_ga:
+            for yy in range(len(rg_bin)-1):
+                if rg_bin[yy]<=samps_dist[ii]<rg_bin[yy+1]:
+                    mass_cumu_init = np.cumsum(mass_init)
+                    if mass_cumu_init[yy] > cumu_mass_bin[yy]: ##or mass_density_init[yy] > rho_bin[yy]
+                        rg_randint[yy] = 0
+
+                    else:
+                        #rg_bin_med = (rg_bin[yy+1]+rg_bin[yy])/2.
+                        mass_init[yy]+=samps_mass[ii]
+                        #vol_init = (2.*twopi/3.)*(rg_bin[yy+1]**3-rg_bin[yy]**3)
+                        #mass_density_init[yy] = mass_init[yy]/vol_init
+                        mass_cumu_init = np.cumsum(mass_init)
+                        if mass_cumu_init[yy] <= cumu_mass_bin[yy]:
+                            allsamps[0].append(samps_mass[ii]); allsamps[1].append(samps_dist[ii]); allsamps[2].append(rho_rh_0); allsamps[3].append(tid_time)
+                            numgc_tot += 1
+                            massgc_tot += samps_mass[ii]
+
+
+        if massgc_tot > 2e9: break
+
+        print(ii)
+
+    print(cumu_mass_bin[-1])
+    print(numgc_tot, massgc_tot)
+
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/cluster_analytical_initial_M_RG_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'_min_rhoh'+str(int(min_rhoh))+'_nmspfit.dat', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3]], fmt = '%f %f %f %f', header = '1.Mass(Msun) 2.RG_INITIAL(kpc) 3.RHO_RH(Msun/pc^3) 4.Ttid(Gyr)', comments = '#')
+
+    ##Kroupa01 IMF; mmin=0.08, mmax=150
+    alpha = [-1.3, -2.3]
+    m_break = 0.5
+    coeff_low = 1; coeff_high=m_break**(-alpha[1]+alpha[0])
+    mlow = coeff_low*integrate.quad(lambda x: x*x**alpha[0], 0.08, m_break)[0]
+    mhigh = coeff_high*integrate.quad(lambda x: x*x**alpha[1], m_break, 150)[0]
+    m_tot = mlow+mhigh
+
+    ###################################################
+    ##Inspiral
+    time_steps = np.linspace(0, 11.5, 3000) ##Gyr
+    gc_disrupt = [[],[],[],[],[],[],[],[],[],[],[],[],[]]
+    Mtot_disrup = np.zeros(bin_num+1)
+    Mtot_disrup_nogas = np.zeros(bin_num+1)
+    Mtot_disrup[0]+=4e6
+    Mtot_cluster = np.zeros(bin_num+1)
+    rg_bin_new = np.logspace(np.log10(0.001), np.log10(xmax_samps), bin_num+1)
+    for ii in range(len(rg_bin_new)-1):
+        for jj in range(len(allsamps[1])):
+            if rg_bin_new[ii]<=allsamps[1][jj]<rg_bin_new[ii+1]:
+                Mtot_cluster[ii+1]+=allsamps[0][jj]
+
+    for kk in range(numgc_tot):
+        ##Initialize the spiral in
+        rg_old = allsamps[1][kk]; t_old = 0.; m_old = allsamps[0][kk]; rho_halfm_old = allsamps[2][kk]
+        tid_old = allsamps[3][kk]
+        mcut = 100#100#0.1*m_old
+        r0_tidal = r_tidal_initial(m_old, rg_old)
+        #rt_cut = 0.2*r0_tidal
+
+        mup_lim = 150
+        ##Starting spiral in
+        for zz in range(1, len(time_steps)):
+            check = 0
+            delta_t = time_steps[zz]-t_old
+
+            Mcumu_disrup = np.cumsum(Mtot_disrup)
+            Mcumu_cluster = np.cumsum(Mtot_cluster)
+            Madd_disrup = 0
+            if rg_old<rg_bin_new[0]:
+                Madd_disrup = Mcumu_disrup[0]+Mcumu_cluster[0]
+            else:
+                for ii in range(len(rg_bin_new)-1): 
+                    if rg_bin_new[ii]<=rg_old<rg_bin_new[ii+1]:
+                        Madd_disrup = Mcumu_disrup[ii+1]+Mcumu_cluster[ii+1]
+            #print(Madd_disrup)
+
+            rg_new = df(delta_t, rg_old, m_old, Madd_disrup)
+
+            m_new, delta_m = dmdt(delta_t, m_old, rg_old, time_steps[zz], Madd_disrup)
+            m_se_ml, mass_turnoff = star_evolv(time_steps[zz], mup_lim, allsamps[0][kk], m_tot)
+            m_new = m_new-m_se_ml
+            mup_lim = mass_turnoff
+
+            ##Add loss mass to the galaxy mass
+            if rg_old<rg_bin_new[0]:
+                Mtot_disrup[0]+=delta_m+m_se_ml
+                Mtot_disrup_nogas[0]+=delta_m
+            else:
+                for ii in range(len(rg_bin_new)-1):
+                    if rg_bin_new[ii]<=rg_old<rg_bin_new[ii+1]:
+                        Mtot_disrup[ii+1]+=delta_m+m_se_ml
+                        Mtot_disrup_nogas[ii+1]+=delta_m
+
+            ##Subtract cluster mass from the galaxy mass
+            if rg_new<rg_bin_new[0]:
+                Mtot_cluster[0]+=m_new
+            else:
+                for ii in range(len(rg_bin_new)-1):
+                    if rg_bin_new[ii]<=rg_new<rg_bin_new[ii+1]:
+                        Mtot_cluster[ii+1]+=m_new
+
+                    if rg_bin_new[ii]<=rg_old<rg_bin_new[ii+1]:
+                        Mtot_cluster[ii+1]-=m_old
+
+
+            #rt_new = r_tidal_initial(m_old, rg_old)
+
+            if m_new <= 1e5:
+                rho_halfm_new = min_rhoh  ##Msun/pc^3
+            elif 1e5 < m_new < 1e6:
+                rho_halfm_new = min_rhoh*(m_new/1e5)**2
+            else:
+                rho_halfm_new = min_rhoh*100.
+
+
+            rho_ga_new = galaxy_rho_r(rg_new,Madd_disrup,circ_vel)
+            if rho_halfm_new <= rho_ga_new:
+                check = 1
+                #print('cluster disrupted', time_steps[zz], rg_new, rho_halfm_new)
+                rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
+                type_disrupt = 1
+                break
+
+            #if time_steps[zz] > tid_old:
+            #    check = 1
+            #    #print('cluster tidally disrupted', time_steps[zz], rg_new, rho_halfm_new)
+            #    rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
+            #    type_disrupt = 2
+            #    break
+
+            if rg_new < 0.001:#rhm_curr:
+                check = 1
+                #print('cluster reached center', time_steps[zz], rg_new, rho_halfm_new)
+                rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
+                type_disrupt = 3
+                break
+
+            if m_new < mcut:
+                check = 1
+                #print('cluster mass negative', time_steps[zz], rg_new, rho_halfm_new)
+                rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new; m_disrupt = m_new
+                type_disrupt = 4
+                break
+
+
+            t_old = time_steps[zz]; m_old = m_new; rg_old = rg_new; rho_halfm_old = rho_halfm_new
+            #tid_old = t_tidal(m_new, rg_new, circ_vel)
+
+
+        if check == 0:
+            rg_disrupt = rg_new; t_disrupt = time_steps[zz]; rho_disrupt = rho_halfm_new
+            type_disrupt = 0; m_disrupt = m_new
+        else:
+            if rg_disrupt<rg_bin_new[0]:
+                Mtot_disrup[0]+=m_disrupt
+                Mtot_disrup_nogas[0]+=m_disrupt
+                Mtot_cluster[0]-=m_disrupt
+            else:
+                for ii in range(len(rg_bin_new)-1):
+                    if rg_bin_new[ii]<=rg_disrupt<rg_bin_new[ii+1]:
+                        Mtot_disrup[ii+1]+=m_disrupt
+                        Mtot_disrup_nogas[ii+1]+=m_disrupt
+                        Mtot_cluster[ii+1]-=m_disrupt
+
+
+        gc_disrupt[0].append(rg_disrupt); gc_disrupt[1].append(t_disrupt); gc_disrupt[2].append(rho_disrupt); gc_disrupt[3].append(type_disrupt); gc_disrupt[4].append(m_disrupt)
+
+
+        #print(rg_disrupt, t_disrupt, rho_disrupt)
+
+        #print(np.cumsum(Mtot_disrup))
+
+
+        #############################################
+        ##Match cluster with model
+        msp_disrupt = Nmsp_fitting(allsamps[0][kk], t_disrupt)
+        lgamma = msp_disrupt*4.8e33  ##erg/s
+        
+
+        gc_disrupt[5].append(lgamma); gc_disrupt[6].append(msp_disrupt)
+
+    print(Mcumu_disrup)
+
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/semi_analytic_model_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'_min_rhoh'+str(int(min_rhoh))+'_mcut'+str(mcut)+'_nmspfit.txt', np.c_[allsamps[0], allsamps[1], allsamps[2], allsamps[3], gc_disrupt[0], gc_disrupt[1], gc_disrupt[2], gc_disrupt[4], gc_disrupt[3], gc_disrupt[5], gc_disrupt[6]], fmt = '%f %f %f %f %f %f %f %f %d %e %f', header = '1.M_init(Msun) 2.Rgc_init(kpc) 3.Rho_rh_init(Msun/pc^3) 4.t_tid_init(Gyr) 5.Rgc_distupt(kpc) 6.T_disrupt(Gyr) 7.Rho_rh_disrupt(Msun/pc^3), 8.M_disrupt(Msun) 9.Type_disrupt 10.Lgamma 11.NMSP', comments = '#', delimiter = ' ')
+    np.savetxt('/projects/b1095/syr904/projects/GCE/analytical_model/disrupt_mass_fcl'+str(frac_gc_close)+'_ffa'+str(frac_gc_far)+'_xcut'+str(round(xcut, 1))+'_xmin'+str(xmin_samps)+'_xmax'+str(xmax_samps)+'_mmin'+str(int(mmin_samps))+'_mmax'+str(int(mmax_samps))+'_min_rhoh'+str(int(min_rhoh))+'_mcut'+str(mcut)+'_nmspfit.txt', np.c_[rg_bin_new, np.cumsum(Mtot_disrup_nogas)], fmt='%f %e', comments = '#')
 
 
 ##Running the functions

@@ -1165,10 +1165,11 @@ def find_num_allcollision():
 ##Startype=13 or 14
 def get_NS_collision(pathlist, start, end, startype):
     sourcedir=np.genfromtxt(pathlist, dtype=str)
-    filepaths=sourcedir[:,0]; status=sourcedir[:,1]
+    #filepaths=sourcedir[:,0]; status=sourcedir[:,1]
+    filepaths=['/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/']; status=[1]
 
     #model=[]; model_status=[]; mm=[]; mcom=[]; ktypem=[]; kcom=[]; timem=[]; idm=[]; rm=[]; colltype=[]
-    fcoll=open('/projects/b1095/syr904/projects/PULSAR2/newruns/tidal_capture/BH_coll_all.dat', 'a+')
+    fcoll=open('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/NS_coll_all.dat', 'a+')
     fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'

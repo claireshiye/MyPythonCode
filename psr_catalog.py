@@ -29,21 +29,23 @@ Lsun=4.02*10**16 ##mJy*kpc^2
 
 
 
-def readdata_freire():
+def readdata_freire(spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at the same time
     #from astropy.extern.six.moves.urllib import request
     #url = 'http://www.naic.edu/~pfreire/GCpsr.txt'
-    #open('/projects/b1095/syr904/projects/PULSAR/GC_psr.txt', 'wb').write(request.urlopen(url).read())
+    #open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr_latest.txt', 'wb').write(request.urlopen(url).read())
     
     K=5.7*10**19
     p=[]; pdot=[]; binflag=[]; namespin=[] #Ps=[]; Pdots=[]; Bs=[]; Pb=[]; Pdotb=[]; Bb=[]  ##P unit ms, dpdt has a factor of 10^-20
     Ns=0; Nb=0.  ##Calculating the numbers of single and binary pulsars
     period=[]; ecc=[]; mc=[]; names=[]
+
+    offset = []; poff = []; binoff = []; nameoff = []; clusteroff = []  ##offset data
     
     pall=[]; bfall=[]; nameall=[]
 
     ntot=0
 
-    with open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr_223.txt', 'rb') as f:
+    with open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr_latest.txt', 'rb') as f:
         for _ in range(4):
             next(f)
         for line in f:
@@ -55,7 +57,11 @@ def readdata_freire():
             #print(datanew)
             #print(data)
             if not data: continue
-            if str(data[0][0])=='J' or data[0][0]=='B':
+            if data[0][0]=='N' or data[0][0]=='T':
+                clustername = data[1]
+
+            if (data[0][0]=='J' or data[0][0]=='B') and str(data[2])=='*': continue
+            if data[0][0]=='J' or data[0][0]=='B':
                 ntot+=1
                 ##Calculate numbers
                 if str(data[5])=='i': 
@@ -76,7 +82,7 @@ def readdata_freire():
 
 
                 ##Extract spin period data
-                if str(data[3])!='*':
+                if str(data[3])!='*' and spinflag==1:
                     if str(data[3][0])=='<':
                         ##May want to include this in the future (there is just one of them)
                         continue        
@@ -118,6 +124,25 @@ def readdata_freire():
                             pdot.append(float(dpdtb)*10**-20)
 
 
+                ##Extract spin period and offset data
+                if offsetflag:
+                    if str(data[1])=='*':
+                        continue        
+                    if str(data[5])=='i':
+                        nameoff.append(data[0]) 
+                        binoff.append(0)
+                        poff.append(float(data[2]))
+                        offset.append(float(data[1]))
+                        clusteroff.append(clustername)
+                    else: 
+                        nameoff.append(data[0]) 
+                        binoff.append(1)
+                        poff.append(float(data[2]))
+                        offset.append(float(data[1]))
+                        clusteroff.append(clustername)
+
+
+
     ##print Pdots, Pdotb, Ps, Pb
     #Bs=K*np.sqrt(np.abs(Pdots)*np.array(Ps)*0.001)
     #Bb=K*np.sqrt(np.abs(Pdotb)*np.array(Pb)*0.001)
@@ -126,4 +151,7 @@ def readdata_freire():
     ##print Bs, Bb
     #print(pdot)
     print(ntot)
-    return p, pdot, binflag, namespin, period, ecc, mc, names, pall, bfall, nameall
+    if spinflag:
+        return p, pdot, binflag, namespin, period, ecc, mc, names, pall, bfall, nameall
+    if offsetflag:
+        return poff, offset, binoff, nameoff, clusteroff

@@ -243,7 +243,7 @@ def get_allpsr_snapshot(snapshot, mspflag):
 
 
 ##Find all the pulsars at a snapshot
-def get_allpsr_atsnap(modelpath, mspfg, snapno):
+def get_allpsr_atsnap(modelpath, mspfg, snapno, thedist, themetal):
     T=[]; BF=[]; S=[]; F=[]; ID_0=[]; ID_1=[]; M_0=[]; M_1=[]; K_0=[]; K_1=[]; Aaxis=[]; E=[]; DMDT0=[]; DMDT1=[]; RAD0=[]; RAD1=[]; RADIUS=[]; TCFLAG=[]
 
     all_keys = np.genfromtxt(modelpath+'snap_keys.txt', dtype = 'str')
@@ -257,8 +257,8 @@ def get_allpsr_atsnap(modelpath, mspfg, snapno):
     l_conv=conv('l', filestr+'.conv.sh')
 
     snap = cmct.Snapshot(fname=modelpath+'initial.snapshots.h5', snapshot_name=thekey, conv=modelpath+'initial.conv.sh', 
-                        dist=4.52, # distance to cluster in kpc
-                        z=0.0038)
+                        dist=thedist, # distance to cluster in kpc
+                        z=themetal)
 
     print('read snap')
 
@@ -313,4 +313,4 @@ def get_allpsr_atsnap(modelpath, mspfg, snapno):
     print('done')
 
     print(len(T), len(RADIUS), len(BF), len(S), len(DMDT0), len(DMDT1), len(RAD0), len(RAD1), len(M_0), len(M_1), len(ID_0), len(ID_1), len(K_0), len(K_1), len(Aaxis), len(E), len(F), len(TCFLAG))
-    np.savetxt(modelpath+mspfg+str(snapno)+'.dat', np.c_[T, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID_0, ID_1, K_0, K_1, Aaxis, E, F, TCFLAG], fmt ='%f %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %d %d', delimiter= ' ', header = '1.Time(Myr) 2.r(pc) 3.B(G) 4.P(sec) 5.dmdt0(Msun/yr) 6.dmdt1(Msun/yr) 7.rolrad0 8.rolrad1 9.m0(Msun) 10.m1(Msun) 11.ID0 12.ID1 13.k0 14.k1 15.a(AU) 16.ecc 17.Formation 18.TCflag', comments = '#')
+    np.savetxt(modelpath+mspfg+str(snapno)+'.dat', np.c_[T, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID_0, ID_1, K_0, K_1, Aaxis, E, F, TCFLAG], fmt ='%f %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %d %d', delimiter= ' ', header = '1.Time(Gyr) 2.r(pc) 3.B(G) 4.P(sec) 5.dmdt0(Msun/yr) 6.dmdt1(Msun/yr) 7.rolrad0 8.rolrad1 9.m0(Msun) 10.m1(Msun) 11.ID0 12.ID1 13.k0 14.k1 15.a(AU) 16.ecc 17.Formation 18.TCflag', comments = '#')
