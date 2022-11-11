@@ -34,7 +34,7 @@ def get_XX_collision(pathlist, start, end, startype, savepath, readflag):
         filepaths=pathlist; status=[1]
 
     #model=[]; model_status=[]; mm=[]; mcom=[]; ktypem=[]; kcom=[]; timem=[]; idm=[]; rm=[]; colltype=[]
-    fcoll=open(savepath+'_coll_all.dat', 'a+')
+    fcoll=open(savepath+'_coll_all.dat', 'w+')
     fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'
@@ -132,7 +132,7 @@ def get_coll_NSfromWDWD(pathlist, start, end, k_finl, klim1, klim2, savepath, re
     fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'
-
+        
         t_conv=dyn.conv('t', filestr+'.conv.sh')
         l_conv=dyn.conv('l', filestr+'.conv.sh')
 
@@ -236,7 +236,7 @@ def get_coll_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
     else:
         filepaths=pathlist; status=[1]
 
-    fcoll=open(savepath+'_coll.dat', 'a+')
+    fcoll=open(savepath+'_coll.dat', 'w+')
     fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'
@@ -301,7 +301,7 @@ def get_merger_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
     else:
         filepaths=pathlist; status=[1]
 
-    fmerge=open(savepath+'_merger.dat', 'a+')
+    fmerge=open(savepath+'_merger.dat', 'w+')
     fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'
@@ -339,7 +339,7 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
         filepaths=pathlist; status=[1]
 
     #model=[]; model_status=[]; mm=[]; mcom=[]; ktypem=[]; kcom=[]; timem=[]; idm=[]; rm=[]; colltype=[]
-    fcoll=open(savepath+'_collproduct_all.dat', 'a+')
+    fcoll=open(savepath+'_collproduct_all.dat', 'w+')
     fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'

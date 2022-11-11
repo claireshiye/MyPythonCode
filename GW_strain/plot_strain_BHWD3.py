@@ -1,6 +1,9 @@
 import numpy as np
+import matplotlib
+matplotlib.use('PDF')
+#plt.switch_backend('agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.switch_backend('agg')
 import LISA_calculations2 as LISA
 import LISA_calculations as LISA_original
 import scipy.constants as ct
@@ -107,7 +110,7 @@ for i in range(len(mBH_arr)):
 			#print 'CHECK', np.sqrt(G*Msun*(m1+m2))/np.pi/(a0*AU)**1.5
                         fGW = calc_fGW(m1,m2,a0,e0,z=z)
 			LINESTYLE = '--'
-		print 'd =', d, m1, m2, 'rTDE =', r_TDE, 'Radius = ', Radius, 'a0 =', a0, e0, 'fGW =',fGW
+		print('d =', d, m1, m2, 'rTDE =', r_TDE, 'Radius = ', Radius, 'a0 =', a0, e0, 'fGW =',fGW)
 		if fGW > 5:
 			continue
 
@@ -122,7 +125,7 @@ for i in range(len(mBH_arr)):
 
 		r_TD = (m2/m1)**(1./3.)*Radius/215.0 # TD radius in AU
 
-		print i,m1, m2, Radius, r_TD, t_insp
+		print(i,m1, m2, Radius, r_TD, t_insp)
 		RL_flag = 0
 
 		for j in range(0,len(t),delta):
@@ -180,7 +183,7 @@ for i in range(len(mBH_arr)):
 		h_f = np.interp(forb, fn, hn_lisa)
 		SNR2 =  h_o*np.sqrt(T_OBS*3.15e7*forb)/h_f
 
-		print 'd =', d, forb, 'SNR = ',SNR
+		print('d =', d, forb, 'SNR = ',SNR)
 		if k == 0:
 			ax1.plot(f_GW_array,strain_array, color=color,lw=2,alpha=1,ls=LINESTYLE,label=label)
 			ax1.plot(f_GW_array_RL,strain_array_RL, color=color,lw=2,ls=LINESTYLE,alpha=1)

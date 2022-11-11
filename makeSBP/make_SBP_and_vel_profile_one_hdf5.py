@@ -17,8 +17,13 @@ import random
 import scipy.optimize as opt
 import unit_convert as uc
 
+
+
 sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
 import cmctoolkit as cmct
+
+#sys.path.insert(2, '/projects/b1095/syr904/MyCodes/dynamics')
+#import dynamics as dyn
 
 def read_keys(thekey):
     return re.findall(r'\d+\.\d+|\d+', thekey)
@@ -826,6 +831,18 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
     snap_h5 = prefix+'.snapshots.h5'
     #with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
     #    snap_keys = snap_hdf.keys()
+
+    
+    #t_conv = dyn.conv('t', sourcepath+'initial.conv.sh')
+
+    #snapno = []; snaptime = []
+    #for ii in range(len(snap_keys)):
+    #    theno = read_keys(snap_keys[ii])[0]; thetime = read_keys(snap_keys[ii])[1]
+    #    snapno.append(int(theno)); snaptime.append(thetime)
+        
+    #snapno_sort, snaptime_sort = (np.array(t) for t in zip(*sorted(zip(snapno, snaptime))))
+    #np.savetxt(sourcepath+'snap_keys.txt',
+    #          np.c_[snapno_sort, snaptime_sort], fmt = '%s %s', header = '1.snap_no 2.snap_time', comments = '#')
 
     #time_array = []; snap_array = []
     #for ii in range(2, len(snap_keys)):
