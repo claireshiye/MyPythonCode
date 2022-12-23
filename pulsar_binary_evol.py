@@ -238,12 +238,12 @@ def extract_NS_binary_attime(typeflag, klowlim, khighlim, timelim, savename):
                             deathcut1=(float(data[9])**2)*(0.17*10**12)
                             deathcut2=(float(data[10])**2)*(0.17*10**12)
                             if deathcut1<=float(data[7]): 
-                                if float(data[9])<=0.03: 
+                                if float(data[9])<=1.: 
                                    f.write('%d %f %f %s %s %f %f %d %d %f %f %f %f %f %f %f %f %e %f %e %f\n'%(pathnos[kk], float(data[1])*t_conv, float(data[19])*l_conv, data[3], data[4], float(data[5]), float(data[6]), int(data[11]), int(data[12]), float(data[15]), float(data[16]), float(data[17]), float(data[18]), float(data[22]), float(data[23]), float(data[13]), float(data[14]),float(data[7]), float(data[9]), float(data[8]), float(data[10])))
                                    MSP_bin[-1]+=1
 
                             elif deathcut2<=float(data[8]): 
-                                if float(data[10])<=0.03:
+                                if float(data[10])<=1.:
                                     f.write('%d %f %f %s %s %f %f %d %d %f %f %f %f %f %f %f %f %e %f %e %f\n'%(pathnos[kk], float(data[1])*t_conv, float(data[19])*l_conv, data[4], data[3], float(data[6]), float(data[5]), int(data[12]), int(data[11]), float(data[16]), float(data[15]), float(data[18]), float(data[17]), float(data[23]), float(data[22]), float(data[13]), float(data[14]),float(data[8]), float(data[10]), float(data[7]), float(data[9])))
                                     MSP_bin[-1]+=1
 
@@ -251,7 +251,7 @@ def extract_NS_binary_attime(typeflag, klowlim, khighlim, timelim, savename):
                         else:
                             deathcut=(float(data[9])**2)*(0.17*10**12)
                             if deathcut<=float(data[7]): 
-                                if float(data[9])<=0.03: 
+                                if float(data[9])<=1.: 
                                     f.write('%d %f %f %s %s %f %f %d %d %f %f %f %f %f %f %f %f %e %f %e %f\n'%(pathnos[kk], float(data[1])*t_conv, float(data[19])*l_conv, data[3], data[4], float(data[5]), float(data[6]), int(data[11]), int(data[12]), float(data[15]), float(data[16]), float(data[17]), float(data[18]), float(data[22]), float(data[23]), float(data[13]), float(data[14]),float(data[7]), float(data[9]), float(data[8]), float(data[10])))
                                     MSP_sin[-1]+=1
 
@@ -280,12 +280,12 @@ def extract_NS_binary_attime(typeflag, klowlim, khighlim, timelim, savename):
                                 deathcut1=(float(data[9])**2)*(0.17*10**12)
                                 deathcut2=(float(data[10])**2)*(0.17*10**12)
                                 if deathcut1<=float(data[7]): 
-                                    if float(data[9])<=0.03: 
+                                    if float(data[9])<=1.: 
                                        f.write('%d %f %f %s %s %f %f %d %d %f %f %f %f %f %f %f %f %e %f %e %f\n'%(pathnos[kk], float(data[1])*t_conv, float(data[19])*l_conv, data[3], data[4], float(data[5]), float(data[6]), int(data[11]), int(data[12]), float(data[15]), float(data[16]), float(data[17]), float(data[18]), float(data[22]), float(data[23]), float(data[13]), float(data[14]),float(data[7]), float(data[9]), float(data[8]), float(data[10])))
                                        MSP_bin[-1]+=1
     
                                 elif deathcut2<=float(data[8]): 
-                                    if float(data[10])<=0.03:
+                                    if float(data[10])<=1.:
                                         f.write('%d %f %f %s %s %f %f %d %d %f %f %f %f %f %f %f %f %e %f %e %f\n'%(pathnos[kk], float(data[1])*t_conv, float(data[19])*l_conv, data[4], data[3], float(data[6]), float(data[5]), int(data[12]), int(data[11]), float(data[16]), float(data[15]), float(data[18]), float(data[17]), float(data[23]), float(data[22]), float(data[13]), float(data[14]),float(data[8]), float(data[10]), float(data[7]), float(data[9])))
                                         MSP_bin[-1]+=1
     
@@ -293,7 +293,7 @@ def extract_NS_binary_attime(typeflag, klowlim, khighlim, timelim, savename):
                             else:
                                 deathcut=(float(data[9])**2)*(0.17*10**12)
                                 if deathcut<=float(data[7]): 
-                                    if float(data[9])<=0.03: 
+                                    if float(data[9])<=1.: 
                                         f.write('%d %f %f %s %s %f %f %d %d %f %f %f %f %f %f %f %f %e %f %e %f\n'%(pathnos[kk], float(data[1])*t_conv, float(data[19])*l_conv, data[3], data[4], float(data[5]), float(data[6]), int(data[11]), int(data[12]), float(data[15]), float(data[16]), float(data[17]), float(data[18]), float(data[22]), float(data[23]), float(data[13]), float(data[14]),float(data[7]), float(data[9]), float(data[8]), float(data[10])))
                                         MSP_sin[-1]+=1
     
@@ -337,7 +337,7 @@ def extract_NS_binary_attime(typeflag, klowlim, khighlim, timelim, savename):
     
     f.close()
 
-    np.savetxt('/projects/b1095/syr904/projects/isolated_MSP/nmsp_rc_rh_'+str(timelim)+'myr.dat', np.c_[Model, Time, Mtot, Rc, Rh, Rc_obs, Rh_obs, MSP_sin, MSP_bin], fmt = '%d %f %f %f %f %f %f %d %d', header = '1.Model, 2.Time[code unit], 3.Mtot[Msun], 4.Rc[pc], 5.Rh[pc], 6.Rc_obs[pc], 7.Rhl_obs[pc], 8.MSP_sin, 9.MSP_bin', delimiter = ' ', comments = '#')
+    np.savetxt('/projects/b1095/syr904/projects/isolated_MSP/nmsp1000ms_rc_rh_'+str(timelim)+'myr.dat', np.c_[Model, Time, Mtot, Rc, Rh, Rc_obs, Rh_obs, MSP_sin, MSP_bin], fmt = '%d %f %f %f %f %f %f %d %d', header = '1.Model, 2.Time[code unit], 3.Mtot[Msun], 4.Rc[pc], 5.Rh[pc], 6.Rc_obs[pc], 7.Rhl_obs[pc], 8.MSP_sin, 9.MSP_bin', delimiter = ' ', comments = '#')
         
 
 

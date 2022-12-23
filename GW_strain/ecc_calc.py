@@ -82,6 +82,7 @@ def hcn_func(m1, m2, z, n, f, e):
 
 def snr_outside(f, mode_vals, noise_vals, averaging_factor=16./5.):
     snr_squared_per_mode = averaging_factor*np.trapz(1./f*(mode_vals/noise_vals)**2., x=f)
+    #print('snr_squared_per_mode', snr_squared_per_mode)
     #check on sqrt(2) in paper also and BOWIE
     return np.sqrt(2.)*np.sqrt(snr_squared_per_mode.sum())
 
@@ -121,6 +122,7 @@ def snr(m1, m2, a0, e0, d, n_max, noise_interp, t_final):
     mode_vals = np.asarray(mode_vals)
     freqs = np.asarray(freqs)
     noise_vals = noise_interp(freqs)
+    #print(freqs, mode_vals, noise_vals)
     #mode_vals = np.asarray([interp(fn) for interp in interp_funcs])
     #import pdb
     #pdb.set_trace()

@@ -9,7 +9,7 @@ import scripts2
 import scripts3
 import dynamics as dyn
 import unit_convert as uc
-import ecc_calc as gwcalc
+import gw_ecc_calc as gwcalc
 import LISA_calculations as lisa
 import ns_history as nh
 import useful_function as uf

@@ -50,7 +50,6 @@ def readdata_freire(spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at t
             next(f)
         for line in f:
             datanew=line.split()
-            #print(data)
             data=[]
             for item in datanew:
                 data.append(re.sub(r'\([^)]*\)', '', item.decode('utf-8')))

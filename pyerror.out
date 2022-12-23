@@ -1,34 +1,36 @@
-=>> PBS: job killed: walltime 255615 exceeded limit 255600
+/projects/b1095/syr904/MyCodes/PythonCodes/ns.py:8: UserWarning: 
+This call to matplotlib.use() has no effect because the backend has already
+been chosen; matplotlib.use() must be called *before* pylab, matplotlib.pyplot,
+or matplotlib.backends is imported for the first time.
+
+The backend was *originally* set to 'TkAgg' by the following code:
+  File "<string>", line 1, in <module>
+  File "/projects/b1095/syr904/MyCodes/PythonCodes/ns_hdf5.py", line 14, in <module>
+    import dynamics as dyn
+  File "/projects/b1095/syr904/MyCodes/PythonCodes/dynamics.py", line 10, in <module>
+    import matplotlib.pyplot as plt
+  File "/software/anaconda3.6/lib/python3.6/site-packages/matplotlib/pyplot.py", line 72, in <module>
+    from matplotlib.backends import pylab_setup
+  File "/software/anaconda3.6/lib/python3.6/site-packages/matplotlib/backends/__init__.py", line 14, in <module>
+    line for line in traceback.format_stack()
+
+
+  matplotlib.use('PDF')
+Traceback (most recent call last):
+  File "/projects/b1095/syr904/MyCodes/PythonCodes/ns_hdf5.py", line 59, in print_Nns_snap
+    fh = open(modelpath+'initial.ns.dat', 'r')
+FileNotFoundError: [Errno 2] No such file or directory: '/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv3.5_3e6_tcon_fb10/initial.ns.dat'
+
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
   File "<string>", line 1, in <module>
-  File "ns.py", line 1523, in get_id_allmodel_position_10Gyr
-    r_temp, b, s=get_id_position_BP(id0[i], snap[j+1])
-NameError: global name 'snap' is not defined
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-  File "ns.py", line 1532, in get_id_allmodel_position_10Gyr
-    nbh, ntot=dyn.find_NBH_NTOT(filestr, t10)
-  File "dynamics.py", line 87, in find_NBH_NTOT
-    return nbh, ntot
-UnboundLocalError: local variable 'nbh' referenced before assignment
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-  File "ns.py", line 1532, in get_id_allmodel_position_10Gyr
-    n_bh, n_tot=dyn.find_NBH_NTOT(filestr, t10)
-  File "dynamics.py", line 87, in find_NBH_NTOT
-    return nbh, ntot
-UnboundLocalError: local variable 'nbh' referenced before assignment
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-  File "ns.py", line 1532, in get_id_allmodel_position_10Gyr
-    n_bh, n_tot=dyn.find_NBH_NTOT(filestr, t10)
-  File "dynamics.py", line 87, in find_NBH_NTOT
-    return nbh, ntot
-UnboundLocalError: local variable 'nbh' referenced before assignment
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-  File "ns.py", line 1525, in get_id_allmodel_position_10Gyr
-    r_temp, b, s=get_id_position_BP(id0[i], snaps[j+1])
-  File "ns.py", line 1469, in get_id_position_BP
-    return r, bfield, spin
-UnboundLocalError: local variable 'r' referenced before assignment
+  File "/projects/b1095/syr904/MyCodes/PythonCodes/ns_hdf5.py", line 70, in print_Nns_snap
+    z=0.0038)
+  File "/projects/b1095/syr904/MyCodes/cmctoolkit/cmctoolkit.py", line 743, in __init__
+    self.data = pd.read_hdf(fname,key=snapshot_name)
+  File "/software/anaconda3.6/lib/python3.6/site-packages/pandas/io/pytables.py", line 360, in read_hdf
+    return store.select(key, auto_close=auto_close, **kwargs)
+  File "/software/anaconda3.6/lib/python3.6/site-packages/pandas/io/pytables.py", line 706, in select
+    raise KeyError('No object named %s in the file' % key)
+KeyError: 'No object named /1(t=9.133773) in the file'

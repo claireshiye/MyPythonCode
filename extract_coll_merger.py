@@ -227,6 +227,161 @@ def get_merger_NSfromWDWD(pathlist, start, end, k_finl, klim1, klim2, savepath, 
     fmerge.close()
 
 
+def get_coll_NSfromNSMS(pathlist, start, end, savepath, readflag):
+    if readflag == 1:
+        sourcedir=np.genfromtxt(pathlist, dtype=str)
+        filepaths=sourcedir[:,0]; status=sourcedir[:,1]
+    else:
+        filepaths=pathlist; status=[1]
+
+    for i in range(len(filepaths)):
+        collfile=filepaths[i]+'initial.collision.log'
+        collfile2=filepaths[i]+'initial2.collision.log'
+        colldata=scripts1.readcollfile(collfile)
+        if os.path.isfile(collfile2) and os.path.getsize(collfile2) > 0:
+            colldata2=scripts1.readcollfile(collfile2)
+            colldata=colldata+colldata2
+            
+        l_conv = dyn.conv('l', filepaths[i]+'initial.conv.sh')
+        t_conv = dyn.conv('t', filepaths[i]+'initial.conv.sh')
+            
+        fcoll=open(filepaths[i]+'ns_nsms_coll.dat', 'w+')
+        fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.COLLTYPE\n')
+    
+        for j in range(len(colldata)):
+            line=colldata[j].split()
+            if line[1]=='single-single':  ##Single-single star collision
+                colltype='SS'
+                ktypem=int(line[10])
+                if ktypem==13 and ((int(line[11])==13 and int(line[12]) <=1) or (int(line[12])==13 and int(line[11]) <=1)):
+                    model=i; timem=t_conv*float(line[0])
+                    mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=-100; m3=-100
+                    ktype0=int(line[11]); ktype1=int(line[12]); ktype2=-100; ktype3=-100
+                    idm=int(line[3]); rm=float(line[9])*l_conv
+                    
+                    fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+    
+    
+            if line[1]=='binary-single':   ##Binary-single collision
+                colltype='BS'
+                if int(line[2])==2:
+                    ktypem=int(line[10])
+                    if ktypem==13 and ((int(line[11])==13 and int(line[12]) <=1) or (int(line[12])==13 and int(line[11]) <=1)):
+                        model=i; timem=t_conv*float(line[0])
+                        mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=-100; m3=-100
+                        ktype0=int(line[11]); ktype1=int(line[12]); ktype2=-100; ktype3=-100
+                        idm=int(line[3]); rm=float(line[9])*l_conv
+                        
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+    
+                if int(line[2])==3:
+                    ktypem=int(line[12])
+                    if ktypem==13:
+                        if int(line[13])==13 and int(line[14])<=1 and int(line[15])<=1:
+                            model=i; timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                            ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                            idm=int(line[3]); rm=float(line[11])*l_conv
+                        
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+                            
+                        if int(line[14])==13 and int(line[13])<=1 and int(line[15])<=1:
+                            model=i; timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                            ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                            idm=int(line[3]); rm=float(line[11])*l_conv
+                        
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+    
+                        if int(line[15])==13 and int(line[13])<=1 and int(line[14])<=1:
+                            model=i; timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                            ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                            idm=int(line[3]); rm=float(line[11])*l_conv
+                        
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+    
+    
+            if line[1]=='binary-binary':   ##Binary-binary collision
+                colltype='BB'
+                if int(line[2])==2:
+                    ktypem=int(line[10])
+                    if ktypem==13 and ((int(line[11])==13 and int(line[12])<=1) or (int(line[12])==13 and int(line[11])<=1)):
+                        model=i; timem=t_conv*float(line[0])
+                        mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=-100; m3=-100
+                        ktype0=int(line[11]); ktype1=int(line[12]); ktype2=-100; ktype3=-100
+                        idm=int(line[3]); rm=float(line[9])*l_conv
+                        
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+    
+                        
+                if int(line[2])==3:
+                    ktypem=int(line[12])
+                    if ktypem==13:
+                        if int(line[13])==13 and int(line[14])<=1 and int(line[15])<=1:
+                            model=i; timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                            ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                            idm=int(line[3]); rm=float(line[11])*l_conv
+                        
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+                            
+                        if int(line[14])==13 and int(line[13])<=1 and int(line[15])<=1:
+                            model=i; timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                            ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                            idm=int(line[3]); rm=float(line[11])*l_conv
+                        
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+    
+                        if int(line[15])==13 and int(line[13])<=1 and int(line[14])<=1:
+                            model=i; timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                            ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                            idm=int(line[3]); rm=float(line[11])*l_conv
+                        
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+    
+    
+                if int(line[2])==4:
+                    ktypem=int(line[14])
+                    if ktypem==13:
+                        if int(line[15])==13 and int(line[16])<=1 and int(line[17])<=1 and int(line[18])<=1:
+                            model=i; model_status=int(status[i]); timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=float(line[12])
+                            ktype0=int(line[15]); ktype1=int(line[16]); ktype2=int(line[17]); ktype3=int(line[18])
+                            idm=int(line[3]); rm=float(line[13])*l_conv
+                            
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+                        
+                        if int(line[16])==13 and int(line[15])<=1 and int(line[17])<=1 and int(line[18])<=1:
+                            model=i; model_status=int(status[i]); timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=float(line[12])
+                            ktype0=int(line[15]); ktype1=int(line[16]); ktype2=int(line[17]); ktype3=int(line[18])
+                            idm=int(line[3]); rm=float(line[13])*l_conv
+                            
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+                        
+                        if int(line[17])==13 and int(line[16])<=1 and int(line[15])<=1 and int(line[18])<=1:
+                            model=i; model_status=int(status[i]); timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=float(line[12])
+                            ktype0=int(line[15]); ktype1=int(line[16]); ktype2=int(line[17]); ktype3=int(line[18])
+                            idm=int(line[3]); rm=float(line[13])*l_conv
+                            
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+
+
+                        if int(line[18])==13 and int(line[16])<=1 and int(line[17])<=1 and int(line[15])<=1:
+                            model=i; model_status=int(status[i]); timem=t_conv*float(line[0])
+                            mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=float(line[12])
+                            ktype0=int(line[15]); ktype1=int(line[16]); ktype2=int(line[17]); ktype3=int(line[18])
+                            idm=int(line[3]); rm=float(line[13])*l_conv
+                            
+                            fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, colltype))
+
+        fcoll.close()
+
+
 ##Find the number of XX and XX collisions in the models
 ##klim1 and klim2 are lists
 def get_coll_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
