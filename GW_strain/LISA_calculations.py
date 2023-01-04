@@ -172,7 +172,7 @@ def fdotn_2(m0,m1,Porb,e,n,z):
 	M2 = m1*Msun
 	f_orb = 1./Porb
 	Mc = chirp_mass(M1,M2)
-	fdotn = n * 96./(10.*np.pi) * (1./c**5.) * (G*Mc)**(5./3.) * (2.*np.pi*f_orb/(1.+z))**(11./3.) * F
+	fdotn = n * 96./(10.*np.pi) * (1./c**5.) * (G*Mc*(1+z))**(5./3.) * (2.*np.pi*f_orb/(1.+z))**(11./3.) * F
 	#fdotn = 1./(1+z) * 192./10.* n * f_orb * (G*(M1+M2)/(4.*np.pi**2.)*Porb**2.)**(-4./3.) * G**3./c**5.*M1*M2*(M1+M2)*F
 	return fdotn
 

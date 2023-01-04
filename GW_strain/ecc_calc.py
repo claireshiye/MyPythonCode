@@ -74,7 +74,7 @@ def dEndfr(m1, m2, z, n, f, e):
     #eq 4 from orazio and samsing
     # takes f in rest frame
     Mc = chirp_mass(m1, m2)
-    return np.pi**(2./3.)*Mc**(5./3.)/(3.*f**(1./3.))*(2./n)**(2./3.)*g_func(n,e)/F_func(e)
+    return np.pi**(2./3.)*(Mc*(1+z))**(5./3.)/(3.*(f/(1+z))**(1./3.))*(2./n)**(2./3.)*g_func(n,e)/F_func(e)
 
 def hcn_func(m1, m2, z, n, f, e):
     D = cosmo.luminosity_distance(z).value*1e6*ct.parsec
@@ -115,7 +115,7 @@ def snr(m1, m2, a0, e0, d, n_max, noise_interp, t_final):
         hcn = hcn_func(m1, m2, z, n, n*f_orb, e)
         f_orb_new = np.logspace(np.log10(f_orb[0]), np.log10(f_orb[-1]), 100)
 
-        freqs.append(n*f_orb_new*ct.c)
+        freqs.append(n*f_orb_new*ct.c/(1+z))
         mode_vals.append(np.interp(f_orb_new, f_orb, hcn))
         #interp_funcs.append(interp1d(n*f_orb_new*ct.c, np.interp(f_orb_new, f_orb, hcn), bounds_error=False, fill_value=1.e-60))
 
