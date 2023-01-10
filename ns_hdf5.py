@@ -314,3 +314,197 @@ def get_allpsr_atsnap(modelpath, mspfg, snapno, thedist, themetal):
 
     print(len(T), len(RADIUS), len(BF), len(S), len(DMDT0), len(DMDT1), len(RAD0), len(RAD1), len(M_0), len(M_1), len(ID_0), len(ID_1), len(K_0), len(K_1), len(Aaxis), len(E), len(F), len(TCFLAG))
     np.savetxt(modelpath+mspfg+str(snapno)+'.dat', np.c_[T, RADIUS, BF, S, DMDT0, DMDT1, RAD0, RAD1, M_0, M_1, ID_0, ID_1, K_0, K_1, Aaxis, E, F, TCFLAG], fmt ='%f %f %e %f %f %f %f %f %f %f %d %d %d %d %f %f %d %d', delimiter= ' ', header = '1.Time(Gyr) 2.r(pc) 3.B(G) 4.P(sec) 5.dmdt0(Msun/yr) 6.dmdt1(Msun/yr) 7.rolrad0 8.rolrad1 9.m0(Msun) 10.m1(Msun) 11.ID0 12.ID1 13.k0 14.k1 15.a(AU) 16.ecc 17.Formation 18.TCflag', comments = '#')
+
+
+
+##Find how NSs are formed
+def find_formation(idlist, pathlist, masslist):
+    sourcedir = np.genfromtxt('/projects/b1095/syr904/cmc/CMC-COSMIC/wdmerger_update/CMC-COSMIC_modified/CMC/runs/ngc6752/allpaths.dat', dtype=str)
+    allpaths = sourcedir[:,1]
+
+    allfm = []
+    ncoll = np.zeros(len(idlist))
+    fmmass = []
+    for xx in range(len(idlist)):
+        thepath = allpaths[int(pathlist[xx])]
+        nsform = np.genfromtxt(thepath+'initial.nsformation.dat')
+        fm = nsform[:,8]; nsmass = nsform[:,7]; nsid = nsform[:,3].astype(int)
+        thefm = fm[nsid==idlist[xx]]
+        if thefm.size == 1:
+            allfm.append(thefm[0])
+            fmmass.append(nsmass[nsid==idlist[xx]][0])
+        elif thefm.size < 1:  ##not new NS or id=0 bug
+            collfile = thepath+'initial.collision.log'
+            colldata = scripts1.collision(collfile)
+            collids=colldata.keys()
+            if idlist[xx] in collids:
+                allfm.append(0)
+                fmmass.append(0)
+                ncoll[xx]+=1
+                par = colldata[idlist[xx]]['parents']
+                while 13. in par['types']:
+                    progID = np.array(par['IDs'])[np.array(par['types'])==13.][0]
+                    ncoll[xx]+=1
+                    if progID in collids:
+                        par = colldata[progID]['parents']
+                    else:
+                        break
+
+            else:  ## check if it's because id=0
+                thefm = fm[nsmass==round(masslist[xx],5)]
+                if thefm.size == 1:
+                    allfm.append(thefm[0])
+                    fmmass.append(round(masslist[xx],5))
+                else:
+                    allfm.append(-100)
+                    fmmass.append(-100)
+
+        else:
+            allfm.append(-2)
+            fmmass.append(-2)
+
+    print(len(allfm), len(idlist))
+
+    np.savetxt('/projects/b1095/syr904/projects/isolated_MSP/massive_NS_formation.dat',
+        np.c_[pathlist, idlist, masslist, allfm, fmmass, ncoll],
+        fmt = '%d %d %f %d %f %d', header = '1.model 2.id 3.mass_12Gyr[MSUN] 4.SN 5.mass_birth[MSUN] 6.Num_coll',
+        comments = '#', delimiter = '')
+
+
+##Check where the MSPs went in the simulations
+##Using to check where the MSPs formed from TDEs went (e.g., ejected or what?)
+def find_where(idlist, masslist, sourcedir):
+    id_nsesc = []; t_nsesc = []
+    escfile = sourcedir+'initial.esc.dat'
+    with open(escfile, 'r') as fesc:
+        next(fesc)
+        for line in fesc:
+            data = line.split()
+            if int(data[14])==1:
+                if int(data[22])==13:
+                    id_nsesc.append(int(data[17]))
+                    t_nsesc.append(float(data[1]))
+                if int(data[23])==13:
+                    id_nsesc.append(int(data[18]))
+                    t_nsesc.append(float(data[1]))
+
+            else:
+                if int(data[21])==13:
+                    id_nsesc.append(int(data[13]))
+                    t_nsesc.append(float(data[1]))
+
+    id_psr = []; p_psr = []
+    with open(sourcedir+'initial.morepulsars.dat', 'r') as fpsr:
+        next(fpsr)
+        for line in fpsr:
+            data = line.split()
+            if int(data[2])==1:
+                if int(data[11])==13:
+                    id_psr.append(int(data[3]))
+                    p_psr.append(float(data[9]))
+                if int(data[12])==13:
+                    id_psr.append(int(data[4]))
+                    p_psr.append(float(data[10]))
+            else:
+                id_psr.append(int(data[3]))
+                p_psr.append(float(data[9]))
+
+    id_psr = np.array(id_psr); p_psr = np.array(p_psr)
+
+    binint = scripts3.read_binint(sourcedir+'initial.binint.log')
+
+    colldata = scripts1.collision(sourcedir+'initial.collision.log')
+    collkeys = list(colldata.keys())
+
+    #m_trip = []
+    #data_trip = np.genfromtxt(sourcedir+'initial.triple.dat')
+    #k_trip = data_trip[:,14]
+    #m_trip = data_trip[:,3]
+    #m_trip = m_trip[k_trip==13.]
+
+
+    t_allesc = []; esc_channel = []; allid_esc = []; allid_check = []; allid_fewbody1 = []; allid_fewbody2 = []
+    nesc = 0; ndyn_esc = 0; n_turnbh = 0; n_slow = 0; n_fewbody1 = 0; n_fewbody2 = 0
+
+    for xx in range(len(idlist)):
+        theid = idlist[xx]
+        for yy in range(len(collkeys)):
+            par = colldata[collkeys[yy]]['parents']
+            if idlist[xx] in par['IDs'] and colldata[collkeys[yy]]['types']==13.:
+                idlist[xx]= collkeys[yy]
+            if idlist[xx] in par['IDs'] and colldata[collkeys[yy]]['types']==14.:
+                n_turnbh +=1
+                break
+
+        checkesc = 0
+        if int(idlist[xx]) in id_nsesc:
+            #t_allesc.append(np.array(t_nsesc)[np.array(id_nsesc)==idlist[xx]])
+            nesc+=1
+            allid_esc.append(int(idlist[xx]))
+
+            for ii in range(len(binint)-1, -1, -1):
+                outs = binint[ii]['output']
+                for jj in range(len(outs)):
+                    if str(int(idlist[xx])) in outs[jj]['ids'] or str(int(idlist[xx])) in outs[jj]['merge']['ids']:
+                        #print(binint[ii]['type']['time'], np.array(t_nsesc)[np.array(id_nsesc)==idlist[xx]])
+                        if round(float(binint[ii]['type']['time']), 6)== np.array(t_nsesc)[np.array(id_nsesc)==int(idlist[xx])][0]:
+                            #esc_channel.append('DYN')
+                            ndyn_esc+=1
+
+                        checkesc = 1
+                        break
+
+                if checkesc==1:
+                    break
+
+                    #else:
+                    #    esc_channel.append('UNCERTN')
+
+        else:
+            if len(p_psr[id_psr==int(theid)])>0:
+                if p_psr[id_psr==int(theid)][0]>0.03:
+                    n_slow+=1
+                    grpar = colldata[theid]['parents']
+                    for ii in range(len(binint)-1, -1, -1):
+                        outs = binint[ii]['output']
+                        for jj in range(len(outs)):
+                            if len(outs[jj]['merge']['ids'])>0:
+                                if outs[jj]['merge']['merge'][0]==1:
+                                    if str(int(grpar['IDs'][0])) in outs[jj]['merge']['ids'][0]:
+                                        n_fewbody1+=1
+                                        allid_fewbody1.append(theid)
+                                elif outs[jj]['merge']['merge'][1]==1:
+                                    if str(int(grpar['IDs'][0])) in outs[jj]['merge']['ids'][1]:
+                                        n_fewbody2+=1
+                                        allid_fewbody2.append(theid)
+
+                        
+            
+        #    t_allesc.append(-100)
+        #    esc_channel.append('UNKNOWN')
+            #print(round(masslist[xx],5))
+            #print(m_trip)
+            #if masslist[xx] in m_trip:
+            #    n_tripout+=1
+            #    allid_tri.append(idlist[xx])
+
+            else:
+                allid_check.append(idlist[xx])
+
+
+
+    print(allid_esc)
+    print('nesc', nesc, 'n_dynesc', ndyn_esc, 'n_turnbh', n_turnbh, 'n_slow', n_slow, 'n_fewbody1', n_fewbody1, 'n_fewbody2', n_fewbody2)
+    print(allid_fewbody1)
+    print(allid_fewbody2)
+    print(allid_check)
+
+
+
+
+
+
+
+
+
+
