@@ -41,7 +41,7 @@ def readdata_freire(spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at t
 
     offset = []; poff = []; binoff = []; nameoff = []; clusteroff = []  ##offset data
     
-    pall=[]; bfall=[]; nameall=[]
+    pall=[]; bfall=[]; nameall=[]; clusterall = []
 
     ntot=0
 
@@ -56,19 +56,23 @@ def readdata_freire(spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at t
             #print(datanew)
             #print(data)
             if not data: continue
-            if data[0][0]=='N' or data[0][0]=='T':
+            if data[0][0]=='N' or data[0][0]=='T' or data[0][0]=='G':
                 clustername = data[1]
 
             if (data[0][0]=='J' or data[0][0]=='B') and str(data[2])=='*': continue
             if data[0][0]=='J' or data[0][0]=='B':
+                #print(data)
                 ntot+=1
                 ##Calculate numbers
                 if str(data[5])=='i': 
                     Ns+=1; pall.append(float(data[2])); bfall.append(0); nameall.append(data[0])
+                    clusterall.append(clustername)
                 elif str(data[5])!='i' and str(data[5])!='*': 
                     Nb+=1; pall.append(float(data[2])); bfall.append(1); nameall.append(data[0])
+                    clusterall.append(clustername)
                 else:
                     pall.append(float(data[2])); bfall.append(-100); nameall.append(data[0]) 
+                    clusterall.append(clustername)
              
                 ##Extract orbital data
                 if str(data[5])!='i' and str(data[5])!='*':
@@ -151,6 +155,6 @@ def readdata_freire(spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at t
     #print(pdot)
     print(ntot)
     if spinflag:
-        return p, pdot, binflag, namespin, period, ecc, mc, names, pall, bfall, nameall
+        return p, pdot, binflag, namespin, period, ecc, mc, names, pall, bfall, nameall, clusterall
     if offsetflag:
         return poff, offset, binoff, nameoff, clusteroff

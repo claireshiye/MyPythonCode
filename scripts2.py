@@ -41,12 +41,14 @@ def bse_int(filename):
             case = int(each_row[1])
             parents = {'nopar': 2,
                 'IDs': [long(each_row[4+i*2]) for i in range(2)],
-                'masses': [float(each_row[5+i*2]) for i in range(2)]
+                'masses': [float(each_row[5+i*2]) for i in range(2)],
+                'types': [int(each_row[-2]), int(each_row[-1])]
                 }
             se_dict[ID] = {'time': float(each_row[0]),
                     'interaction': each_row[1],
                     'id': long(each_row[2]),
                     'mass': float(each_row[3]),
+                    'type': int(each_row[-3]),
                     'parents': parents,
                     'position': float(each_row[3+2*2+1]),
                     'fin_prod': 1,
@@ -61,6 +63,7 @@ def bse_int(filename):
                     'interaction': each_row[1],
                     'id': long(each_row[4]),
                     'mass': float(each_row[5]),
+                    'type': int(each_row[-2]),
                     'parents': parents,
                     'position': float(each_row[3+2*2+1]),
                     'fin_prod': 1,
@@ -70,6 +73,7 @@ def bse_int(filename):
                     'interaction': each_row[1],
                     'id': long(each_row[6]),
                     'mass': float(each_row[7]),
+                    'type': int(each_row[-1]),
                     'parents': parents,
                     'position': float(each_row[3+2*2+1]),
                     'fin_prod': 1,
