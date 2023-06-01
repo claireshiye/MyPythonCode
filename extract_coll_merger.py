@@ -9,7 +9,7 @@ import scripts2
 import scripts3
 import dynamics as dyn
 import unit_convert as uc
-import ecc_calc as gwcalc
+import gw_ecc_calc as gwcalc
 import LISA_calculations as lisa
 import ns_history as nh
 import useful_function as uf
@@ -495,7 +495,7 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
 
     #model=[]; model_status=[]; mm=[]; mcom=[]; ktypem=[]; kcom=[]; timem=[]; idm=[]; rm=[]; colltype=[]
     fcoll=open(savepath+'_collproduct_all.dat', 'w+')
-    fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
+    fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.id0 16.id1 17.id2 18.id3 19.model_status 20.COLLTYPE\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'
 
@@ -518,8 +518,9 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
                     mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=-100; m3=-100
                     ktypem=int(line[10]); ktype0=int(line[11]); ktype1=int(line[12]); ktype2=-100; ktype3=-100
                     idm=int(line[3]); rm=float(line[9])*l_conv
+                    id0=int(line[5]); id1=int(line[7]); id2=-100; id3=-100
 
-                    fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+                    fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, id0, id1, id2, id3, model_status, colltype))
 
 
             if line[1]=='binary-single':   ##Binary-single collision
@@ -530,8 +531,9 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
                         mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=-100; m3=-100
                         ktypem=int(line[10]); ktype0=int(line[11]); ktype1=int(line[12]); ktype2=-100; ktype3=-100
                         idm=int(line[3]); rm=float(line[9])*l_conv
+                        id0=int(line[5]); id1=int(line[7]); id2=-100; id3=-100
 
-                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, id0, id1, id2, id3, model_status, colltype))
 
                 if int(line[2])==3:
                     if int(line[12]) in startype:
@@ -539,8 +541,9 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
                         mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
                         ktypem=int(line[12]); ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
                         idm=int(line[3]); rm=float(line[11])*l_conv
+                        id0=int(line[5]); id1=int(line[7]); id2=int(line[9]); id3=-100
 
-                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, id0, id1, id2, id3, model_status, colltype))
 
 
             if line[1]=='binary-binary':   ##Binary-binary collision
@@ -551,8 +554,9 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
                         mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=-100; m3=-100
                         ktypem=int(line[10]); ktype0=int(line[11]); ktype1=int(line[12]); ktype2=-100; ktype3=-100
                         idm=int(line[3]); rm=float(line[9])*l_conv
+                        id0=int(line[5]); id1=int(line[7]); id2=-100; id3=-100
 
-                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, id0, id1, id2, id3, model_status, colltype))
 
                 if int(line[2])==3:
                     if int(line[12]) in startype:
@@ -560,8 +564,9 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
                         mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
                         ktypem=int(line[12]); ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
                         idm=int(line[3]); rm=float(line[11])*l_conv
+                        id0=int(line[5]); id1=int(line[7]); id2=int(line[9]); id3=-100
 
-                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, id0, id1, id2, id3, model_status, colltype))
 
                 if int(line[2])==4:
                     if int(line[14]) in startype:
@@ -569,8 +574,9 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
                         mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=float(line[12])
                         ktypem=int(line[14]); ktype0=int(line[15]); ktype1=int(line[16]); ktype2=int(line[17]); ktype3=int(line[18])
                         idm=int(line[3]); rm=float(line[13])*l_conv
+                        d0=int(line[5]); id1=int(line[7]); id2=int(line[9]); id3=int(line[11])
 
-                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, id0, id1, id2, id3, model_status, colltype))
 
 
         print(i)
@@ -588,7 +594,7 @@ def get_XX_mergerproduct(pathlist, start, end, startype, savepath, readflag):
         filepaths=pathlist; status=[1]
 
     fmerge=open(savepath+'_mergerproduct_all.dat', 'w+')
-    fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
+    fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.id0 12.id1 13.model_status\n')
     for i in range(len(filepaths)):
         filestr=filepaths[i]+'initial'
 
@@ -607,8 +613,8 @@ def get_XX_mergerproduct(pathlist, start, end, startype, savepath, readflag):
             #print(line)
             if int(line[1])<3:
                 if int(line[-3]) in startype:
-                    fmerge.write('%d %f %d %f %f %f %f %d %d %d %d\n'%(i, t_conv*float(line[0]), 
-                    int(line[2]), float(line[8])*l_conv, float(line[3]), float(line[5]), float(line[7]),int(line[-3]), int(line[-2]), int(line[-1]), status[i]))
+                    fmerge.write('%d %f %d %f %f %f %f %d %d %d %d %d %d\n'%(i, t_conv*float(line[0]), 
+                    int(line[2]), float(line[8])*l_conv, float(line[3]), float(line[5]), float(line[7]),int(line[-3]), int(line[-2]), int(line[-1]), int(line[4]), int(line[6]), status[i]))
 
         print(i)
 
