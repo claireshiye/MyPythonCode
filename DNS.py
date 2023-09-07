@@ -19,7 +19,7 @@ import scripts1
 import scripts2
 import scripts3
 import LISA_calculations as lisa
-import ecc_calc as gwcalc
+import gw_ecc_calc as gwcalc
 import unit_convert
 import single_psr_evolv as psrev
 
@@ -477,41 +477,49 @@ def find_formationtime_BBH(ids, filestring):
 
 
 def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the cluster and escaped
-    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    status = sourcedir[:,1].astype(int)
     #status = np.ones(len(sourcedir))
     #status=map(int, sourcedir[:,1]); 
-    #sourcedir=sourcedir[:,0]
-    sourcedir=['/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/']
-    status=[1]
-
-    ##Mergers in the clusters
-    model_coll=[]; model_merge=[]; status_coll=[]; status_merge=[]
-
-    idcoll=[]; id0coll=[]; id1coll=[]; id2coll=[]; id3coll=[]
-    idsemerge=[]; id0merge=[]; id1merge=[]
-    typecoll=[]; k0=[]; k1=[]; k2=[]; k3=[]
-    timecoll=[]; timesemerge=[]
-    timecoll_myr=[]; timesemerge_myr=[]
-    mf_merge=[]; m0_merge=[]; m1_merge=[]
-    mf_coll=[]; m0_coll=[]; m1_coll=[]; m2_coll=[]; m3_coll=[]
-    r_merge=[]; r_coll=[]
-    tform_semerge=[]; snapno_semerge=[]
-    primordial_bin=[]; dynamics_ejection=[]; any_interact=[]
-
-    ##Mergers outside of the clusters
-    #model_esc=[]; timeesc=[]; timeesc_myr=[]; tins=[]; m0=[]; m1=[]; id0=[]; id1=[]; a=[]; ecc=[]
-    #tform_esc=[]; snapno_esc=[]
-
-
-    ##Numbers
-    Ncoll2=[]; Ncoll3=[]; Ncoll4=[]; Ncoll=[]
-    Nsemerge=[]
-    Nesc=[]; Nescmerge=[]
-    Models=[]
+    sourcedir=sourcedir[:,0]
+    #sourcedir=['/projects/b1095/syr904/cmc/CMC-COSMIC/wdmerger_update/CMC-COSMIC_modified/CMC/runs/ngc6752/allfixed/n8-rv0.5-rg8-z0.0002_iccatalog_nstde0.2_wdtc_wdmass_v1/']
+    #status=[1]
 
 
     ####For mergers that happen in the clusters####
     for i in range(start, end):
+        
+        if status[i]!=1:
+            continue
+
+        print(i, sourcedir[i])
+
+        ##Mergers in the clusters
+        model_coll=[]; model_merge=[]; status_coll=[]; status_merge=[]
+
+        idcoll=[]; id0coll=[]; id1coll=[]; id2coll=[]; id3coll=[]
+        idsemerge=[]; id0merge=[]; id1merge=[]
+        typecoll=[]; k0=[]; k1=[]; k2=[]; k3=[]
+        timecoll=[]; timesemerge=[]
+        timecoll_myr=[]; timesemerge_myr=[]
+        mf_merge=[]; m0_merge=[]; m1_merge=[]
+        mf_coll=[]; m0_coll=[]; m1_coll=[]; m2_coll=[]; m3_coll=[]
+        r_merge=[]; r_coll=[]
+        tform_semerge=[]; snapno_semerge=[]
+        primordial_bin=[]; dynamics_ejection=[]; any_interact=[]
+
+        ##Mergers outside of the clusters
+        #model_esc=[]; timeesc=[]; timeesc_myr=[]; tins=[]; m0=[]; m1=[]; id0=[]; id1=[]; a=[]; ecc=[]
+        #tform_esc=[]; snapno_esc=[]
+
+
+        ##Numbers
+        Ncoll2=[]; Ncoll3=[]; Ncoll4=[]; Ncoll=[]
+        Nsemerge=[]
+        Nesc=[]; Nescmerge=[]
+        Models=[]
+
+        print(sourcedir[i])
         filestr=sourcedir[i]+'initial'
         collfile=filestr+'.collision.log'
         binintfile=filestr+'.binint.log'
@@ -651,19 +659,19 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
                     idsemerge.append(int(line[2])); id0merge.append(int(line[4])); id1merge.append(int(line[6]))
                     mf_merge.append(float(line[3])); m0_merge.append(float(line[5])); m1_merge.append(float(line[7]))
                     r_merge.append(float(line[8]))
-                    tf_semerge, sno_semerge, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(line[4]), int(line[6])], filestr, typeflag)
-                    if tf_semerge!=-100:
-                       tform_semerge.append(tf_semerge*t_conv); snapno_semerge.append(sno_semerge)
-                    else:
-                       tform_semerge.append(t_conv*float(line[0])); snapno_semerge.append(-100)
-                    primordial_bin.append(pribin); dynamics_ejection.append(dyn_eject); any_interact.append(dyn_any)
+                    #tf_semerge, sno_semerge, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(line[4]), int(line[6])], filestr, typeflag)
+                    #if tf_semerge!=-100:
+                    #   tform_semerge.append(tf_semerge*t_conv); snapno_semerge.append(sno_semerge)
+                    #else:
+                    #   tform_semerge.append(t_conv*float(line[0])); snapno_semerge.append(-100)
+                    #primordial_bin.append(pribin); dynamics_ejection.append(dyn_eject); any_interact.append(dyn_any)
 
         print('semerge:', nsemerge)#, idsemerge, timesemerge
         Nsemerge.append(nsemerge)
 
 
-        fesc_merger=open('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/Esc_'+typeflag+'.dat', 'a+')
-        #fescbns.write('#1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 11.Tform(Myr) 12.Primordial? 13.Dynamically_Ejected? 14.Status\n')
+        fesc_merger=open(sourcedir[i]+'Esc_'+typeflag+'.dat', 'w+')
+        fesc_merger.write('#1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 14.Status\n')  ##11.Tform(Myr) 12.Primordial? 13.Dynamically_Ejected?
         ####For mergers that happen outside of the clusters####
         escfile=filestr+'.esc.dat'
         with open(escfile, 'r') as fesc:
@@ -686,15 +694,16 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
                         timeesc_myr=float(dataesc[1])*t_conv; tins=t_inspiral
                         timeesc=float(dataesc[1]); m0=float(dataesc[15]); m1=float(dataesc[16]); id0=int(dataesc[17]); id1=int(dataesc[18]); a=float(dataesc[19]); ecc=float(dataesc[20])
                     
-                        tf_esc, sno_esc, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(dataesc[17]), int(dataesc[18])], filestr, typeflag)
+                        #tf_esc, sno_esc, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(dataesc[17]), int(dataesc[18])], filestr, typeflag)
 
-                        if tf_esc!=-100:
-                            tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
-                        else:
-                            tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
-
-                        fesc_merger.write('%d %f %f %f %f %f %d %d %f %f %f %d %d %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, tform_esc, pribin, dyn_eject, status[i]))
+                        #if tf_esc!=-100:
+                        #    tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
+                        #else:
+                        #    tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
+                        
+                        fesc_merger.write('%d %f %f %f %f %f %d %d %f %f %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, status[i]))
                         ##Turn off dyn_any for BBH
+                        ##%f %d %d, tform_esc, pribin, dyn_eject,
 
 
                         if t_inspiral+tesc<=14000.:
@@ -732,15 +741,16 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
                             timeesc_myr=float(dataesc[1])*t_conv; tins=t_inspiral
                             timeesc=float(dataesc[1]); m0=float(dataesc[15]); m1=float(dataesc[16]); id0=int(dataesc[17]); id1=int(dataesc[18]); a=float(dataesc[19]); ecc=float(dataesc[20])
 
-                            tf_esc, sno_esc, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(dataesc[17]), int(dataesc[18])], filestr, typeflag)
+                            #tf_esc, sno_esc, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(dataesc[17]), int(dataesc[18])], filestr, typeflag)
 
-                            if tf_esc!=-100:
-                                tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
-                            else:
-                                tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
+                            #if tf_esc!=-100:
+                            #    tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
+                            #else:
+                            #    tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
 
-                            fesc_merger.write('%d %f %f %f %f %f %d %d %f %f %f %d %d %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, tform_esc, pribin, dyn_eject, status[i]))
+                            fesc_merger.write('%d %f %f %f %f %f %d %d %f %f %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, status[i]))
                             ##Turn off dyn_any for BBH
+                            ## %f %d %d, tform_esc, pribin, dyn_eject,
 
 
                             if t_inspiral+tesc<=14000.: nescmerger+=1
@@ -753,14 +763,325 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
         Models.append(i)
 
 
-    ##Output files
-    np.savetxt('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/GWcap_'+typeflag+'.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
+        ##Output files
+        np.savetxt(sourcedir[i]+'GWcap_'+typeflag+'.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
 
-    np.savetxt('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/Incluster_'+typeflag+'.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, tform_semerge, primordial_bin, dynamics_ejection, status_merge], fmt='%d %f %f %d %d %d %f %f %f %f %f %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R 11.Tform(Myr) 12.Primordial 13.Dynamics? 14.Status(1-done; 2&3-dissolved)', comments='#')
-    ##Turn off dyn_any for BBH
+        np.savetxt(sourcedir[i]+'Incluster_'+typeflag+'.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, status_merge], fmt='%d %f %f %d %d %d %f %f %f %f %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R  14.Status(1-done; 2&3-dissolved)', comments='#')
+        ##Turn off dyn_any for BBH
+        ##tform_semerge, primordial_bin, dynamics_ejection, 11.Tform(Myr) 12.Primordial 13.Dynamics?, %f %d %d
 
-    np.savetxt('/projects/b1095/syr904/cmc/CMC-COSMIC/master_tc_test/ver_0601/MOCHA47Tuc_elson_rv4_3e6_tcon/num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, status], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
+        np.savetxt(sourcedir[i]+'num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, [1]], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
 
+
+def find_all_mergers_WDs(pathlist, start, end, typeflag):   ##Mergers with WDs both in the cluster and escaped
+    ##typeflag includes BWD, BHWD, NSWD
+    sourcedir=np.genfromtxt(pathlist, dtype=str)
+    status = sourcedir[:,1].astype(int)
+    #status = np.ones(len(sourcedir))
+    #status=map(int, sourcedir[:,1]); 
+    sourcedir=sourcedir[:,0]
+    #sourcedir=['/projects/b1095/syr904/cmc/CMC-COSMIC/wdmerger_update/CMC-COSMIC_modified/CMC/runs/ngc6752/allfixed/n8-rv0.5-rg8-z0.0002_iccatalog_nstde0.2_wdtc_wdmass_v1/']
+    #status=[1]
+
+
+    ####For mergers that happen in the clusters####
+    for i in range(start, end):
+        
+        if status[i]!=1:
+            continue
+
+        print(i, sourcedir[i])
+
+        ##Mergers in the clusters
+        model_coll=[]; model_merge=[]; status_coll=[]; status_merge=[]
+
+        idcoll=[]; id0coll=[]; id1coll=[]; id2coll=[]; id3coll=[]
+        idsemerge=[]; id0merge=[]; id1merge=[]
+        typecoll=[]; k0=[]; k1=[]; k2=[]; k3=[]
+        timecoll=[]; timesemerge=[]
+        timecoll_myr=[]; timesemerge_myr=[]
+        mf_merge=[]; m0_merge=[]; m1_merge=[]
+        kf_merge = []; k0_merge = []; k1_merge = []
+        mf_coll=[]; m0_coll=[]; m1_coll=[]; m2_coll=[]; m3_coll=[]
+        r_merge=[]; r_coll=[]
+        tform_semerge=[]; snapno_semerge=[]
+        primordial_bin=[]; dynamics_ejection=[]; any_interact=[]
+
+        ##Mergers outside of the clusters
+        #model_esc=[]; timeesc=[]; timeesc_myr=[]; tins=[]; m0=[]; m1=[]; id0=[]; id1=[]; a=[]; ecc=[]
+        #tform_esc=[]; snapno_esc=[]
+
+
+        ##Numbers
+        Ncoll2=[]; Ncoll3=[]; Ncoll4=[]; Ncoll=[]
+        Nsemerge=[]
+        Nesc=[]; Nescmerge=[]
+        Models=[]
+
+        print(sourcedir[i])
+        filestr=sourcedir[i]+'initial'
+        collfile=filestr+'.collision.log'
+        binintfile=filestr+'.binint.log'
+        semergefile=filestr+'.semergedisrupt.log'
+        collfile2=filestr+'2.collision.log'
+        binintfile2=filestr+'2.binint.log'
+        semergefile2=filestr+'2.semergedisrupt.log'
+
+
+        t_conv=dyn.conv('t', filestr+'.conv.sh')
+
+        ncoll2=0; ncoll3=0; ncoll4=0
+        nsemerge=0
+        nesc=0; nescmerger=0
+
+        ##Check in-cluster merger in the collision file
+        colldata=scripts1.readcollfile(collfile)
+        if os.path.isfile(collfile2) and os.path.getsize(collfile2) > 0:
+            colldata2=scripts1.readcollfile(collfile2)
+            colldata=colldata+colldata2
+        
+        for j in range(len(colldata)):
+            line=colldata[j].split()
+            if int(line[2])==2:  ##Single-single star collision
+                starlist=[int(line[11]), int(line[12])]
+                starnum=Counter(starlist)
+                starlist = np.array(starlist)
+                if (typeflag=='BHWD' and starnum[14]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='NSWD' and starnum[13]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                #if int(line[11])==13 and int(line[12])==13:    
+                    model_coll.append(i); status_coll.append(status[i])
+                    ncoll2+=1
+                    idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(-100); id3coll.append(-100)
+                    typecoll.append(int(line[2]))
+                    timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                    mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(-100); m3_coll.append(-100)
+                    r_coll.append(float(line[9]))
+                    k0.append(int(line[11])); k1.append(int(line[12])); k2.append(-100); k3.append(-100)
+                    
+
+            if int(line[2])==3:  ##Binary-single star collision
+                if len(line)==16:  ##Three stars collision
+                    starlist=[int(line[13]), int(line[14]), int(line[15])]
+                    starnum=Counter(starlist)
+                    starlist = np.array(starlist)
+                    if (typeflag=='BHWD' and starnum[14]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='NSWD' and starnum[13]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                    #if (int(line[13])==13 and int(line[14])==13) or (int(line[14])==13 and int(line[15])==13) or (int(line[13])==13 and int(line[15])==13):
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll3+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(int(line[9])); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(float(line[10])); m3_coll.append(-100)
+                        r_coll.append(float(line[11]))
+                        k0.append(int(line[13])); k1.append(int(line[14])); k2.append(int(line[15])); k3.append(-100)
+                        
+                        
+                if len(line)==13: ##Two stars collision
+                    starlist=[int(line[11]), int(line[12])]
+                    starnum=Counter(starlist)
+                    starlist = np.array(starlist)
+                    if (typeflag=='BHWD' and starnum[14]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='NSWD' and starnum[13]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                    #if int(line[11])==13 and int(line[12])==13:
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll3+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(-100); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(-100); m3_coll.append(-100)
+                        r_coll.append(float(line[9]))
+                        k0.append(int(line[11])); k1.append(int(line[12])); k2.append(-100); k3.append(-100)
+
+
+            if int(line[2])==4:  ##Binary-binary star collision
+                if len(line)==19: ##Four stars collision
+                    starlist=[int(line[15]), int(line[16]), int(line[17]), int(line[18])]
+                    starnum=Counter(starlist)
+                    starlist = np.array(starlist)
+                    if (typeflag=='BHWD' and starnum[14]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='NSWD' and starnum[13]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                    #if (int(line[15])==13 and int(line[16])==13) or (int(line[16])==13 and int(line[17])==13) or (int(line[17])==13 and int(line[18])==13) or (int(line[15])==13 and int(line[17])==13) or (int(line[15])==13 and int(line[18])==13) or (int(line[16])==13 and int(line[18])==13):
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll4+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(int(line[9])); id3coll.append(int(line[11]))
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(float(line[10])); m3_coll.append(float(line[12]))
+                        r_coll.append(float(line[13]))
+                        k0.append(int(line[15])); k1.append(int(line[16])); k2.append(int(line[17])); k3.append(int(line[18]))
+
+
+                if len(line)==16:  ##Three stars collision
+                    starlist=[int(line[13]), int(line[14]), int(line[15])]
+                    starnum=Counter(starlist)
+                    starlist = np.array(starlist)
+                    if (typeflag=='BHWD' and starnum[14]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='NSWD' and starnum[13]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                    #if (int(line[13])==13 and int(line[14])==13) or (int(line[14])==13 and int(line[15])==13) or (int(line[13])==13 and int(line[15])==13):
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll4+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(int(line[9])); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(float(line[10])); m3_coll.append(-100)
+                        r_coll.append(float(line[11]))
+                        k0.append(int(line[13])); k1.append(int(line[14])); k2.append(int(line[15])); k3.append(-100)
+                        
+                        
+                if len(line)==13: ##Two stars collision
+                    starlist=[int(line[11]), int(line[12])]
+                    starnum=Counter(starlist)
+                    starlist = np.array(starlist)
+                    if (typeflag=='BHWD' and starnum[14]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='NSWD' and starnum[13]>=1 and (starnum[10]>=1 or starnum[11]>=1 or starnum[12]>=1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                    #if int(line[11])==13 and int(line[12])==13:
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll4+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(-100); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(-100); m3_coll.append(-100)
+                        r_coll.append(float(line[9]))
+                        k0.append(int(line[11])); k1.append(int(line[12])); k2.append(-100); k3.append(-100)
+
+
+        print('collfile:', ncoll2, ncoll3, ncoll4)#, typecoll, timecoll
+        Ncoll2.append(ncoll2); Ncoll3.append(ncoll3); Ncoll4.append(ncoll4)
+        Ncoll.append(ncoll2+ncoll3+ncoll4)
+
+    
+        ##Check in-cluster merger in the semerge file
+        semergedata=scripts2.readmergefile(semergefile)
+        if os.path.isfile(semergefile2) and os.path.getsize(semergefile2)>0:
+            semergedata2=scripts2.readmergefile(semergefile2)
+            semergedata=semergedata+semergedata2
+
+        for k in range(len(semergedata)):
+            line=semergedata[k].split()
+            if int(line[1])<3:
+                starlist=[int(line[-1]), int(line[-2])]
+                starnum=Counter(starlist)
+                starlist = np.array(starlist)
+                if (typeflag=='BHWD' and starnum[14]==1 and (starnum[10]==1 or starnum[11]==1 or starnum[12]==1)) or (typeflag=='NSWD' and starnum[13]==1 and (starnum[10]==1 or starnum[11]==1 or starnum[12]==1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                #if int(line[-1])==13 and int(line[-2])==13:
+                    model_merge.append(i); status_merge.append(status[i])
+                    nsemerge+=1
+                    timesemerge.append(float(line[0])); timesemerge_myr.append(t_conv*float(line[0]))
+                    idsemerge.append(int(line[2])); id0merge.append(int(line[4])); id1merge.append(int(line[6]))
+                    mf_merge.append(float(line[3])); m0_merge.append(float(line[5])); m1_merge.append(float(line[7]))
+                    r_merge.append(float(line[8]))
+                    kf_merge.append(int(line[-3])); k0_merge.append(int(line[-2])); k1_merge.append(int(line[-1]))
+                    #tf_semerge, sno_semerge, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(line[4]), int(line[6])], filestr, typeflag)
+                    #if tf_semerge!=-100:
+                    #   tform_semerge.append(tf_semerge*t_conv); snapno_semerge.append(sno_semerge)
+                    #else:
+                    #   tform_semerge.append(t_conv*float(line[0])); snapno_semerge.append(-100)
+                    #primordial_bin.append(pribin); dynamics_ejection.append(dyn_eject); any_interact.append(dyn_any)
+
+        print('semerge:', nsemerge)#, idsemerge, timesemerge
+        Nsemerge.append(nsemerge)
+
+
+        fesc_merger=open(sourcedir[i]+'Esc_'+typeflag+'.dat', 'w+')
+        fesc_merger.write('#1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 11.K0 12.K1 14.Status\n')  ##11.Tform(Myr) 12.Primordial? 13.Dynamically_Ejected?
+        ####For mergers that happen outside of the clusters####
+        escfile=filestr+'.esc.dat'
+        with open(escfile, 'r') as fesc:
+            next(fesc)
+            for line in fesc:
+                dataesc=line.split()
+                if int(dataesc[14])==1:
+                    starlist=[int(dataesc[22]), int(dataesc[23])]
+                    starnum=Counter(starlist)
+                    starlist = np.array(starlist)
+                    if (typeflag=='BHWD' and starnum[14]==1 and (starnum[10]==1 or starnum[11]==1 or starnum[12]==1)) or (typeflag=='NSWD' and starnum[13]==1 and (starnum[10]==1 or starnum[11]==1 or starnum[12]==1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                    #if int(dataesc[22])==13 and int(dataesc[23])==13:
+                        nesc+=1
+                        #print float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16])
+                        if typeflag=='BBH':
+                            t_inspiral=lisa.inspiral_time_peters(float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16]))*10**3 ##in Myr
+                        else:
+                            t_inspiral=gwcalc.t_inspiral_2(float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16]), 0, 0, 0, 1100)/10**6 ##in Myr
+                        tesc=float(dataesc[1])*t_conv  ##In Myr
+                        model_esc=i
+                        timeesc_myr=float(dataesc[1])*t_conv; tins=t_inspiral
+                        timeesc=float(dataesc[1]); m0=float(dataesc[15]); m1=float(dataesc[16]); id0=int(dataesc[17]); id1=int(dataesc[18]); a=float(dataesc[19]); ecc=float(dataesc[20])
+                        k0esc = int(dataesc[22]); k1esc = int(dataesc[23])
+                    
+                        #tf_esc, sno_esc, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(dataesc[17]), int(dataesc[18])], filestr, typeflag)
+
+                        #if tf_esc!=-100:
+                        #    tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
+                        #else:
+                        #    tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
+                        
+                        fesc_merger.write('%d %f %f %f %f %f %d %d %f %f %d %d %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, k0esc, k1esc, status[i]))
+                        ##Turn off dyn_any for BBH
+                        ##%f %d %d, tform_esc, pribin, dyn_eject,
+
+
+                        if t_inspiral+tesc<=14000.:
+                            nescmerger+=1
+                            #print int(dataesc[17]), int(dataesc[18]), tesc, t_inspiral
+                            
+                            #model_esc=i
+                            #timeesc_myr=float(dataesc[1])*t_conv; tins=t_inspiral
+                            #timeesc=float(dataesc[1]); m0=float(dataesc[15]); m1=float(dataesc[16]); id0=int(dataesc[17]); id1=int(dataesc[18]); a=float(dataesc[19]); ecc=float(dataesc[20])
+                            #tf_esc, sno_esc=find_formationtime_DNS([int(dataesc[17]), int(dataesc[18])], filestr)
+                            #if tf_esc!=-100:
+                            #   tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
+                            #else:
+                            #   tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
+
+                            #fescbns.write('%d %f %f %f %f %f %d %d %f %f %f %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, tform_esc, snapno_esc))
+
+        escfile2=filestr+'2.esc.dat'
+        if os.path.isfile(escfile2) and os.path.getsize(escfile2) > 0:
+            with open(escfile2, 'r') as fesc:
+                for line in fesc:
+                    dataesc=line.split()
+                    if int(dataesc[14])==1:
+                        starlist=[int(dataesc[22]), int(dataesc[23])]
+                        starnum=Counter(starlist)
+                        starlist = np.array(starlist)
+                        if (typeflag=='BHWD' and starnum[14]==1 and (starnum[10]==1 or starnum[11]==1 or starnum[12]==1)) or (typeflag=='NSWD' and starnum[13]==1 and (starnum[10]==1 or starnum[11]==1 or starnum[12]==1)) or (typeflag=='BWD' and not np.any((starlist<10)|(starlist>12))):
+                        #if int(dataesc[22])==13 and int(dataesc[23])==13:
+                            nesc+=1
+                            if typeflag=='BBH':
+                                t_inspiral=lisa.inspiral_time_peters(float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16]))*10**3 ##in Myr
+                            else:
+                                t_inspiral=gwcalc.t_inspiral_2(float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16]), 0, 0, 0, 1100)/10**6 ##in Myr
+                            tesc=float(dataesc[1])*t_conv  ##In Myr
+                            model_esc=i
+                            timeesc_myr=float(dataesc[1])*t_conv; tins=t_inspiral
+                            timeesc=float(dataesc[1]); m0=float(dataesc[15]); m1=float(dataesc[16]); id0=int(dataesc[17]); id1=int(dataesc[18]); a=float(dataesc[19]); ecc=float(dataesc[20])
+                            k0esc = int(dataesc[22]); k1esc = int(dataesc[23])
+
+                            #tf_esc, sno_esc, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(dataesc[17]), int(dataesc[18])], filestr, typeflag)
+
+                            #if tf_esc!=-100:
+                            #    tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
+                            #else:
+                            #    tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
+
+                            fesc_merger.write('%d %f %f %f %f %f %d %d %f %f %d %d %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, k0esc, k1esc, status[i]))
+                            ##Turn off dyn_any for BBH
+                            ## %f %d %d, tform_esc, pribin, dyn_eject,
+
+
+                            if t_inspiral+tesc<=14000.: nescmerger+=1
+
+        fesc_merger.close()
+        print('escaped:', nesc, nescmerger)
+        Nesc.append(nesc); Nescmerge.append(nescmerger)
+
+
+        Models.append(i)
+
+
+        ##Output files
+        np.savetxt(sourcedir[i]+'GWcap_'+typeflag+'.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
+
+        np.savetxt(sourcedir[i]+'Incluster_'+typeflag+'.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, kf_merge, k0_merge, k1_merge, status_merge], fmt='%d %f %f %d %d %d %f %f %f %f %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R 11.Kf 12.K0 13.K1 14.Status(1-done; 2&3-dissolved)', comments='#')
+        ##Turn off dyn_any for BBH
+        ##tform_semerge, primordial_bin, dynamics_ejection, 11.Tform(Myr) 12.Primordial 13.Dynamics?, %f %d %d
+
+        np.savetxt(sourcedir[i]+'num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, [1]], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
 
 
 def find_all_mergers_pnmodels_DNS(pathlist, start, end):   
