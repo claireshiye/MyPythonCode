@@ -29,7 +29,7 @@ Lsun=4.02*10**16 ##mJy*kpc^2
 
 
 
-def readdata_freire(spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at the same time
+def readdata_freire(sourcepath, spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at the same time
     #from astropy.extern.six.moves.urllib import request
     #url = 'http://www.naic.edu/~pfreire/GCpsr.txt'
     #open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr_latest.txt', 'wb').write(request.urlopen(url).read())
@@ -45,7 +45,7 @@ def readdata_freire(spinflag=1, offsetflag=0):  ##the two flags cannot be 1 at t
 
     ntot=0
 
-    with open('/projects/b1095/syr904/projects/PULSAR/data_observed/GC_psr_latest.txt', 'rb') as f:
+    with open(sourcepath+'/GC_psr_latest.txt', 'rb') as f:
         for _ in range(4):
             next(f)
         for line in f:
