@@ -262,11 +262,12 @@ def t_inspiral_2(a0,e0,m1,m2, t_flag=0, array=0, LIGO=0, steps=1000):
         #print t_FINAL
         #print DELTA_T_FINAL
 
-        if 'DELTA_T_FINAL' in locals()==False:
+
+        if not 'DELTA_T_FINAL' in locals():
                 DELTA_T_FINAL=1.0e-6
                 t_FINAL=t[-1]/seconds
 
-        #print DELTA_T_FINAL
+        print(DELTA_T_FINAL)
 
         if DELTA_T_FINAL > DELTA_T_MIN:
                 flag = 0

@@ -128,9 +128,12 @@ def get_coll_NSfromWDWD(pathlist, start, end, k_finl, klim1, klim2, savepath, re
     else:
         filepaths=pathlist; status=[1]
 
-    fcoll=open(savepath+'_coll.dat', 'w+')
-    fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
-    for i in range(len(filepaths)):
+    #fcoll=open(savepath+'_coll.dat', 'w+')
+    #fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
+    for i in range(start, end):
+        fcoll=open(filepaths[i]+'ns_wdwd_coll.dat', 'w+')
+        fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
+
         filestr=filepaths[i]+'initial'
         
         t_conv=dyn.conv('t', filestr+'.conv.sh')
@@ -195,13 +198,16 @@ def get_coll_NSfromWDWD(pathlist, start, end, k_finl, klim1, klim2, savepath, re
 def get_merger_NSfromWDWD(pathlist, start, end, k_finl, klim1, klim2, savepath, readflag):
     if readflag == 1:
         sourcedir=np.genfromtxt(pathlist, dtype=str)
-        filepaths=sourcedir[:,0]; status=sourcedir[:,1]
+        filepaths=sourcedir[:,0]; status=sourcedir[:,1].astype(int)
     else:
         filepaths=pathlist; status=[1]
 
-    fmerge=open(savepath+'_merger.dat', 'w+')
-    fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
-    for i in range(len(filepaths)):
+    #fmerge=open(savepath+'_merger.dat', 'w+')
+    #fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
+    for i in range(start,end):
+        fmerge=open(filepaths[i]+'ns_wdwd_merger.dat', 'w+')
+        fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
+
         filestr=filepaths[i]+'initial'
 
         t_conv=dyn.conv('t', filestr+'.conv.sh')
@@ -234,7 +240,7 @@ def get_coll_NSfromNSMS(pathlist, start, end, savepath, readflag):
     else:
         filepaths=pathlist; status=[1]
 
-    for i in range(len(filepaths)):
+    for i in range(start, end):
         collfile=filepaths[i]+'initial.collision.log'
         collfile2=filepaths[i]+'initial2.collision.log'
         colldata=scripts1.readcollfile(collfile)
@@ -494,9 +500,12 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
         filepaths=pathlist; status=[1]
 
     #model=[]; model_status=[]; mm=[]; mcom=[]; ktypem=[]; kcom=[]; timem=[]; idm=[]; rm=[]; colltype=[]
-    fcoll=open(savepath+'_collproduct_all.dat', 'w+')
-    fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.id0 16.id1 17.id2 18.id3 19.model_status 20.COLLTYPE\n')
-    for i in range(len(filepaths)):
+    #fcoll=open(savepath+'_collproduct_all.dat', 'w+')
+    #fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.id0 16.id1 17.id2 18.id3 19.model_status 20.COLLTYPE\n')
+    for i in range(start, end):
+        fcoll=open(filepaths[i]+'ns_collproduct_all.dat', 'w+')
+        fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.id0 16.id1 17.id2 18.id3 19.model_status 20.COLLTYPE\n')
+
         filestr=filepaths[i]+'initial'
 
         t_conv=dyn.conv('t', filestr+'.conv.sh')
@@ -593,9 +602,12 @@ def get_XX_mergerproduct(pathlist, start, end, startype, savepath, readflag):
     else:
         filepaths=pathlist; status=[1]
 
-    fmerge=open(savepath+'_mergerproduct_all.dat', 'w+')
-    fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.id0 12.id1 13.model_status\n')
-    for i in range(len(filepaths)):
+    #fmerge=open(savepath+'_mergerproduct_all.dat', 'w+')
+    #fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.id0 12.id1 13.model_status\n')
+    for i in range(start, end):
+        fmerge=open(filepaths[i]+'ns_mergerproduct_all.dat', 'w+')
+        fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.id0 12.id1 13.model_status\n')
+
         filestr=filepaths[i]+'initial'
 
         t_conv=dyn.conv('t', filestr+'.conv.sh')
@@ -614,7 +626,7 @@ def get_XX_mergerproduct(pathlist, start, end, startype, savepath, readflag):
             if int(line[1])<3:
                 if int(line[-3]) in startype:
                     fmerge.write('%d %f %d %f %f %f %f %d %d %d %d %d %d\n'%(i, t_conv*float(line[0]), 
-                    int(line[2]), float(line[8])*l_conv, float(line[3]), float(line[5]), float(line[7]),int(line[-3]), int(line[-2]), int(line[-1]), int(line[4]), int(line[6]), status[i]))
+                    int(line[2]), float(line[8])*l_conv, float(line[3]), float(line[5]), float(line[7]),int(line[-3]), int(line[-2]), int(line[-1]), int(line[4]), int(line[6]), int(status[i])))
 
         print(i)
 
