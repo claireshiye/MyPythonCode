@@ -16,7 +16,7 @@ import ns
 import ns_tidalcapture_hdf5 as ntc_hdf5
 #from scipy import stats
 
-sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
+sys.path.insert(1, '/fs/lustre/cita/claireshiye/cmctoolkit')
 import cmctoolkit as cmct
 
 yearsc=31557600.
