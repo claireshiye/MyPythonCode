@@ -22,8 +22,6 @@ import unit_convert as uc
 sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
 import cmctoolkit as cmct
 
-#sys.path.insert(2, '/projects/b1095/syr904/MyCodes/dynamics')
-#import dynamics as dyn
 
 def read_keys(thekey):
     return re.findall(r'\d+\.\d+|\d+', thekey)
@@ -637,7 +635,7 @@ def velocity_dispersion_hdf5(modelpath, thekey, Starinbin=200, mcut=0, hdf5flag 
     rpc = []
     for xx in range(len(ktype)):
         if binflag[xx] == 1:
-            if mcut == 0 and 2<=k0[xx]<=9 or 2<=k1[xx]<=9:
+            if mcut == 0 and (2<=k0[xx]<=9 or 2<=k1[xx]<=9):
                 rpc.append(rd[xx])
                 vel_r.append(VX[xx]); vel_pmr.append(VY[xx]); vel_pmt.append(VZ[xx])
 
@@ -736,7 +734,7 @@ def velocity_dispersion_2dsnap(path, snapno, Starinbin=200, mcut=0):
     rpc = []
     for xx in range(len(ktype)):
         if binflag[xx] == 1:
-            if mcut == 0 and 2<=k0[xx]<=9 or 2<=k1[xx]<=9:
+            if mcut == 0 and (2<=k0[xx]<=9 or 2<=k1[xx]<=9):
                 rpc.append(rd[xx])
                 vel_r.append(VX[xx]); vel_pmr.append(VY[xx]); vel_pmt.append(VZ[xx])
 
@@ -829,20 +827,19 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
 
     prefix = 'initial'
     snap_h5 = prefix+'.snapshots.h5'
-    #with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
-    #    snap_keys = snap_hdf.keys()
+    with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
+        snap_keys = snap_hdf.keys()
 
-    
-    #t_conv = dyn.conv('t', sourcepath+'initial.conv.sh')
+    t_conv = conv('t', sourcepath+'initial.conv.sh')
 
-    #snapno = []; snaptime = []
-    #for ii in range(len(snap_keys)):
-    #    theno = read_keys(snap_keys[ii])[0]; thetime = read_keys(snap_keys[ii])[1]
-    #    snapno.append(int(theno)); snaptime.append(thetime)
+    snapno = []; snaptime = []
+    for ii in range(len(snap_keys)):
+        theno = read_keys(snap_keys[ii])[0]; thetime = read_keys(snap_keys[ii])[1]
+        snapno.append(int(theno)); snaptime.append(thetime)
         
-    #snapno_sort, snaptime_sort = (np.array(t) for t in zip(*sorted(zip(snapno, snaptime))))
-    #np.savetxt(sourcepath+'snap_keys.txt',
-    #          np.c_[snapno_sort, snaptime_sort], fmt = '%s %s', header = '1.snap_no 2.snap_time', comments = '#')
+    snapno_sort, snaptime_sort = (np.array(t) for t in zip(*sorted(zip(snapno, snaptime))))
+    np.savetxt(sourcepath+'snap_keys.txt',
+              np.c_[snapno_sort, snaptime_sort], fmt = '%s %s', header = '1.snap_no 2.snap_time', comments = '#')
 
     #time_array = []; snap_array = []
     #for ii in range(2, len(snap_keys)):
@@ -876,7 +873,7 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
             break
         try:
             f = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','r')
-            #f = open(sourcepath+'initial.snap'+no_snap+'.vel_dispersion_vr_pm_50_0.dat','r')
+            #f = open(sourcepath+'initial.snap'+no_snap+'.vel_dispersion_vr_pm_700_0_updated.dat','r')
             #f = open(sourcepath+'initial.snap'+no_snap+'.test','r')
             print(no_snap, 'is done')
             continue
@@ -886,14 +883,14 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
                 os.system('gzip '+sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat')
                 print('made 2D projection')
 
-                ###### make cluster params file
+                ##### make cluster params file
                 f2 = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','w')
                 props = get_obs_props(sourcepath+prefix, no_snap, FAC=1.)
                 print('props=', props)
                 rc = props['rc']
                 print('rc=', rc)
     
-                ##Initialization
+                #Initialization
                 count_obj=0; count=0
                 #BHnonBH=0; BBH=0; NSnonNS=0; BNS=0    
                 #P=0; MS=0; G=0; WD=0; NS=0; BH=0
@@ -970,8 +967,8 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
                 #get_sbp_from_2D_projection_ncut(sourcepath+string, no_snap, BINNO=50, LCUT=12, NCUT=0.85)
                 get_sbp_from_2D_projection_ncut(sourcepath+prefix, no_snap, BINNO=50, LCUT=12, NCUT=-1)
                 print(key_snap, 'made SBP')
-                ##velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
-                ##velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
+                #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
+                #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
                 #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=700, mcut = 0.85)
                 #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=500, mcut = 0)
                 velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=700, mcut = 0)
