@@ -11,6 +11,8 @@ from scipy.special import gamma
 import astropy.units as u
 from astropy.cosmology import Planck15
 
+from statsmodels.stats.weightstats import DescrStatsW
+
 #cosmology helper functions to convert between redshift and lookback time
 #zmax is the maximum redshift of star formation 
 zmax = 20
@@ -28,6 +30,9 @@ ncl_grid = np.array([2e5, 4e5, 8e5, 1.6e6]) #number of particles. Stellar mass i
 def jax_gamma(x):
     #return np.exp(gammaln(x))
     return gamma(x)
+
+def chi_eff(m1, m2, s1, s2, alpha, beta):
+    return (m1*s1*np.cos(alpha)+m2*s2*np.cos(beta))/(m1+m2)
 
 def schechter_lower_int(beta, logMstar, logMlo):
     '''
@@ -120,13 +125,13 @@ def compute_missing_cluster_factor(beta = -2, logMstar0 = 6.26, logMlo = 2, logM
     w_grid_full = x_grid_full**(beta + 1) * np.exp(-x_grid_full) #cluster weight according to mass distribution (not normalized)
     norm_full = np.sum(w_grid_full)
     
-    average_merge_full = np.sum(x_grid_full**1.6 * w_grid_full/norm_full) #weighted sum of (m/Mstar)**1.6, corresponding to average number of mergers per cluster over the full mass range 
+    average_merge_full = np.sum(x_grid_full**1.6 * w_grid_full/norm_full) #weighted sum of (m/Mstar)**1.6, corresponding to average number of mergers per cluster over the full mass range
     
     x_grid = 0.6 * ncl_grid/ 10**logMstar0
     w_grid = x_grid**(beta + 1) * np.exp(-x_grid)
     norm = np.sum(w_grid)
     average_merge_sim = np.sum(x_grid**1.6 * w_grid/norm) #weighted sum of (m/Mstar)**1.6 in the simulated mass range, corresponding to average number of mergers per simulated cluster
-    
+
     missing_cluster_factor = average_merge_full/average_merge_sim
     
     return missing_cluster_factor
@@ -196,6 +201,8 @@ def cluster_number_density_from_mass_density(rho_GC = 7.3e14, beta = -2, logMsta
     
     #average_mass = np.sum(phi_cl * logm_grid)/np.sum(phi_cl)
     
+    print('number density from mass density', rho_GC/average_mass)
+
     return rho_GC/ average_mass 
                              
 def radius_weights(cluster_radius, mu_rv = 1, sigma_rv = 1.5):
@@ -261,10 +268,42 @@ def read_data(sourcepath):
     data_esc = np.genfromtxt(sourcepath+'Esc_BBH_maingrid.dat')
     tmer_esc = data_esc[:,2]+data_esc[:,3]
 
+    ###extract spin info since they are in another file###
+    allbbh = np.genfromtxt(sourcepath+'All_BBH_with_gen_spin.txt')
+    allt_mer = allbbh[:,1]; allm0 = allbbh[:,10]; allmodelno = allbbh[:,0]
+    allspin0 = allbbh[:,20]; allspin1 = allbbh[:,21]
+    allt_code = allbbh[:,2]
+    allid0 = allbbh[:,5]
+    
+    S0 = []; S1 = []
+    for ii in range(len(data_gwcap[:,0])):
+        if gwc_type[ii]!=2:
+            continue
+        S0.append(allspin0[(allt_mer==data_gwcap[:,2][ii]) & (allm0==data_gwcap[:,10][ii]) & (allmodelno==data_gwcap[:,0][ii])][0])
+        S1.append(allspin1[(allt_mer==data_gwcap[:,2][ii]) & (allm0==data_gwcap[:,10][ii]) & (allmodelno==data_gwcap[:,0][ii])][0])
+        if len(allspin0[(allt_mer==data_gwcap[:,2][ii]) & (allm0==data_gwcap[:,10][ii]) & (allmodelno==data_gwcap[:,0][ii])])>1:
+            print('error', data_gwcap[:,2][ii], data_gwcap[:,0][ii])
+
+    for jj in range(len(data_inclu[:,0])):
+        S0.append(allspin0[(allt_mer==data_inclu[:,2][jj]) & (allm0==data_inclu[:,7][jj]) & (allmodelno==data_inclu[:,0][jj])][0])
+        S1.append(allspin1[(allt_mer==data_inclu[:,2][jj]) & (allm0==data_inclu[:,7][jj]) & (allmodelno==data_inclu[:,0][jj])][0])
+        if len(allspin0[(allt_mer==data_inclu[:,2][jj]) & (allm0==data_inclu[:,7][jj]) & (allmodelno==data_inclu[:,0][jj])]) > 1:
+            print('error', data_inclu[:,2][jj], data_inclu[:,0][jj])
+
+    for kk in range(len(data_esc[:,0])):
+        if tmer_esc[kk]>=14000.: continue
+        S0.append(allspin0[(allt_code==data_esc[:,1][kk]) & (allid0==data_esc[:,6][kk]) & (allmodelno==data_esc[:,0][kk])][0])
+        S1.append(allspin1[(allt_code==data_esc[:,1][kk]) & (allid0==data_esc[:,6][kk]) & (allmodelno==data_esc[:,0][kk])][0])
+        if len(allspin0[(allt_code==data_esc[:,1][kk]) & (allid0==data_esc[:,6][kk]) & (allmodelno==data_esc[:,0][kk])])>1:
+            print('error', data_esc[:,1][kk], data_esc[:,0][kk], allspin0[(allt_code==data_esc[:,1][kk]) & (allm0==data_esc[:,4][kk]) & (allmodelno==data_esc[:,0][kk])])
+
+    S0 = np.array(S0); S1 = np.array(S1)    
+
     numsim = np.array(list(data_gwcap[:,0][gwc_type==2])+list(data_inclu[:,0])+list(data_esc[:,0][tmer_esc<14000.])).astype(int)
     tgw = np.array(list(data_gwcap[:,2][gwc_type==2]/1000.)+list(data_inclu[:,2]/1000.)+list(tmer_esc[tmer_esc<14000.]/1000.))  ##merger times in Gyr
     M0 = np.array(list(data_gwcap[:,10][gwc_type==2])+list(data_inclu[:,7])+list(data_esc[:,4][tmer_esc<14000.]))
     M1 = np.array(list(data_gwcap[:,11][gwc_type==2])+list(data_inclu[:,8])+list(data_esc[:,5][tmer_esc<14000.]))
+    
     
     paths = np.genfromtxt(sourcepath+'path_allfinished_newruns_maingrid.dat', dtype='str')
     paths = paths[:,0]
@@ -315,6 +354,8 @@ def read_data(sourcepath):
     tgw_copy = tgw[copy_sel]
     M0_copy = M0[copy_sel]
     M1_copy = M1[copy_sel]
+    S0_copy = S0[copy_sel]
+    S1_copy = S1[copy_sel]
     print(M0_copy, M1_copy, len(M0_copy))
     
     #pretend they correspond to the missing zb
@@ -333,8 +374,201 @@ def read_data(sourcepath):
 
     M0_new = np.concatenate((M0, M0_copy))
     M1_new = np.concatenate((M1, M1_copy))
+
+    S0_new = np.concatenate((S0, S0_copy))
+    S1_new = np.concatenate((S1, S1_copy))
     
-    return numsim_new, rvv_new, zb_new, ncll_new, tgw_new, M0_new, M1_new
+    return numsim_new, rvv_new, zb_new, ncll_new, tgw_new, M0_new, M1_new, S0_new, S1_new
+
+def weighted_quantile(values, quantiles, sample_weight=None, 
+                      values_sorted=False, old_style=False):
+    """ Very close to numpy.percentile, but supports weights.
+    NOTE: quantiles should be in [0, 1]!
+    :param values: numpy.array with data
+    :param quantiles: array-like with many quantiles needed
+    :param sample_weight: array-like of the same length as `array`
+    :param values_sorted: bool, if True, then will avoid sorting of
+        initial array
+    :param old_style: if True, will correct output to be consistent
+        with numpy.percentile.
+    :return: numpy.array with computed quantiles.
+    """
+    values = np.array(values)
+    quantiles = np.array(quantiles)
+    if sample_weight is None:
+        sample_weight = np.ones(len(values))
+    sample_weight = np.array(sample_weight)
+    assert np.all(quantiles >= 0) and np.all(quantiles <= 1), \
+        'quantiles should be in [0, 1]'
+
+    if not values_sorted:
+        sorter = np.argsort(values)
+        values = values[sorter]
+        sample_weight = sample_weight[sorter]
+
+    weighted_quantiles = np.cumsum(sample_weight) - 0.5 * sample_weight
+    if old_style:
+        # To be convenient with numpy.percentile
+        weighted_quantiles -= weighted_quantiles[0]
+        weighted_quantiles /= weighted_quantiles[-1]
+    else:
+        weighted_quantiles /= np.sum(sample_weight)
+    return np.interp(quantiles, weighted_quantiles, values)
+
+def ave_mass_redshift(data, zmerge, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
+    #numsim, rvv, zb, ncll, tgw = data[0], data[1], data[2], data[3], data[4]
+    m0, m1 = data[5], data[6]
+    M0 = np.maximum(m0, m1)
+    M1 = np.minimum(m0, m1)
+
+    numsim = data[0]    
+    rvv = data[1]
+    zb = data[2] 
+    ncll = data[3] 
+    tgw = data[4]
+
+    #compute mass and radius weights for each simulation based on ncl, rv. 
+    mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
+    rweights = radius_weights(rvv, mu_rv, sigma_rv)
+    
+
+    cluster_weight = mweights * rweights * dNdV0 * 10**logf_disrupted_cluster 
+    #f_missing_cluster * (remove this and leave the uncertainties in logf_disrupted_cluster)
+    #used to be cluster_weight = mweights * rweights * f_missing_cluster * dNdV0 * 10**logf_disrupted_cluster
+
+    tL_merge = tL_at_z_interp(zmerge) #lookback time at merger in Gyr
+    tL_form = tL_merge + tgw #lookback time at formation
+    z_form = z_at_tL_interp(tL_form) #redshift at formation
+    
+    metal_weight = metallicity_weights(zb, z_form, sigma_dex, Zsun)
+
+    out = np.sum(M0*cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b))/np.sum(cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b)) #sum over all mergers
+
+    return out
+
+def std_mass_redshift(data, zmerge, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
+    #numsim, rvv, zb, ncll, tgw = data[0], data[1], data[2], data[3], data[4]
+    m0, m1 = data[5], data[6]
+    M0 = np.maximum(m0, m1)
+    M1 = np.minimum(m0, m1)
+
+    numsim = data[0]
+    rvv = data[1]
+    zb = data[2]
+    ncll = data[3]
+    tgw = data[4]
+
+    #compute mass and radius weights for each simulation based on ncl, rv.
+    mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
+    rweights = radius_weights(rvv, mu_rv, sigma_rv)
+
+
+    cluster_weight = mweights * rweights * dNdV0 * 10**logf_disrupted_cluster
+    #f_missing_cluster * (remove this and leave the uncertainties in logf_disrupted_cluster)
+    #used to be cluster_weight = mweights * rweights * f_missing_cluster * dNdV0 * 10**logf_disrupted_cluster
+
+    tL_merge = tL_at_z_interp(zmerge) #lookback time at merger in Gyr
+    tL_form = tL_merge + tgw #lookback time at formation
+    z_form = z_at_tL_interp(tL_form) #redshift at formation
+
+    metal_weight = metallicity_weights(zb, z_form, sigma_dex, Zsun)
+
+    #out = np.sum(M0*cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b))/np.sum(cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b)) #sum over all mergers
+    #out_std = math.sqrt(np.sum((M0-out)**2*cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b))/(np.count_nonzero(cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b))-1)*np.count_nonzero(cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b))/np.sum(cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b)))
+    
+    combined_weights = cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b)
+    out_std = DescrStatsW(data=M0, weights=combined_weights).std
+    
+    return out_std
+
+def percentile_redshift(data, zmerge, perc_input, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
+    #numsim, rvv, zb, ncll, tgw = data[0], data[1], data[2], data[3], data[4]
+    m0, m1 = data[5], data[6]
+    M0 = np.maximum(m0, m1)
+    M1 = np.minimum(m0, m1)
+
+    numsim = data[0]
+    rvv = data[1]
+    zb = data[2]
+    ncll = data[3]
+    tgw = data[4]
+
+    #compute mass and radius weights for each simulation based on ncl, rv.
+    mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
+    rweights = radius_weights(rvv, mu_rv, sigma_rv)
+
+
+    cluster_weight = mweights * rweights * dNdV0 * 10**logf_disrupted_cluster
+    #f_missing_cluster * (remove this and leave the uncertainties in logf_disrupted_cluster)
+    #used to be cluster_weight = mweights * rweights * f_missing_cluster * dNdV0 * 10**logf_disrupted_cluster
+
+    tL_merge = tL_at_z_interp(zmerge) #lookback time at merger in Gyr
+    tL_form = tL_merge + tgw #lookback time at formation
+    z_form = z_at_tL_interp(tL_form) #redshift at formation
+
+    metal_weight = metallicity_weights(zb, z_form, sigma_dex, Zsun)
+
+    combined_weights = cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b)
+    #out_quantiles = weighted_quantile(M0, [perc_input], sample_weight=combined_weights, values_sorted=False, old_style=False)  #wikipedia calculation, same as the statsmodels method below.
+    
+    wq = DescrStatsW(data=M0, weights=combined_weights)
+    out_quantiles=wq.quantile(probs=np.array([perc_input]), return_pandas=False)
+
+    return out_quantiles
+
+
+def spin_redshift(data, zmerge, perc_input, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
+    m0, m1 = data[5], data[6]
+    s0, s1 = data[7], data[8]
+
+    numsim = data[0]
+    rvv = data[1]
+    zb = data[2]
+    ncll = data[3]
+    tgw = data[4]
+
+    #compute mass and radius weights for each simulation based on ncl, rv.
+    mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
+    rweights = radius_weights(rvv, mu_rv, sigma_rv)
+
+
+    cluster_weight = mweights * rweights * dNdV0 * 10**logf_disrupted_cluster
+    #f_missing_cluster * (remove this and leave the uncertainties in logf_disrupted_cluster)
+    #used to be cluster_weight = mweights * rweights * f_missing_cluster * dNdV0 * 10**logf_disrupted_cluster
+
+    tL_merge = tL_at_z_interp(zmerge) #lookback time at merger in Gyr
+    tL_form = tL_merge + tgw #lookback time at formation
+    z_form = z_at_tL_interp(tL_form) #redshift at formation
+
+    metal_weight = metallicity_weights(zb, z_form, sigma_dex, Zsun)
+    
+    combined_weights = cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b)
+    
+    alpha_list = np.random.uniform(low=0., high=np.pi, size=len(m0))
+    beta_list = np.random.uniform(low=0., high=np.pi, size=len(m0))
+    
+    chieff = chi_eff(m0, m1, s0, s1, alpha_list, beta_list)
+   
+    signs = np.random.choice([0,1], size=len(chieff[chieff==0]))
+    combined_weights_pos = list(combined_weights[chieff>0])+list(combined_weights[chieff==0][signs==1])
+    chieff_pos = list(chieff[chieff>0])+list(chieff[chieff==0][signs==1])
+    combined_weights_neg = list(combined_weights[chieff<0])+list(combined_weights[chieff==0][signs==0])
+    chieff_neg = list(chieff[chieff<0])+list(chieff[chieff==0][signs==0])
+    #print(np.mean(combined_weights_pos)/np.std(combined_weights_pos), np.mean(combined_weights_neg)/np.std(combined_weights_neg))
+    #print(np.mean(combined_weights)/np.std(combined_weights))
+
+    out = np.sum(chieff*cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b))/np.sum(cluster_weight * metal_weight * sfr_at_z_norm(z_form, z_gc, a, b))
+    out_std = DescrStatsW(data=chieff, weights=combined_weights).std
+
+    #wq_pos = DescrStatsW(data=chieff_pos, weights=combined_weights_pos)
+    #out_quantiles_pos=wq_pos.quantile(probs=np.array([perc_input]), return_pandas=False)
+    #wq_neg = DescrStatsW(data=np.abs(chieff_neg), weights=combined_weights_neg)
+    #out_quantiles_neg=-wq_neg.quantile(probs=np.array([perc_input]), return_pandas=False)
+    wq_abs = DescrStatsW(data=np.abs(chieff), weights=combined_weights)
+    out_quantiles_abs=wq_abs.quantile(probs=np.array([perc_input]), return_pandas=False)
+
+    return out, out_quantiles_abs#out_quantiles_pos, out_quantiles_neg
+
 
 #each BBH came from a cluster that represents a rate density at some z/time. 
 
@@ -357,10 +591,10 @@ def merger_rate_at_z(zmerge, formation_rate_at_z, tgw, cluster_weight, metal, me
     z_form = z_at_tL_interp(tL_form) #redshift at formation
     
     metal_weight = metal_frac_at_z(metal, z_form, **metal_kwargs)
-    
+
     return np.sum(cluster_weight * metal_weight * formation_rate_at_z(z_form, **sfr_kwargs)) #sum over all mergers
 
-def merger_rate_at_z_pop(data, zmerge, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
+def merger_rate_at_z_pop(data, zmerge, mlow, mhigh, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
     '''
     data: output of read_data() -- list of numsim, rvv, zb, ncll, tgw
     zmerge: merger redshift
@@ -379,21 +613,141 @@ def merger_rate_at_z_pop(data, zmerge, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.3
     logMhi: log10 maximum GC mass (Msun)
     '''
 
-    numsim, rvv, zb, ncll, tgw = data[0], data[1], data[2], data[3], data[4]
-            
+    #numsim, rvv, zb, ncll, tgw = data[0], data[1], data[2], data[3], data[4]
+    m0, m1 = data[5], data[6]
+    M0 = np.maximum(m0, m1)
+    M1 = np.minimum(m0, m1)
+
+    numsim = data[0][(M0>=mlow) & (M0<mhigh)] 
+    rvv = data[1][(M0>=mlow) & (M0<mhigh)] 
+    zb = data[2][(M0>=mlow) & (M0<mhigh)] 
+    ncll = data[3][(M0>=mlow) & (M0<mhigh)] 
+    tgw = data[4][(M0>=mlow) & (M0<mhigh)]
+
     #compute mass and radius weights for each simulation based on ncl, rv. 
     mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
     rweights = radius_weights(rvv, mu_rv, sigma_rv)
     
     f_missing_cluster = compute_missing_cluster_factor(beta, logMstar0, logMlo, logMhi)
     
-    cluster_weight = mweights * rweights * dNdV0 * f_missing_cluster * 10**logf_disrupted_cluster
+    cluster_weight = mweights * rweights * dNdV0 * 10**logf_disrupted_cluster 
+    #f_missing_cluster * (remove this and leave the uncertainties in logf_disrupted_cluster)
+    #used to be cluster_weight = mweights * rweights * f_missing_cluster * dNdV0 * 10**logf_disrupted_cluster
     
     merger_rate_array = merger_rate_at_z(zmerge, sfr_at_z_norm, tgw, cluster_weight, zb, metallicity_weights, sfr_kwargs = {'z_gc': z_gc, 'a': a, 'b': b}, metal_kwargs = {'sigma_dex': sigma_dex, 'Zsun': Zsun})
-    
+    #print('merger_rate_array', merger_rate_array)
+
     out = np.sum(merger_rate_array)
     
     return out
+
+
+def merger_rate_at_z_pop_metal(data, zmerge, zmetal, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
+    '''
+    data: output of read_data() -- list of numsim, rvv, zb, ncll, tgw
+    zmerge: merger redshift
+    z_gc: peak formation redshift
+    a: formation rate follows (1 + z)^a at low z
+    b: formation rate follows (1 + z)^-b at high z
+    dNdV0: number density of GCs today in units Gpc^-3
+    logf_disrupted_cluster: log10 of the contribution to formation rate at each z from cluster mass lost between formation and today
+    sigma_dex: scatter in metallicity-redshift relation
+    Zsun: solar metallicity
+    mu_rv: mean cluster radius (pc)
+    sigma_rv: standard deviation of cluster radius distripution (pc)
+    beta: power law slope of birth cluster mass distribution
+    logMstar0: log10 Schechter mass of birth cluster mass distribution
+    logMlo: log10 minimum GC mass (Msun)
+    logMhi: log10 maximum GC mass (Msun)
+    '''
+
+    #numsim, rvv, zb, ncll, tgw = data[0], data[1], data[2], data[3], data[4]
+    m0, m1 = data[5][data[2]==zmetal], data[6][data[2]==zmetal]
+    M0 = np.maximum(m0, m1)
+    M1 = np.minimum(m0, m1)
+
+    numsim = data[0][data[2]==zmetal]
+    rvv = data[1][data[2]==zmetal]
+    zb = data[2][data[2]==zmetal]
+    ncll = data[3][data[2]==zmetal]
+    tgw = data[4][data[2]==zmetal]
+
+    
+    #compute mass and radius weights for each simulation based on ncl, rv.
+    mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
+    rweights = radius_weights(rvv, mu_rv, sigma_rv)
+
+    f_missing_cluster = compute_missing_cluster_factor(beta, logMstar0, logMlo, logMhi)
+
+    cluster_weight = mweights * rweights * dNdV0 * 10**logf_disrupted_cluster
+    #f_missing_cluster * (remove this and leave the uncertainties in logf_disrupted_cluster)
+    #used to be cluster_weight = mweights * rweights * f_missing_cluster * dNdV0 * 10**logf_disrupted_cluster
+
+    merger_rate_array = merger_rate_at_z(zmerge, sfr_at_z_norm, tgw, cluster_weight, zb, metallicity_weights, sfr_kwargs = {'z_gc': z_gc, 'a': a, 'b': b}, metal_kwargs = {'sigma_dex': sigma_dex, 'Zsun': Zsun})
+    #print('merger_rate_array', merger_rate_array)
+
+    out = np.sum(merger_rate_array)
+
+    return out
+
+
+def merger_rate_at_z_pop_gen(data, zmerge, ngen, z_gc = 4.5, a = 2.5, b = 2.5, dNdV0 = 2.31e9, logf_disrupted_cluster = 0.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, logMlo = 2, logMhi = 8):
+    '''
+    data: output of read_data() -- list of numsim, rvv, zb, ncll, tgw
+    zmerge: merger redshift
+    z_gc: peak formation redshift
+    a: formation rate follows (1 + z)^a at low z
+    b: formation rate follows (1 + z)^-b at high z
+    dNdV0: number density of GCs today in units Gpc^-3
+    logf_disrupted_cluster: log10 of the contribution to formation rate at each z from cluster mass lost between formation and today
+    sigma_dex: scatter in metallicity-redshift relation
+    Zsun: solar metallicity
+    mu_rv: mean cluster radius (pc)
+    sigma_rv: standard deviation of cluster radius distripution (pc)
+    beta: power law slope of birth cluster mass distribution
+    logMstar0: log10 Schechter mass of birth cluster mass distribution
+    logMlo: log10 minimum GC mass (Msun)
+    logMhi: log10 maximum GC mass (Msun)
+    '''
+
+    #numsim, rvv, zb, ncll, tgw = data[0], data[1], data[2], data[3], data[4]
+    m0, m1 = data[5], data[6]
+    M0 = np.maximum(m0, m1)
+    M1 = np.minimum(m0, m1)
+ 
+    s0, s1 = data[7], data[8]
+
+    if ngen=='1G':
+        numsim = data[0][(s0==0.) & (s1==0.)]
+        rvv = data[1][(s0==0.) & (s1==0.)]
+        zb = data[2][(s0==0.) & (s1==0.)]
+        ncll = data[3][(s0==0.) & (s1==0.)]
+        tgw = data[4][(s0==0.) & (s1==0.)]
+    else:
+        numsim = data[0][(s0>0.) | (s1>0.)]
+        rvv = data[1][(s0>0.) | (s1>0.)]
+        zb = data[2][(s0>0.) | (s1>0.)]
+        ncll = data[3][(s0>0.) | (s1>0.)]
+        tgw = data[4][(s0>0.) | (s1>0.)]
+
+
+    #compute mass and radius weights for each simulation based on ncl, rv.
+    mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
+    rweights = radius_weights(rvv, mu_rv, sigma_rv)
+
+    f_missing_cluster = compute_missing_cluster_factor(beta, logMstar0, logMlo, logMhi)
+
+    cluster_weight = mweights * rweights * dNdV0 * 10**logf_disrupted_cluster
+    #f_missing_cluster * (remove this and leave the uncertainties in logf_disrupted_cluster)
+    #used to be cluster_weight = mweights * rweights * f_missing_cluster * dNdV0 * 10**logf_disrupted_cluster
+
+    merger_rate_array = merger_rate_at_z(zmerge, sfr_at_z_norm, tgw, cluster_weight, zb, metallicity_weights, sfr_kwargs = {'z_gc': z_gc, 'a': a, 'b': b}, metal_kwargs = {'sigma_dex': sigma_dex, 'Zsun': Zsun})
+    #print('merger_rate_array', merger_rate_array)
+
+    out = np.sum(merger_rate_array)
+
+    return out
+
 
 def merger_rate_at_z_pop_selfconsistentfactors(data, zmerge, mlow, mhigh, z_gc = 4.5, a = 2.5, b = 2.5, sigma_dex = 0.5, Zsun = 0.02, mu_rv = 1, sigma_rv = 1.5, beta = -2, logMstar0 = 6.26, rho_GC = 7.3e14, logDelta = 5.33, logMlo = 2, logMhi = 8, average_M_evolved = None):
     '''
@@ -423,6 +777,7 @@ def merger_rate_at_z_pop_selfconsistentfactors(data, zmerge, mlow, mhigh, z_gc =
     f_missing_cluster = compute_missing_cluster_factor(beta, logMstar0, logMlo, logMhi)
     
     f_disrupted_cluster = compute_disrupted_cluster_factor(beta, logMstar0, logMlo, logMhi, logDelta)
+    #print('disrupt factor', f_disrupted_cluster)
 
     M0, M1 = data[5], data[6]
     numsim = data[0][(M0>=mlow) & (M0<mhigh)] 
@@ -434,7 +789,7 @@ def merger_rate_at_z_pop_selfconsistentfactors(data, zmerge, mlow, mhigh, z_gc =
             
     #compute mass and radius weights for each simulation based on ncl, rv. 
     mweights = mass_weights_schechter(ncll*0.6, beta, logMstar0)
-    rweights = radius_weights(rvv, mu_rv, sigma_rv)
+    rweights = radius_weights(rvv, mu_rv, sigma_rv) 
     
     cluster_weight = mweights * rweights * dNdV0 * f_missing_cluster * f_disrupted_cluster
     
