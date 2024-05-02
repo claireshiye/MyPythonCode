@@ -26,7 +26,6 @@ import unit_convert
 import single_psr_evolv as psrev
 import extract_coll_merger as ecm
 
-savepath='/projects/b1095/syr904/projects/SGRB'
 
 yearsc=31557600.
 twopi=6.283185307179586
@@ -477,6 +476,45 @@ def find_formationtime_BBH(ids, filestring):
     return tform, snapno, primordial, dynamics_eject
 
 
+def find_pribin(ids, filestring, flag):
+    #####snaps#####
+    #snaps=dyn.get_snapshots(filestring)
+    #firstsnap=snaps[0]
+
+
+    #####hdf5#####
+    sys.path.insert(1, '/fs/lustre/cita/claireshiye/cmctoolkit')
+    import cmctoolkit as cmct
+
+    path = filestring.rsplit('/', 1)[0]
+    firstsnap = cmct.Snapshot(fname=path+'/initial.snapshots.h5', 
+        snapshot_name='/0(t=0)', conv=path+'/initial.conv.sh', 
+                     z=0.002)
+    id0_snap0 = firstsnap.data['id0']; id1_snap0 = firstsnap.data['id1']
+    print('readign snap done')
+
+
+    primordial=0
+    #####snap#####
+    #with gzip.open(firstsnap, 'r') as ffirst:
+    #    next(ffirst)
+    #    next(ffirst)
+    #    for line in ffirst:
+    #        datafirst=line.split()
+    #        if int(datafirst[7])==1:
+    #            if (int(datafirst[10])==ids[0] and int(datafirst[11])==ids[1]) or (int(datafirst[10])==ids[1] and int(datafirst[11])==ids[0]):
+    #                primordial=1
+    #                break
+
+    #####hdf5#####
+    for ii in range(len(id0_snap0)):
+        if (ids[0] == int(id0_snap0[ii]) and ids[1] == int(id1_snap0[ii])) or (ids[0] == int(id1_snap0[ii]) and ids[1] == int(id0_snap0[ii])):
+            primordial = 1
+            break
+
+    
+    return primordial
+
 
 
 def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the cluster and escaped
@@ -774,6 +812,305 @@ def find_all_mergers_DNS(pathlist, start, end, typeflag):   ##DNSs both in the c
         ##tform_semerge, primordial_bin, dynamics_ejection, 11.Tform(Myr) 12.Primordial 13.Dynamics?, %f %d %d
 
         np.savetxt(sourcedir[i]+'num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, [1]], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
+
+
+
+def find_all_mergers_DNS_restarts(pathlist, start, end, typeflag):   ##DNSs both in the cluster and escaped
+    #sourcedir=np.genfromtxt(pathlist, dtype=str)
+    #status = sourcedir[:,1].astype(int)
+    #status = np.ones(len(sourcedir))
+    #status=map(int, sourcedir[:,1]); 
+    #sourcedir=sourcedir[:,0]
+    sourcedir=['/fs/lustre/cita/claireshiye/CMC-COSMIC/CMC/f100/n8e5rv0.5rg8z0.002fb100/']
+    status=[1]
+
+
+    ####For mergers that happen in the clusters####
+    for i in range(start, end):
+
+        print(i, sourcedir[i])
+
+        #####hdf5 get primorial binaries#####
+        sys.path.insert(1, '/fs/lustre/cita/claireshiye/cmctoolkit')
+        import cmctoolkit as cmct
+
+        path = sourcedir[i].rsplit('/', 1)[0]
+        firstsnap = cmct.Snapshot(fname=path+'/initial.snapshots.h5', 
+        snapshot_name='/0(t=0)', conv=path+'/initial.conv.sh', 
+                     z=0.002)
+        id0_snap0 = firstsnap.data['id0']; id1_snap0 = firstsnap.data['id1']
+        print('reading snap done')
+
+        ##Mergers in the clusters
+        model_coll=[]; model_merge=[]; status_coll=[]; status_merge=[]
+
+        idcoll=[]; id0coll=[]; id1coll=[]; id2coll=[]; id3coll=[]
+        idsemerge=[]; id0merge=[]; id1merge=[]
+        typecoll=[]; k0=[]; k1=[]; k2=[]; k3=[]
+        timecoll=[]; timesemerge=[]
+        timecoll_myr=[]; timesemerge_myr=[]
+        mf_merge=[]; m0_merge=[]; m1_merge=[]
+        mf_coll=[]; m0_coll=[]; m1_coll=[]; m2_coll=[]; m3_coll=[]
+        r_merge=[]; r_coll=[]
+        tform_semerge=[]; snapno_semerge=[]
+        primordial_bin=[]; dynamics_ejection=[]; any_interact=[]
+
+
+        ##Numbers
+        Ncoll2=[]; Ncoll3=[]; Ncoll4=[]; Ncoll=[]
+        Nsemerge=[]
+        Nesc=[]; Nescmerge=[]
+        Models=[]
+
+        print(sourcedir[i])
+        filestr=sourcedir[i]
+        collfile = np.sort(glob(filestr+'*.collision.log'))
+        print(collfile)
+        binintfile=np.sort(glob(filestr+'*.binint.log'))
+        print(binintfile)
+        semergefile=np.sort(glob(filestr+'*.semergedisrupt.log'))
+        print(semergefile)
+        escfile = np.sort(glob(filestr+'*.esc.dat'))
+
+        t_conv=dyn.conv('t', filestr+'initial.conv.sh')
+
+        ncoll2=0; ncoll3=0; ncoll4=0
+        nsemerge=0
+        nesc=0; nescmerger=0
+
+        ##Check in-cluster merger in the collision file
+        colldata = []
+        for xx in range(len(collfile)):
+            #print(type(scripts1.readcollfile(collfile[xx])))
+            colldata = colldata + scripts1.readcollfile(collfile[xx])
+        
+        tcoll_last = 0
+        for j in range(len(colldata)):
+            line=colldata[j].split()
+            if float(line[0]) < tcoll_last:
+                continue
+
+            if int(line[2])==2:  ##Single-single star collision
+                starlist=[int(line[11]), int(line[12])]
+                starnum=Counter(starlist)
+                if (typeflag=='DNS' and starnum[13]>=2) or (typeflag=='NSBH' and starnum[13]>=1 and starnum[14]>=1) or (typeflag=='BBH' and starnum[14]>=2):
+                #if int(line[11])==13 and int(line[12])==13:    
+                    model_coll.append(i); status_coll.append(status[i])
+                    ncoll2+=1
+                    idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(-100); id3coll.append(-100)
+                    typecoll.append(int(line[2]))
+                    timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                    mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(-100); m3_coll.append(-100)
+                    r_coll.append(float(line[9]))
+                    k0.append(int(line[11])); k1.append(int(line[12])); k2.append(-100); k3.append(-100)
+                    
+
+            if int(line[2])==3:  ##Binary-single star collision
+                if len(line)==16:  ##Three stars collision
+                    starlist=[int(line[13]), int(line[14]), int(line[15])]
+                    starnum=Counter(starlist)
+                    if (typeflag=='DNS' and starnum[13]>=2) or (typeflag=='NSBH' and starnum[13]>=1 and starnum[14]>=1) or (typeflag=='BBH' and starnum[14]>=2):
+                    #if (int(line[13])==13 and int(line[14])==13) or (int(line[14])==13 and int(line[15])==13) or (int(line[13])==13 and int(line[15])==13):
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll3+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(int(line[9])); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(float(line[10])); m3_coll.append(-100)
+                        r_coll.append(float(line[11]))
+                        k0.append(int(line[13])); k1.append(int(line[14])); k2.append(int(line[15])); k3.append(-100)
+                        
+                        
+                if len(line)==13: ##Two stars collision
+                    starlist=[int(line[11]), int(line[12])]
+                    starnum=Counter(starlist)
+                    if (typeflag=='DNS' and starnum[13]>=2) or (typeflag=='NSBH' and starnum[13]>=1 and starnum[14]>=1) or (typeflag=='BBH' and starnum[14]>=2):
+                    #if int(line[11])==13 and int(line[12])==13:
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll3+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(-100); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(-100); m3_coll.append(-100)
+                        r_coll.append(float(line[9]))
+                        k0.append(int(line[11])); k1.append(int(line[12])); k2.append(-100); k3.append(-100)
+
+
+            if int(line[2])==4:  ##Binary-binary star collision
+                if len(line)==19: ##Four stars collision
+                    starlist=[int(line[15]), int(line[16]), int(line[17]), int(line[18])]
+                    starnum=Counter(starlist)
+                    if (typeflag=='DNS' and starnum[13]>=2) or (typeflag=='NSBH' and starnum[13]>=1 and starnum[14]>=1) or (typeflag=='BBH' and starnum[14]>=2):
+                    #if (int(line[15])==13 and int(line[16])==13) or (int(line[16])==13 and int(line[17])==13) or (int(line[17])==13 and int(line[18])==13) or (int(line[15])==13 and int(line[17])==13) or (int(line[15])==13 and int(line[18])==13) or (int(line[16])==13 and int(line[18])==13):
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll4+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(int(line[9])); id3coll.append(int(line[11]))
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(float(line[10])); m3_coll.append(float(line[12]))
+                        r_coll.append(float(line[13]))
+                        k0.append(int(line[15])); k1.append(int(line[16])); k2.append(int(line[17])); k3.append(int(line[18]))
+
+
+                if len(line)==16:  ##Three stars collision
+                    starlist=[int(line[13]), int(line[14]), int(line[15])]
+                    starnum=Counter(starlist)
+                    if (typeflag=='DNS' and starnum[13]>=2) or (typeflag=='NSBH' and starnum[13]>=1 and starnum[14]>=1) or (typeflag=='BBH' and starnum[14]>=2):
+                    #if (int(line[13])==13 and int(line[14])==13) or (int(line[14])==13 and int(line[15])==13) or (int(line[13])==13 and int(line[15])==13):
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll4+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(int(line[9])); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(float(line[10])); m3_coll.append(-100)
+                        r_coll.append(float(line[11]))
+                        k0.append(int(line[13])); k1.append(int(line[14])); k2.append(int(line[15])); k3.append(-100)
+                        
+                        
+                if len(line)==13: ##Two stars collision
+                    starlist=[int(line[11]), int(line[12])]
+                    starnum=Counter(starlist)
+                    if (typeflag=='DNS' and starnum[13]>=2) or (typeflag=='NSBH' and starnum[13]>=1 and starnum[14]>=1) or (typeflag=='BBH' and starnum[14]>=2):
+                    #if int(line[11])==13 and int(line[12])==13:
+                        model_coll.append(i); status_coll.append(status[i])
+                        ncoll4+=1
+                        idcoll.append(int(line[3])); id0coll.append(int(line[5])); id1coll.append(int(line[7])); id2coll.append(-100); id3coll.append(-100)
+                        typecoll.append(int(line[2]))
+                        timecoll.append(float(line[0])); timecoll_myr.append(t_conv*float(line[0]))
+                        mf_coll.append(float(line[4])); m0_coll.append(float(line[6])); m1_coll.append(float(line[8])); m2_coll.append(-100); m3_coll.append(-100)
+                        r_coll.append(float(line[9]))
+                        k0.append(int(line[11])); k1.append(int(line[12])); k2.append(-100); k3.append(-100)
+
+            tcoll_last = float(line[0])
+
+        print('collfile:', ncoll2, ncoll3, ncoll4)#, typecoll, timecoll
+        Ncoll2.append(ncoll2); Ncoll3.append(ncoll3); Ncoll4.append(ncoll4)
+        Ncoll.append(ncoll2+ncoll3+ncoll4)
+
+    
+        ##Check in-cluster merger in the semerge file
+        semergedata = []
+        for yy in range(len(semergefile)):
+            #print(type(scripts2.readmergefile(semergefile[yy])))
+            semergedata = semergedata + scripts2.readmergefile(semergefile[yy])
+
+        tsem_last = 0
+        for k in range(len(semergedata)):
+            line=semergedata[k].split()
+            if float(line[0]) < tsem_last:
+                continue
+
+            if int(line[1])<3:
+                starlist=[int(line[-1]), int(line[-2])]
+                starnum=Counter(starlist)
+                if (typeflag=='DNS' and starnum[13]==2) or (typeflag=='NSBH' and starnum[13]==1 and starnum[14]==1) or (typeflag=='BBH' and starnum[14]==2):
+                #if int(line[-1])==13 and int(line[-2])==13:
+                    model_merge.append(i); status_merge.append(status[i])
+                    nsemerge+=1
+                    timesemerge.append(float(line[0])); timesemerge_myr.append(t_conv*float(line[0]))
+                    idsemerge.append(int(line[2])); id0merge.append(int(line[4])); id1merge.append(int(line[6]))
+                    mf_merge.append(float(line[3])); m0_merge.append(float(line[5])); m1_merge.append(float(line[7]))
+                    r_merge.append(float(line[8]))
+                    pribin = 0
+                    for vv in range(len(id0_snap0)):
+                        if (int(line[4]) == int(id0_snap0[vv]) and int(line[6]) == int(id1_snap0[vv])) or (int(line[4]) == int(id1_snap0[vv]) and int(line[6]) == int(id0_snap0[vv])):
+                            pribin = 1
+                            break
+                    primordial_bin.append(pribin)
+                    #tf_semerge, sno_semerge, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(line[4]), int(line[6])], filestr, typeflag)
+                    #if tf_semerge!=-100:
+                    #   tform_semerge.append(tf_semerge*t_conv); snapno_semerge.append(sno_semerge)
+                    #else:
+                    #   tform_semerge.append(t_conv*float(line[0])); snapno_semerge.append(-100)
+                    #primordial_bin.append(pribin); dynamics_ejection.append(dyn_eject); any_interact.append(dyn_any)
+
+            tsem_last = float(line[0])
+
+        print('semerge:', nsemerge)#, idsemerge, timesemerge
+        Nsemerge.append(nsemerge)
+
+
+        fesc_merger=open(sourcedir[i]+'Esc_'+typeflag+'.dat', 'w+')
+        fesc_merger.write('#1.Model 2.Time_esc(code) 3.Time_esc(Myr) 4.T_insp(Myr) 5.M0 6.M1 7.ID0 8.ID1 9.A 10.ECC 11.Status 12.Primordial?\n')  ##11.Tform(Myr) 12.Primordial? 13.Dynamically_Ejected?
+        ####For mergers that happen outside of the clusters####
+
+        tesc_last = 0
+        for zz in range(len(escfile)):
+            with open(escfile[zz], 'r') as fesc:
+                next(fesc)
+                for line in fesc:
+                    dataesc=line.split()
+                    if float(dataesc[1]) < tesc_last:
+                        continue
+
+                    if int(dataesc[14])==1:
+                        starlist=[int(dataesc[22]), int(dataesc[23])]
+                        starnum=Counter(starlist)
+                        if (typeflag=='DNS' and starnum[13]==2) or (typeflag=='NSBH' and starnum[13]==1 and starnum[14]==1) or (typeflag=='BBH' and starnum[14]==2):
+                        #if int(dataesc[22])==13 and int(dataesc[23])==13:
+                            nesc+=1
+                            #print float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16])
+                            if typeflag=='BBH':
+                                t_inspiral=lisa.inspiral_time_peters(float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16]))*10**3 ##in Myr
+                            else:
+                                t_inspiral=gwcalc.t_inspiral_2(float(dataesc[19]), float(dataesc[20]), float(dataesc[15]), float(dataesc[16]), 0, 0, 0, 1100)/10**6 ##in Myr
+                            tesc=float(dataesc[1])*t_conv  ##In Myr
+                            model_esc=i
+                            timeesc_myr=float(dataesc[1])*t_conv; tins=t_inspiral
+                            timeesc=float(dataesc[1]); m0=float(dataesc[15]); m1=float(dataesc[16]); id0=int(dataesc[17]); id1=int(dataesc[18]); a=float(dataesc[19]); ecc=float(dataesc[20])
+
+                            pribin = 0
+                            for vv in range(len(id0_snap0)):
+                                if (int(dataesc[17]) == int(id0_snap0[vv]) and int(dataesc[18]) == int(id1_snap0[vv])) or (int(dataesc[17]) == int(id1_snap0[vv]) and int(dataesc[18]) == int(id0_snap0[vv])):
+                                    pribin = 1
+                                    break
+                    
+                            #tf_esc, sno_esc, pribin, dyn_eject, dyn_any=find_formationtime_DNS_new([int(dataesc[17]), int(dataesc[18])], filestr, typeflag)
+
+                            #if tf_esc!=-100:
+                            #    tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
+                            #else:
+                            #    tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
+                        
+                            fesc_merger.write('%d %f %f %f %f %f %d %d %f %f %d %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, status[i], pribin))
+                            ##Turn off dyn_any for BBH
+                            ##%f %d %d, tform_esc, pribin, dyn_eject,
+
+
+                            if t_inspiral+tesc<=14000.:
+                                nescmerger+=1
+                                #print int(dataesc[17]), int(dataesc[18]), tesc, t_inspiral
+                            
+                                #model_esc=i
+                                #timeesc_myr=float(dataesc[1])*t_conv; tins=t_inspiral
+                                #timeesc=float(dataesc[1]); m0=float(dataesc[15]); m1=float(dataesc[16]); id0=int(dataesc[17]); id1=int(dataesc[18]); a=float(dataesc[19]); ecc=float(dataesc[20])
+                                #tf_esc, sno_esc=find_formationtime_DNS([int(dataesc[17]), int(dataesc[18])], filestr)
+                                #if tf_esc!=-100:
+                                #   tform_esc=tf_esc*t_conv; snapno_esc=sno_esc
+                                #else:
+                                #   tform_esc=float(dataesc[1])*t_conv; snapno_esc=-100
+
+                                #fescbns.write('%d %f %f %f %f %f %d %d %f %f %f %d\n'%(model_esc, timeesc, timeesc_myr, tins, m0, m1, id0, id1, a, ecc, tform_esc, snapno_esc))
+
+                    tesc_last = float(dataesc[1])
+
+        fesc_merger.close()
+        print('escaped:', nesc, nescmerger)
+        Nesc.append(nesc); Nescmerge.append(nescmerger)
+
+
+        Models.append(i)
+
+
+        ##Output files
+        np.savetxt(sourcedir[i]+'GWcap_'+typeflag+'.dat', np.c_[model_coll, timecoll, timecoll_myr, typecoll, idcoll, id0coll, id1coll, id2coll, id3coll, mf_coll, m0_coll, m1_coll, m2_coll, m3_coll, r_coll, k0, k1, k2, k3, status_coll], fmt='%d %f %f %d %d %d %d %d %d %f %f %f %f %f %f %d %d %d %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.R 16.K0 17.K1 18.K2 19.K3 20.Status(1-done; 2&3-dissolved)', comments='#')
+
+        np.savetxt(sourcedir[i]+'Incluster_'+typeflag+'.dat', np.c_[model_merge, timesemerge, timesemerge_myr, idsemerge, id0merge, id1merge, mf_merge, m0_merge, m1_merge, r_merge, status_merge, primordial_bin], fmt='%d %f %f %d %d %d %f %f %f %f %d %d', delimiter='', header='1.Model 2.Time(code) 3.Time(Myr) 4.IDM 5.ID0 6.ID1 7.MM 8.M0 9.M1 10.R  14.Status(1-done; 2&3-dissolved) 15.Primordial?', comments='#')
+        ##Turn off dyn_any for BBH
+        ##tform_semerge, primordial_bin, dynamics_ejection, 11.Tform(Myr) 12.Primordial 13.Dynamics?, %f %d %d
+
+        np.savetxt(sourcedir[i]+'num_merger_'+typeflag+'.dat', np.c_[Models, Ncoll, Ncoll2, Ncoll3, Ncoll4, Nsemerge, Nesc, Nescmerge, [1]], fmt='%d %d %d %d %d %d %d %d %d', header='1.Model 2.Ncoll 3.Ncoll2 4.Ncoll3 5.Ncoll4 6.Nsemerge 7.Nesc 8.Nescmerge 9.Status(1-done; 2&3-dissolved)', delimiter='', comments='#')
+
 
 
 def find_all_mergers_WDs(pathlist, start, end, typeflag):   ##Mergers with WDs both in the cluster and escaped
@@ -2713,6 +3050,29 @@ def find_bhspin_esc(sourcestr):
     return tesc_bh, id0_bh, id1_bh, s0_bh, s1_bh
 
 
+def find_bhspin_esc_restart(sourcestr):
+    escfile = np.sort(glob(sourcestr+'*.esc.dat'))
+
+    tesc_bh = []; id0_bh = []; id1_bh = []; s0_bh = []; s1_bh = []
+    t_last = 0
+    for ii in range(len(escfile)):
+        with open(escfile[ii], 'r') as fesc:
+            next(fesc)
+            for line in fesc:
+                dataesc=line.split()
+                if float(dataesc[1])<t_last:
+                    continue
+
+                if int(dataesc[14])==1 and int(dataesc[22])==14 and int(dataesc[23])==14:
+                    tesc_bh.append(float(dataesc[1]))
+                    id0_bh.append(int(dataesc[17])); id1_bh.append(int(dataesc[18]))
+                    s0_bh.append(float(dataesc[58])); s1_bh.append(float(dataesc[59]))
+
+                t_last = float(dataesc[1])
+
+
+    return tesc_bh, id0_bh, id1_bh, s0_bh, s1_bh
+
 
 ##Find merger generations of BBHs
 def find_BBH_gen_spin(savepath):
@@ -3126,8 +3486,844 @@ def find_BBH_gen_spin(savepath):
 
        
 
+##Find merger generations of BBHs
+def find_BBH_gen_spin_vel(savepath):
+    from IPython.display import display
 
+    pathlist = np.genfromtxt(savepath+'paths.dat', dtype=str)
+    paths = pathlist[:,0]
     
+    t_hub = 14000.
+
+    model_no = []
+    IDM = []; IDs = [[],[],[],[]]; bbh_type = []; t_mer = []; tm_code = []
+    MM = []; Ms = [[],[],[],[]]
+    
+    bbh_col = np.genfromtxt(savepath+'GWcap_BBH_maingrid.dat')
+    num_col = bbh_col[:,3]
+    bbh_mer = np.genfromtxt(savepath+'Incluster_BBH_maingrid.dat')
+    bbh_esc = np.genfromtxt(savepath+'Esc_BBH_maingrid.dat')
+    t_merger = bbh_esc[:,2]+bbh_esc[:,3]
+
+    ##GW cap
+    IDM = IDM+list(bbh_col[:,4])
+    IDs[0] = IDs[0]+list(bbh_col[:,5])
+    IDs[1] = IDs[1]+list(bbh_col[:,6])
+    IDs[2] = IDs[2]+list(bbh_col[:,7])
+    IDs[3] = IDs[3]+list(bbh_col[:,8])
+    bbh_type = bbh_type+list(np.full_like(bbh_col[:,10], 1))
+    t_mer = t_mer + list(bbh_col[:,2])
+    model_no = model_no+list(bbh_col[:,0])
+    tm_code = tm_code+list(bbh_col[:,1])
+    MM = MM+list(bbh_col[:,9])
+    Ms[0] = Ms[0]+list(bbh_col[:,10]); Ms[1] = Ms[1]+list(bbh_col[:,11])
+    Ms[2] = Ms[2]+list(bbh_col[:,12]); Ms[3] = Ms[3]+list(bbh_col[:,13])
+
+    ##Incluster mer
+    IDM = IDM+list(bbh_mer[:,3])
+    IDs[0] = IDs[0]+list(bbh_mer[:,4])
+    IDs[1] = IDs[1]+list(bbh_mer[:,5])
+    IDs[2] = IDs[2]+list(np.full_like(bbh_mer[:,4], -100))
+    IDs[3] = IDs[3]+list(np.full_like(bbh_mer[:,4], -100))
+    bbh_type = bbh_type+list(np.full_like(bbh_mer[:,7], 2))
+    t_mer = t_mer + list(bbh_mer[:,2])
+    model_no = model_no+list(bbh_mer[:,0])
+    tm_code = tm_code+list(bbh_mer[:,1])
+    MM = MM+list(bbh_mer[:,6])
+    Ms[0] = Ms[0]+list(bbh_mer[:,7]); Ms[1] = Ms[1]+list(bbh_mer[:,8])
+    Ms[2] = Ms[2]+list(np.full_like(bbh_mer[:,4], -100)); Ms[3] = Ms[3]+list(np.full_like(bbh_mer[:,4], -100))
+
+
+    ##Escape
+    IDM = IDM+list(np.full_like(bbh_esc[:,4], -100))
+    IDs[0] = IDs[0]+list(bbh_esc[:,6])
+    IDs[1] = IDs[1]+list(bbh_esc[:,7])
+    IDs[2] = IDs[2]+list(np.full_like(bbh_esc[:,6], -100))
+    IDs[3] = IDs[3]+list(np.full_like(bbh_esc[:,6], -100))
+    bbh_type = bbh_type+list(np.full_like(bbh_esc[:,4], 3))
+    t_mer = t_mer + list(t_merger)
+    model_no = model_no+list(bbh_esc[:,0])
+    tm_code = tm_code+list(bbh_esc[:,1])
+    MM = MM+list(bbh_esc[:,4]+bbh_esc[:,5])
+    Ms[0] = Ms[0]+list(bbh_esc[:,4]); Ms[1] = Ms[1]+list(bbh_esc[:,5])
+    Ms[2] = Ms[2]+list(np.full_like(bbh_esc[:,4], -100)); Ms[3] = Ms[3]+list(np.full_like(bbh_esc[:,4], -100))
+
+
+    unique_modelno = np.unique(model_no)
+    model_no = np.array(model_no)
+    IDM = np.array(IDM)
+    IDs[0] = np.array(IDs[0]); IDs[1] = np.array(IDs[1])
+    IDs[2] = np.array(IDs[2]); IDs[3] = np.array(IDs[3])
+    bbh_type = np.array(bbh_type)
+    t_mer = np.array(t_mer)
+    tm_code = np.array(tm_code)
+
+    MM = np.array(MM)
+    Ms[0] = np.array(Ms[0]); Ms[1] = np.array(Ms[1])
+    Ms[2] = np.array(Ms[2]); Ms[3] = np.array(Ms[3])
+
+
+    fnew = open(savepath+'All_BBH_with_gen_spin_vel.txt', 'w+')
+    fnew.write('#1.Model 2.Time[Myr] 3.Time[code] 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.GM 16.G0 17.G1 18.G2 19.G3 20.spinm 21.spin0 22.spin1 23.vkick[km/s] 24.vesc[km/s]\n')
+    fnew.write('#Time[code] for escaped systems are the time of escape, while Time[Myr] for escaped systems are the merger time\n')
+
+    ##marking repeated mergers
+    #gen_mer = [[],[],[]]
+
+    ngrt3 = 0  ##check how many mergers have more than 2 BHs
+
+    for xx in range(len(unique_modelno)): #len(unique_modelno)
+        #if unique_modelno[xx]!=11: #11,22
+        #    continue
+
+        path_no = int(unique_modelno[xx])
+        filestr=paths[path_no]+'initial'
+        collfile=filestr+'.collision.log'
+        semergefile=filestr+'.semergedisrupt.log'
+        collfile2=filestr+'2.collision.log'
+        semergefile2=filestr+'2.semergedisrupt.log'
+
+        t_conv=dyn.conv('t', filestr+'.conv.sh')
+
+        tmer_model = t_mer[(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        IDM_model = IDM[(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID0_model = IDs[0][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID1_model = IDs[1][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID2_model = IDs[2][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID3_model = IDs[3][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        tm_code_model = tm_code[(model_no==unique_modelno[xx])]
+        bbh_type_model = bbh_type[(model_no==unique_modelno[xx])]
+
+        MM_model = MM[(model_no==unique_modelno[xx])]
+        M0_model = Ms[0][(model_no==unique_modelno[xx])]
+        M1_model = Ms[1][(model_no==unique_modelno[xx])]
+        M2_model = Ms[2][(model_no==unique_modelno[xx])]
+        M3_model = Ms[3][(model_no==unique_modelno[xx])]
+        
+        ##sorting
+        index_sort = np.argsort(tm_code_model)
+        #print(tmer_model[index_sort])
+        
+        IDM_sort = IDM_model[index_sort]
+        ID0_sort = ID0_model[index_sort]
+        ID1_sort = ID1_model[index_sort]
+        ID2_sort = ID2_model[index_sort]
+        ID3_sort = ID3_model[index_sort]
+        tm_code_sort = tm_code_model[index_sort]
+        tm_myr_sort = tmer_model[index_sort]
+        bbh_type_sort = bbh_type_model[index_sort]
+
+        MM_sort = MM_model[index_sort]
+        M0_sort = M0_model[index_sort]
+        M1_sort = M1_model[index_sort]
+        M2_sort = M2_model[index_sort]
+        M3_sort = M3_model[index_sort]
+
+
+        #index_unsort = np.argsort(index_sort)
+
+        #########Find spins##############
+        ###First get the spins of ejected mergers from the esc file###
+        tesc_bh, id0_escbh, id1_escbh, s0_escbh, s1_escbh = find_bhspin_esc(filestr)
+        id0_escbh = np.array(id0_escbh); id1_escbh = np.array(id1_escbh)
+        s0_escbh = np.array(s0_escbh); s1_escbh = np.array(s1_escbh)
+
+        ###Then find the spins and vel for each merger###
+        spin0_sort = []; spin1_sort = []; spinf_sort = []
+        vkick_sort = []; vesc_sort = []
+        bhmerger = np.genfromtxt(filestr+'.bhmerger.dat', usecols = [0,3,4,7,8,10,11,12])
+        if os.path.isfile(filestr+'2.bhmerger.dat') and os.path.getsize(filestr+'2.bhmerger.dat') > 0:
+            bhmerger2 = np.genfromtxt(filestr+'2.bhmerger.dat', usecols = [0,3,4,7,8,10,11,12])
+            bhmerger = np.concatenate((bhmerger, bhmerger2))
+
+
+        if len(bhmerger)==0:
+            s0 = np.array([])
+        elif bhmerger.ndim==1:
+            s0=np.array([bhmerger[3]]); s1=np.array([bhmerger[4]]); sf=np.array([bhmerger[5]])
+            id0_bhmer=np.array([bhmerger[1]]); id1_bhmer=np.array([bhmerger[2]])
+            vk = np.array([bhmerger[6]]); ve = np.array([bhmerger[7]])
+        else:
+            s0=bhmerger[:,3]; s1=bhmerger[:,4]; sf=bhmerger[:,5]
+            id0_bhmer=bhmerger[:,1]; id1_bhmer=bhmerger[:,2]
+            vk = bhmerger[:,6]; ve = bhmerger[:,7]
+
+        for hh in range(len(ID0_sort)):
+            s0_temp=-100; s1_temp=-100; s2_temp=-100
+            vk_temp=-100; ve_temp=-100
+
+            if ID2_sort[hh]!=-100:
+                spin0_sort.append(s0_temp); spin1_sort.append(s1_temp)
+                spinf_sort.append(sf_temp)
+                vkick_sort.append(vk_temp); vesc_sort.append(ve_temp)
+                ngrt3+=1
+                continue
+
+            if bbh_type_sort[hh]!=3 and len(s0)>0:
+                if len(s0[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])])==0:
+                    print('not found', ID0_sort[hh], bbh_type_sort[hh], filestr)
+                s0_temp = s0[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                s1_temp = s1[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                sf_temp = sf[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                vk_temp = vk[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                ve_temp = ve[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                if len(s0[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])])>1:
+                    print('error', ID0_sort[hh], bbh_type_sort[hh], filestr)
+            else:
+                s0_temp = s0_escbh[(id0_escbh==ID0_sort[hh]) & (id1_escbh==ID1_sort[hh])][0]
+                s1_temp = s1_escbh[(id0_escbh==ID0_sort[hh]) & (id1_escbh==ID1_sort[hh])][0]
+                sf_temp = -100
+                vk_temp = -100; ve_temp = -100
+                if len(s0_escbh[(id0_escbh==ID0_sort[hh]) & (id1_escbh==ID1_sort[hh])])>1:
+                    print('error', ID0_sort[hh], bbh_type_sort[hh], filestr)
+
+
+            if s0_temp==-100: print('not found', ID0_sort[hh], bbh_type_sort[hh], filestr)
+
+            spin0_sort.append(s0_temp); spin1_sort.append(s1_temp)
+            spinf_sort.append(sf_temp)
+            vkick_sort.append(vk_temp); vesc_sort.append(ve_temp)
+
+        #print(spin0_sort, spin1_sort)
+
+
+        #######Extract collision/merger history#######
+        hist_idm = ecm.coll_merger_hist(paths[path_no], IDM_sort, tm_code_sort, 14)
+        allkeys = list(hist_idm.keys())
+        #print(len(hist_idm), len(allkeys))
+        #print(hist_idm)
+
+        
+        ######Find escapers since some IDs are recycled!!!########
+        tesc_code = []; idesc = []
+        escfile=filestr+'.esc.dat'
+        with open(escfile, 'r') as fesc:
+            next(fesc)
+            for line in fesc:
+                dataesc=line.split()
+                if int(dataesc[14])==1:
+                    if float(dataesc[17]) in IDM_sort:
+                        tesc_code.append(float(dataesc[1]))
+                        idesc.append(int(dataesc[17]))
+                    elif float(dataesc[18]) in IDM_sort:
+                        tesc_code.append(float(dataesc[1]))
+                        idesc.append(int(dataesc[18]))              
+                else:
+                    if float(dataesc[13]) in IDM_sort:
+                        tesc_code.append(float(dataesc[1]))
+                        idesc.append(int(dataesc[13]))
+       
+        escfile2=filestr+'2.esc.dat'
+        if os.path.isfile(escfile2) and os.path.getsize(escfile2) > 0:
+            with open(escfile2, 'r') as fesc2:
+                next(fesc2)
+                for line in fesc2:
+                    dataesc2=line.split()
+                    if int(dataesc2[14])==1:
+                        if float(dataesc2[17]) in IDM_sort:
+                            tesc_code.append(float(dataesc2[1]))
+                            idesc.append(int(dataesc2[17]))
+                        elif float(dataesc2[18]) in IDM_sort:
+                            tesc_code.append(float(dataesc2[1]))
+                            idesc.append(int(dataesc2[18]))              
+                    else:
+                        if float(dataesc2[13]) in IDM_sort:
+                            tesc_code.append(float(dataesc2[1]))
+                            idesc.append(int(dataesc2[13]))
+
+        #print(len(tesc_code), idesc)
+        tesc_code = np.array(tesc_code); idesc = np.array(idesc)
+
+
+        #######Start checking generations#########
+        check = [np.full_like(IDM_sort, 1), np.full_like(IDM_sort, 1), np.full_like(IDM_sort, 1),
+                 np.full_like(IDM_sort, 1), np.full_like(IDM_sort, 1)]
+
+        yy = 1
+        fnew.write('%d %f %f %d %d %d %d %d %d %f %f %f %f %f %d %d %d %d %d %f %f %f %f %f\n'%(path_no, tm_myr_sort[0], tm_code_sort[0], bbh_type_sort[0], IDM_sort[0], ID0_sort[0], ID1_sort[0], ID2_sort[0], ID3_sort[0], MM_sort[0], M0_sort[0], M1_sort[0], M2_sort[0], M3_sort[0], 1, 1, 1, 1, 1, spinf_sort[0], spin0_sort[0], spin1_sort[0], vkick_sort[0], vesc_sort[0]))
+        while yy < len(IDM_sort):
+            #print(IDM_sort[:yy], ID0_sort[yy], ID1_sort[yy])
+            ###Check for recycled IDs####
+            recyflag=[0,0,0,0]
+            if ID0_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID0_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID0_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('0', ID0_sort[yy], tesc_code[idesc==ID0_sort[yy]], tesc_code[idesc==ID0_sort[yy]][kk], round(tesc_code[idesc==ID0_sort[yy]][kk], 6), round(tesc_code[idesc==ID0_sort[yy]][kk], 5),tm_code_sort[yy], )
+                        recyflag[0] = 1
+                        break
+
+            if ID1_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID1_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID1_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('1', ID1_sort[yy], tesc_code[idesc==ID1_sort[yy]], tesc_code[idesc==ID1_sort[yy]][kk], tm_code_sort[yy])
+                        recyflag[1] = 1
+                        break
+
+            if ID2_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID2_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID2_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('2', ID2_sort[yy], tesc_code[idesc==ID2_sort[yy]], tesc_code[idesc==ID2_sort[yy]][kk], tm_code_sort[yy])
+                        recyflag[2] = 1
+                        break
+
+            if ID3_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID3_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID3_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('3', ID3_sort[yy], tesc_code[idesc==ID3_sort[yy]], tesc_code[idesc==ID3_sort[yy]][kk], tm_code_sort[yy])
+                        recyflag[3] = 1
+                        break
+
+
+            ###Update merger/collision generations###
+            if ID0_sort[yy]!=0:
+                if ID0_sort[yy] in IDM_sort[:yy]:
+                    index_check = np.where(IDM_sort[:yy]==ID0_sort[yy])[0]
+                    #check0_old = check[0][yy]
+                    check[0][yy] = check[0][yy]+check[4][:yy][index_check[-1]]
+                else:
+                    ##check if other coll/mer with stars change the BH's ID
+                    for ii in range(len(hist_idm)):
+                        thedict = hist_idm[allkeys[ii]]
+                        if ID0_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                            #print(thedict.values())
+                            thetime = list(thedict.keys())[list(thedict.values()).index(ID0_sort[yy])]
+                            if thetime < tm_code_sort[yy]:
+                               index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                               check[0][yy] = check[0][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[0]:
+                    check[0][yy]=1
+
+
+            if ID1_sort[yy]!=0:
+                if ID1_sort[yy] in IDM_sort[:yy]:
+                    index_check = np.where(IDM_sort[:yy]==ID1_sort[yy])[0]
+                    check[1][yy] = check[1][yy]+check[4][:yy][index_check[-1]]
+                else:
+                    ##check if other coll/mer with stars change the BH's ID
+                    for ii in range(len(hist_idm)):
+                        thedict = hist_idm[allkeys[ii]]
+                        if ID1_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                            #print(thedict.values())
+                            thetime = list(thedict.keys())[list(thedict.values()).index(ID1_sort[yy])]
+                            if thetime < tm_code_sort[yy]:
+                               index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                               check[1][yy] = check[1][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[1]:
+                    check[1][yy]=1
+                    
+
+            if ID2_sort[yy]!=0:
+                if ID2_sort[yy]!=-100:
+                    if ID2_sort[yy] in IDM_sort[:yy]:
+                        index_check = np.where(IDM_sort[:yy]==ID2_sort[yy])[0]
+                        check[2][yy] = check[2][yy]+check[4][:yy][index_check[-1]]
+                    else:
+                        ##check if other coll/mer with stars change the BH's ID
+                        for ii in range(len(hist_idm)):
+                            thedict = hist_idm[allkeys[ii]]
+                            if ID2_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                                #print(thedict.values())
+                                thetime = list(thedict.keys())[list(thedict.values()).index(ID2_sort[yy])]
+                                if thetime < tm_code_sort[yy]:
+                                   index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                                   check[2][yy] = check[2][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[2]:
+                    check[2][yy]=1
+                    
+
+            if ID3_sort[yy]!=0:
+                if ID3_sort[yy]!=-100:
+                    if ID3_sort[yy] in IDM_sort[:yy]:
+                        index_check = np.where(IDM_sort[:yy]==ID3_sort[yy])[0]
+                        check[3][yy] = check[3][yy]+check[4][:yy][index_check[-1]]
+                    else:
+                        ##check if other coll/mer with stars change the BH's ID
+                        for ii in range(len(hist_idm)):
+                            thedict = hist_idm[allkeys[ii]]
+                            if ID3_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                                #print(thedict.values())
+                                thetime = list(thedict.keys())[list(thedict.values()).index(ID3_sort[yy])]
+                                if thetime < tm_code_sort[yy]:
+                                   index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                                   check[3][yy] = check[3][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[3]:
+                    check[3][yy]=1
+                    
+
+            check[4][yy]=max(check[0][yy], check[1][yy], check[2][yy], check[3][yy])
+
+            ##saving into new file
+            fnew.write('%d %f %f %d %d %d %d %d %d %f %f %f %f %f %d %d %d %d %d %f %f %f %f %f\n'%(path_no, tm_myr_sort[yy], tm_code_sort[yy], bbh_type_sort[yy], IDM_sort[yy], ID0_sort[yy], ID1_sort[yy], ID2_sort[yy], ID3_sort[yy], MM_sort[yy], M0_sort[yy], M1_sort[yy], M2_sort[yy], M3_sort[yy], check[4][yy],check[0][yy],check[1][yy],check[2][yy],check[3][yy], spinf_sort[yy], spin0_sort[yy], spin1_sort[yy], vkick_sort[yy], vesc_sort[yy]))
+               
+            yy+=1
+            
+        #gen_mer[0] = gen_mer[0]+list(check[2])
+        #gen_mer[1] = gen_mer[1]+list(check[0])
+        #gen_mer[2] = gen_mer[2]+list(check[1])
+
+        ## creating a DataFrame
+        #dict = {'tmer_code' : tm_code_sort,
+        #        'IDM' : IDM_sort,
+        #        'ID0' : ID0_sort,
+        #        'ID1' : ID1_sort,
+        #        #'ID2' : ID2_sort,
+        #        #'ID3' : ID3_sort,
+        #        'type': bbh_type[(model_no==unique_modelno[xx]) & (IDM!=0)][index_sort],
+        #        'checkm': check[4],
+        #        'check0': check[0],
+        #        'check1': check[1]}
+        #        #'check2': check[2],
+        #        #'check3': check[3]}
+        #df = pd.DataFrame(dict)
+  #
+        ### displaying the DataFrame
+        #pd.set_option('display.max_rows', None)
+        #display(df)
+#
+        #dict = {'tmer_code' : tm_code_sort,
+        #        'IDM' : IDM_sort,
+        #        'ID0' : ID0_sort,
+        #        'ID1' : ID1_sort,
+        #        #'ID2' : ID2_model,
+        #        #'ID3' : ID3_model,
+        #        'checkm': check[4],
+        #        'check0': check[0],
+        #        'check1': check[1]}
+        #        #'check2': checkmodel2,
+        #        #'check3': checkmodel3}
+        #df = pd.DataFrame(dict)
+  #
+        ### displaying the DataFrame
+        #pd.set_option('display.max_rows', None)
+        #display(df)
+
+        
+    #fnew.close()
+    print(ngrt3)
+    
+
+
+##Find merger generations of BBHs
+def find_BBH_gen_spin_vel_restart(savepath):
+    from IPython.display import display
+
+    pathlist = np.genfromtxt(savepath+'paths.dat', dtype=str)
+    paths = pathlist[:,0]
+    
+    t_hub = 14000.
+
+    model_no = []
+    IDM = []; IDs = [[],[],[],[]]; bbh_type = []; t_mer = []; tm_code = []
+    MM = []; Ms = [[],[],[],[]]
+    pribin = []
+
+    for pa in range(len(paths)):
+        bbh_col = np.genfromtxt(paths[pa]+'GWcap_BBH.dat')
+        num_col = bbh_col[:,3]
+        bbh_mer = np.genfromtxt(paths[pa]+'Incluster_BBH.dat')
+        bbh_esc = np.genfromtxt(paths[pa]+'Esc_BBH.dat')
+        t_merger = bbh_esc[:,2]+bbh_esc[:,3]
+
+        ##GW cap
+        IDM = IDM+list(bbh_col[:,4])
+        IDs[0] = IDs[0]+list(bbh_col[:,5])
+        IDs[1] = IDs[1]+list(bbh_col[:,6])
+        IDs[2] = IDs[2]+list(bbh_col[:,7])
+        IDs[3] = IDs[3]+list(bbh_col[:,8])
+        bbh_type = bbh_type+list(np.full_like(bbh_col[:,10], 1))
+        t_mer = t_mer + list(bbh_col[:,2])
+        model_no = model_no + list(np.full_like(bbh_col[:,0], pa))
+        tm_code = tm_code+list(bbh_col[:,1])
+        MM = MM+list(bbh_col[:,9])
+        Ms[0] = Ms[0]+list(bbh_col[:,10]); Ms[1] = Ms[1]+list(bbh_col[:,11])
+        Ms[2] = Ms[2]+list(bbh_col[:,12]); Ms[3] = Ms[3]+list(bbh_col[:,13])
+        pribin = pribin + list(np.full_like(bbh_col[:,10], 0))
+
+        ##Incluster mer
+        IDM = IDM+list(bbh_mer[:,3])
+        IDs[0] = IDs[0]+list(bbh_mer[:,4])
+        IDs[1] = IDs[1]+list(bbh_mer[:,5])
+        IDs[2] = IDs[2]+list(np.full_like(bbh_mer[:,4], -100))
+        IDs[3] = IDs[3]+list(np.full_like(bbh_mer[:,4], -100))
+        bbh_type = bbh_type+list(np.full_like(bbh_mer[:,7], 2))
+        t_mer = t_mer + list(bbh_mer[:,2])
+        model_no = model_no + list(np.full_like(bbh_mer[:,0], pa))
+        tm_code = tm_code+list(bbh_mer[:,1])
+        MM = MM+list(bbh_mer[:,6])
+        Ms[0] = Ms[0]+list(bbh_mer[:,7]); Ms[1] = Ms[1]+list(bbh_mer[:,8])
+        Ms[2] = Ms[2]+list(np.full_like(bbh_mer[:,4], -100)); Ms[3] = Ms[3]+list(np.full_like(bbh_mer[:,4], -100))
+        pribin = pribin + list(bbh_mer[:,11])
+
+        ##Escape
+        IDM = IDM+list(np.full_like(bbh_esc[:,4], -100))
+        IDs[0] = IDs[0]+list(bbh_esc[:,6])
+        IDs[1] = IDs[1]+list(bbh_esc[:,7])
+        IDs[2] = IDs[2]+list(np.full_like(bbh_esc[:,6], -100))
+        IDs[3] = IDs[3]+list(np.full_like(bbh_esc[:,6], -100))
+        bbh_type = bbh_type+list(np.full_like(bbh_esc[:,4], 3))
+        t_mer = t_mer + list(t_merger)
+        model_no = model_no + list(np.full_like(bbh_esc[:,0], pa))
+        tm_code = tm_code+list(bbh_esc[:,1])
+        MM = MM+list(bbh_esc[:,4]+bbh_esc[:,5])
+        Ms[0] = Ms[0]+list(bbh_esc[:,4]); Ms[1] = Ms[1]+list(bbh_esc[:,5])
+        Ms[2] = Ms[2]+list(np.full_like(bbh_esc[:,4], -100)); Ms[3] = Ms[3]+list(np.full_like(bbh_esc[:,4], -100))
+        pribin = pribin + list(bbh_esc[:,11])
+
+
+    unique_modelno = np.unique(model_no)
+    model_no = np.array(model_no)
+    IDM = np.array(IDM)
+    IDs[0] = np.array(IDs[0]); IDs[1] = np.array(IDs[1])
+    IDs[2] = np.array(IDs[2]); IDs[3] = np.array(IDs[3])
+    bbh_type = np.array(bbh_type)
+    t_mer = np.array(t_mer)
+    tm_code = np.array(tm_code)
+
+    MM = np.array(MM)
+    Ms[0] = np.array(Ms[0]); Ms[1] = np.array(Ms[1])
+    Ms[2] = np.array(Ms[2]); Ms[3] = np.array(Ms[3])
+
+    pribin = np.array(pribin)
+
+
+    fnew = open(savepath+'All_BBH_with_gen_spin_vel.txt', 'w+')
+    fnew.write('#1.Model 2.Time[Myr] 3.Time[code] 4.Type 5.IDM 6.ID0 7.ID1 8.ID2 9.ID3 10.MM 11.M0 12.M1 13.M2 14.M3 15.GM 16.G0 17.G1 18.G2 19.G3 20.spinm 21.spin0 22.spin1 23.vkick[km/s] 24.vesc[km/s] 25.Primordial?\n')
+    fnew.write('#Time[code] for escaped systems are the time of escape, while Time[Myr] for escaped systems are the merger time\n')
+
+
+    ngrt3 = 0  ##check how many mergers have more than 2 BHs
+
+    for xx in range(len(unique_modelno)): #len(unique_modelno)
+        #if unique_modelno[xx]!=11: #11,22
+        #    continue
+
+        path_no = int(unique_modelno[xx])
+        filestr=paths[path_no]
+
+        collfile = np.sort(glob(filestr+'*.collision.log'))
+        print(collfile)
+        #semergefile=np.sort(glob(filestr+'*.semergedisrupt.log'))
+        #print(semergefile)
+
+        t_conv=dyn.conv('t', filestr+'initial.conv.sh')
+
+        tmer_model = t_mer[(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        IDM_model = IDM[(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID0_model = IDs[0][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID1_model = IDs[1][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID2_model = IDs[2][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        ID3_model = IDs[3][(model_no==unique_modelno[xx])]# & (IDM!=0)]
+        tm_code_model = tm_code[(model_no==unique_modelno[xx])]
+        bbh_type_model = bbh_type[(model_no==unique_modelno[xx])]
+
+        MM_model = MM[(model_no==unique_modelno[xx])]
+        M0_model = Ms[0][(model_no==unique_modelno[xx])]
+        M1_model = Ms[1][(model_no==unique_modelno[xx])]
+        M2_model = Ms[2][(model_no==unique_modelno[xx])]
+        M3_model = Ms[3][(model_no==unique_modelno[xx])]
+
+        pribin_model = pribin[(model_no==unique_modelno[xx])]
+        
+        ##sorting
+        index_sort = np.argsort(tm_code_model)
+        #print(tmer_model[index_sort])
+        
+        IDM_sort = IDM_model[index_sort]
+        ID0_sort = ID0_model[index_sort]
+        ID1_sort = ID1_model[index_sort]
+        ID2_sort = ID2_model[index_sort]
+        ID3_sort = ID3_model[index_sort]
+        tm_code_sort = tm_code_model[index_sort]
+        tm_myr_sort = tmer_model[index_sort]
+        bbh_type_sort = bbh_type_model[index_sort]
+
+        MM_sort = MM_model[index_sort]
+        M0_sort = M0_model[index_sort]
+        M1_sort = M1_model[index_sort]
+        M2_sort = M2_model[index_sort]
+        M3_sort = M3_model[index_sort]
+
+        pribin_sort = pribin_model[index_sort]
+
+
+        #index_unsort = np.argsort(index_sort)
+
+        #########Find spins##############
+        ###First get the spins of ejected mergers from the esc file###
+        tesc_bh, id0_escbh, id1_escbh, s0_escbh, s1_escbh = find_bhspin_esc_restart(filestr)
+        id0_escbh = np.array(id0_escbh); id1_escbh = np.array(id1_escbh)
+        s0_escbh = np.array(s0_escbh); s1_escbh = np.array(s1_escbh)
+
+        ###Then find the spins and vel for each merger###
+        spin0_sort = []; spin1_sort = []; spinf_sort = []
+        vkick_sort = []; vesc_sort = []
+        bhmergerfile = np.sort(glob(filestr+'*.bhmerger.dat'))
+        bhmerger = np.genfromtxt(bhmergerfile[0], usecols = [0,3,4,7,8,10,11,12])
+        tbhmer_last = bhmerger[:,0][-1]
+        for ii in range(1, len(bhmergerfile)):
+            bhmerger2 = np.genfromtxt(bhmergerfile[ii], usecols = [0,3,4,7,8,10,11,12])
+            bhmerger = np.concatenate((bhmerger, bhmerger2[bhmerger2[:,0]>tbhmer_last]))
+            tbhmer_last = bhmerger2[:,0][-1]
+
+
+        if len(bhmerger)==0:
+            s0 = np.array([])
+        elif bhmerger.ndim==1:
+            s0=np.array([bhmerger[3]]); s1=np.array([bhmerger[4]]); sf=np.array([bhmerger[5]])
+            id0_bhmer=np.array([bhmerger[1]]); id1_bhmer=np.array([bhmerger[2]])
+            vk = np.array([bhmerger[6]]); ve = np.array([bhmerger[7]])
+        else:
+            s0=bhmerger[:,3]; s1=bhmerger[:,4]; sf=bhmerger[:,5]
+            id0_bhmer=bhmerger[:,1]; id1_bhmer=bhmerger[:,2]
+            vk = bhmerger[:,6]; ve = bhmerger[:,7]
+
+        for hh in range(len(ID0_sort)):
+            s0_temp=-100; s1_temp=-100; s2_temp=-100
+            vk_temp=-100; ve_temp=-100
+
+            if ID2_sort[hh]!=-100:
+                spin0_sort.append(s0_temp); spin1_sort.append(s1_temp)
+                spinf_sort.append(sf_temp)
+                vkick_sort.append(vk_temp); vesc_sort.append(ve_temp)
+                ngrt3+=1
+                continue
+
+            if bbh_type_sort[hh]!=3 and len(s0)>0:
+                if len(s0[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])])==0:
+                    print('not found', ID0_sort[hh], bbh_type_sort[hh], filestr)
+                s0_temp = s0[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                s1_temp = s1[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                sf_temp = sf[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                vk_temp = vk[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                ve_temp = ve[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])][0]
+                if len(s0[(id0_bhmer==ID0_sort[hh]) & (id1_bhmer==ID1_sort[hh])])>1:
+                    print('error', ID0_sort[hh], bbh_type_sort[hh], filestr)
+            else:
+                s0_temp = s0_escbh[(id0_escbh==ID0_sort[hh]) & (id1_escbh==ID1_sort[hh])][0]
+                s1_temp = s1_escbh[(id0_escbh==ID0_sort[hh]) & (id1_escbh==ID1_sort[hh])][0]
+                sf_temp = -100
+                vk_temp = -100; ve_temp = -100
+                if len(s0_escbh[(id0_escbh==ID0_sort[hh]) & (id1_escbh==ID1_sort[hh])])>1:
+                    print('error', ID0_sort[hh], bbh_type_sort[hh], filestr)
+
+
+            if s0_temp==-100: print('not found', ID0_sort[hh], bbh_type_sort[hh], filestr)
+
+            spin0_sort.append(s0_temp); spin1_sort.append(s1_temp)
+            spinf_sort.append(sf_temp)
+            vkick_sort.append(vk_temp); vesc_sort.append(ve_temp)
+
+        #print(spin0_sort, spin1_sort)
+
+
+        #######Extract collision/merger history#######
+        hist_idm = ecm.coll_merger_hist_restart(paths[path_no], IDM_sort, tm_code_sort, 14)
+        allkeys = list(hist_idm.keys())
+        #print(len(hist_idm), len(allkeys))
+        #print(hist_idm)
+
+        
+        ######Find escapers since some IDs are recycled!!!########
+        tesc_code = []; idesc = []
+        escfile = np.sort(glob(filestr+'*.esc.dat'))
+        tesc_last = 0
+        for jj in range(len(escfile)):
+            with open(escfile[jj], 'r') as fesc:
+                next(fesc)
+                for line in fesc:
+                    dataesc=line.split()
+                    if float(dataesc[1]) < tesc_last:
+                        continue
+
+                    if int(dataesc[14])==1:
+                        if float(dataesc[17]) in IDM_sort:
+                            tesc_code.append(float(dataesc[1]))
+                            idesc.append(int(dataesc[17]))
+                        elif float(dataesc[18]) in IDM_sort:
+                            tesc_code.append(float(dataesc[1]))
+                            idesc.append(int(dataesc[18]))              
+                    else:
+                        if float(dataesc[13]) in IDM_sort:
+                            tesc_code.append(float(dataesc[1]))
+                            idesc.append(int(dataesc[13]))
+
+                    tesc_last = float(dataesc[1])
+       
+
+        #print(len(tesc_code), idesc)
+        tesc_code = np.array(tesc_code); idesc = np.array(idesc)
+
+
+        #######Start checking generations#########
+        check = [np.full_like(IDM_sort, 1), np.full_like(IDM_sort, 1), np.full_like(IDM_sort, 1),
+                 np.full_like(IDM_sort, 1), np.full_like(IDM_sort, 1)]
+
+        yy = 1
+        fnew.write('%d %f %f %d %d %d %d %d %d %f %f %f %f %f %d %d %d %d %d %f %f %f %f %f %d\n'%(path_no, tm_myr_sort[0], tm_code_sort[0], bbh_type_sort[0], IDM_sort[0], ID0_sort[0], ID1_sort[0], ID2_sort[0], ID3_sort[0], MM_sort[0], M0_sort[0], M1_sort[0], M2_sort[0], M3_sort[0], 1, 1, 1, 1, 1, spinf_sort[0], spin0_sort[0], spin1_sort[0], vkick_sort[0], vesc_sort[0], pribin_sort[0]))
+        while yy < len(IDM_sort):
+            #print(IDM_sort[:yy], ID0_sort[yy], ID1_sort[yy])
+            ###Check for recycled IDs####
+            recyflag=[0,0,0,0]
+            if ID0_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID0_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID0_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID0_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('0', ID0_sort[yy], tesc_code[idesc==ID0_sort[yy]], tesc_code[idesc==ID0_sort[yy]][kk], round(tesc_code[idesc==ID0_sort[yy]][kk], 6), round(tesc_code[idesc==ID0_sort[yy]][kk], 5),tm_code_sort[yy], )
+                        recyflag[0] = 1
+                        break
+
+            if ID1_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID1_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID1_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID1_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('1', ID1_sort[yy], tesc_code[idesc==ID1_sort[yy]], tesc_code[idesc==ID1_sort[yy]][kk], tm_code_sort[yy])
+                        recyflag[1] = 1
+                        break
+
+            if ID2_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID2_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID2_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID2_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('2', ID2_sort[yy], tesc_code[idesc==ID2_sort[yy]], tesc_code[idesc==ID2_sort[yy]][kk], tm_code_sort[yy])
+                        recyflag[2] = 1
+                        break
+
+            if ID3_sort[yy] in idesc:
+                for kk in range(len(tesc_code[idesc==ID3_sort[yy]])-1, -1, -1):
+                    if round(tesc_code[idesc==ID3_sort[yy]][kk], 6) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][kk], 5) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][kk], 4) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][kk], 3) < tm_code_sort[yy] and round(tesc_code[idesc==ID3_sort[yy]][-1], 4) != round(tm_code_sort[yy], 4):
+                        print('3', ID3_sort[yy], tesc_code[idesc==ID3_sort[yy]], tesc_code[idesc==ID3_sort[yy]][kk], tm_code_sort[yy])
+                        recyflag[3] = 1
+                        break
+
+
+            ###Update merger/collision generations###
+            if ID0_sort[yy]!=0:
+                if ID0_sort[yy] in IDM_sort[:yy]:
+                    index_check = np.where(IDM_sort[:yy]==ID0_sort[yy])[0]
+                    #check0_old = check[0][yy]
+                    check[0][yy] = check[0][yy]+check[4][:yy][index_check[-1]]
+                else:
+                    ##check if other coll/mer with stars change the BH's ID
+                    for ii in range(len(hist_idm)):
+                        thedict = hist_idm[allkeys[ii]]
+                        if ID0_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                            #print(thedict.values())
+                            thetime = list(thedict.keys())[list(thedict.values()).index(ID0_sort[yy])]
+                            if thetime < tm_code_sort[yy]:
+                               index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                               check[0][yy] = check[0][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[0]:
+                    check[0][yy]=1
+
+
+            if ID1_sort[yy]!=0:
+                if ID1_sort[yy] in IDM_sort[:yy]:
+                    index_check = np.where(IDM_sort[:yy]==ID1_sort[yy])[0]
+                    check[1][yy] = check[1][yy]+check[4][:yy][index_check[-1]]
+                else:
+                    ##check if other coll/mer with stars change the BH's ID
+                    for ii in range(len(hist_idm)):
+                        thedict = hist_idm[allkeys[ii]]
+                        if ID1_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                            #print(thedict.values())
+                            thetime = list(thedict.keys())[list(thedict.values()).index(ID1_sort[yy])]
+                            if thetime < tm_code_sort[yy]:
+                               index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                               check[1][yy] = check[1][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[1]:
+                    check[1][yy]=1
+                    
+
+            if ID2_sort[yy]!=0:
+                if ID2_sort[yy]!=-100:
+                    if ID2_sort[yy] in IDM_sort[:yy]:
+                        index_check = np.where(IDM_sort[:yy]==ID2_sort[yy])[0]
+                        check[2][yy] = check[2][yy]+check[4][:yy][index_check[-1]]
+                    else:
+                        ##check if other coll/mer with stars change the BH's ID
+                        for ii in range(len(hist_idm)):
+                            thedict = hist_idm[allkeys[ii]]
+                            if ID2_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                                #print(thedict.values())
+                                thetime = list(thedict.keys())[list(thedict.values()).index(ID2_sort[yy])]
+                                if thetime < tm_code_sort[yy]:
+                                   index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                                   check[2][yy] = check[2][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[2]:
+                    check[2][yy]=1
+                    
+
+            if ID3_sort[yy]!=0:
+                if ID3_sort[yy]!=-100:
+                    if ID3_sort[yy] in IDM_sort[:yy]:
+                        index_check = np.where(IDM_sort[:yy]==ID3_sort[yy])[0]
+                        check[3][yy] = check[3][yy]+check[4][:yy][index_check[-1]]
+                    else:
+                        ##check if other coll/mer with stars change the BH's ID
+                        for ii in range(len(hist_idm)):
+                            thedict = hist_idm[allkeys[ii]]
+                            if ID3_sort[yy] in thedict.values() and allkeys[ii]!='0':
+                                #print(thedict.values())
+                                thetime = list(thedict.keys())[list(thedict.values()).index(ID3_sort[yy])]
+                                if thetime < tm_code_sort[yy]:
+                                   index_check = np.where(IDM_sort[:yy]==float(allkeys[ii]))[0]
+                                   check[3][yy] = check[3][yy]+check[4][:yy][index_check[-1]]
+
+                if recyflag[3]:
+                    check[3][yy]=1
+                    
+
+            check[4][yy]=max(check[0][yy], check[1][yy], check[2][yy], check[3][yy])
+
+            ##saving into new file
+            fnew.write('%d %f %f %d %d %d %d %d %d %f %f %f %f %f %d %d %d %d %d %f %f %f %f %f %d\n'%(path_no, tm_myr_sort[yy], tm_code_sort[yy], bbh_type_sort[yy], IDM_sort[yy], ID0_sort[yy], ID1_sort[yy], ID2_sort[yy], ID3_sort[yy], MM_sort[yy], M0_sort[yy], M1_sort[yy], M2_sort[yy], M3_sort[yy], check[4][yy],check[0][yy],check[1][yy],check[2][yy],check[3][yy], spinf_sort[yy], spin0_sort[yy], spin1_sort[yy], vkick_sort[yy], vesc_sort[yy], pribin_sort[yy]))
+               
+            yy+=1
+
+
+        ## creating a DataFrame
+        #dict = {'tmer_code' : tm_code_sort,
+        #        'IDM' : IDM_sort,
+        #        'ID0' : ID0_sort,
+        #        'ID1' : ID1_sort,
+        #        #'ID2' : ID2_sort,
+        #        #'ID3' : ID3_sort,
+        #        'type': bbh_type[(model_no==unique_modelno[xx]) & (IDM!=0)][index_sort],
+        #        'checkm': check[4],
+        #        'check0': check[0],
+        #        'check1': check[1]}
+        #        #'check2': check[2],
+        #        #'check3': check[3]}
+        #df = pd.DataFrame(dict)
+  #
+        ### displaying the DataFrame
+        #pd.set_option('display.max_rows', None)
+        #display(df)
+#
+        #dict = {'tmer_code' : tm_code_sort,
+        #        'IDM' : IDM_sort,
+        #        'ID0' : ID0_sort,
+        #        'ID1' : ID1_sort,
+        #        #'ID2' : ID2_model,
+        #        #'ID3' : ID3_model,
+        #        'checkm': check[4],
+        #        'check0': check[0],
+        #        'check1': check[1]}
+        #        #'check2': checkmodel2,
+        #        #'check3': checkmodel3}
+        #df = pd.DataFrame(dict)
+  #
+        ### displaying the DataFrame
+        #pd.set_option('display.max_rows', None)
+        #display(df)
+
+        
+    fnew.close()
+    print(ngrt3)
 
 
 
