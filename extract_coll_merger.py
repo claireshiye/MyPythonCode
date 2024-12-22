@@ -3,6 +3,7 @@ import os,sys
 from collections import Counter
 import re
 import gzip
+from glob import glob
 import scripts
 import scripts1
 import scripts2
@@ -995,6 +996,7 @@ def coll_merger_hist_previous(modelpath, IDinit_list, Tinit_list, startype):
 
     #print(modelpath, 'done extracting data')
 
+
     timem = np.array(timem)
     idm = np.array(idm)
     ids[0] = np.array(ids[0]); ids[1] = np.array(ids[1])
@@ -1023,6 +1025,7 @@ def coll_merger_hist_previous(modelpath, IDinit_list, Tinit_list, startype):
     dict_allid = {}
     for xx in range(len(IDinit_list)):
         if IDinit_list[xx]==-100 or IDinit_list[xx]==0:
+
             continue
             
         #print(xx, IDinit_list[xx])
@@ -1096,5 +1099,199 @@ def coll_merger_hist_previous(modelpath, IDinit_list, Tinit_list, startype):
 
         #print(idm_list, tm_list)
         dict_allid[str(int(IDinit_list[xx]))] = {'time': tm_list, 'ids': idm_list,'ms': m_list, 'ks':k_list}
+
+    return dict_allid
+
+
+def coll_merger_hist_restart(modelpath, IDinit_list, Tinit_list, startype):
+    '''Input initial IDs, output the coll/mer history (IDs, time of coll/mer)'''
+    '''Tinit_list is in code unit'''
+
+    filestr=modelpath
+
+    t_conv=dyn.conv('t', filestr+'initial.conv.sh')
+
+    collfile = np.sort(glob(filestr+'*.collision.log'))
+    colldata = []
+    for xx in range(len(collfile)):
+        #print(type(scripts1.readcollfile(collfile[xx])))
+        colldata = colldata + scripts1.readcollfile(collfile[xx])
+     
+    timem = []; idm = []; ids = [[],[],[],[]]
+    tcoll_last = 0
+    for jj in range(len(colldata)):
+        line=colldata[jj].split()
+        if float(line[0]) < tcoll_last:
+            continue
+
+        if line[1]=='single-single':  ##Single-single star collision
+                colltype='SS'
+                list_star=[int(line[11]), int(line[12])]
+                num_star=Counter(list_star)
+                if int(line[10])==startype and num_star[startype]==1:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(-100); ids[3].append(-100)
+
+
+        if line[1]=='binary-single':   ##Binary-single collision
+            colltype='BS'
+            if int(line[2])==2:
+                list_star=[int(line[11]), int(line[12])]
+                num_star=Counter(list_star)
+                if int(line[10])==startype and num_star[startype]==1:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(-100); ids[3].append(-100)
+
+
+            if int(line[2])==3:
+                list_star=[int(line[13]), int(line[14]), int(line[15])]
+                num_star=Counter(list_star)
+                if int(line[12])==startype and num_star[startype]==1:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(int(line[9])); ids[3].append(-100)
+
+
+        if line[1]=='binary-binary':   ##Binary-binary collision
+            colltype='BB'
+            if int(line[2])==2:
+                list_star=[int(line[11]), int(line[12])]
+                num_star=Counter(list_star)
+                if int(line[10])==startype and num_star[startype]==1:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(-100); ids[3].append(-100)
+
+
+            if int(line[2])==3:
+                list_star=[int(line[13]), int(line[14]), int(line[15])]
+                num_star=Counter(list_star)
+                if int(line[12])==startype and num_star[startype]==1:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(int(line[9])); ids[3].append(-100)
+
+
+            if int(line[2])==4:
+                list_star=[int(line[15]), int(line[16]), int(line[17]), int(line[18])]
+                num_star=Counter(list_star)
+                if int(line[14])==startype and num_star[startype]==1:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(int(line[9])); ids[3].append(int(line[11]))
+
+        tcoll_last = float(line[0])
+
+
+    semergefile=np.sort(glob(filestr+'*.semergedisrupt.log'))
+    semergedata = []
+    for yy in range(len(semergefile)):
+        #print(type(scripts2.readmergefile(semergefile[yy])))
+        semergedata = semergedata + scripts2.readmergefile(semergefile[yy])
+
+    tsem_last = 0
+    for kk in range(len(semergedata)):
+        line=semergedata[kk].split()
+        if float(line[0]) < tsem_last:
+            continue
+
+        if int(line[1])<3:
+            list_star=[int(line[-2]),int(line[-1])]
+            num_star=Counter(list_star)
+            if int(line[-3])==startype and num_star[startype]==1:
+                #print(line)
+                timem.append(float(line[0]))
+                idm.append(int(line[2]))
+                ids[0].append(int(line[4])); ids[1].append(int(line[6]))
+                ids[2].append(-100); ids[3].append(-100)
+
+        tsem_last = float(line[0])
+
+    print(modelpath, 'done extracting data')
+
+
+    timem = np.array(timem)
+    idm = np.array(idm)
+    ids[0] = np.array(ids[0]); ids[1] = np.array(ids[1])
+    ids[2] = np.array(ids[2]); ids[3] = np.array(ids[3])
+    
+    tindex_sort = np.argsort(timem)
+    timem_sort = timem[tindex_sort]
+    idm_sort = idm[tindex_sort]
+    id0_sort = ids[0][tindex_sort]
+    id1_sort = ids[1][tindex_sort]
+    id2_sort = ids[2][tindex_sort]
+    id3_sort = ids[3][tindex_sort]
+
+    dict_allid = {}
+    for xx in range(len(IDinit_list)):
+        if IDinit_list[xx]==-100:
+            continue
+            
+        #print(xx, IDinit_list[xx])
+
+        oldidm = IDinit_list[xx]
+        oldtime = Tinit_list[xx]
+
+        timem_tcut = timem_sort[timem_sort>oldtime]
+        idm_tcut = idm_sort[timem_sort>oldtime]
+        id0_tcut = id0_sort[timem_sort>oldtime]
+        id1_tcut = id1_sort[timem_sort>oldtime]
+        id2_tcut = id2_sort[timem_sort>oldtime]
+        id3_tcut = id3_sort[timem_sort>oldtime]
+
+        #print(timem_tcut, idm_tcut)
+
+        yy=0
+        tm_list = []; idm_list = []
+        check = 0
+        while yy < len(timem_tcut):
+            if oldidm in id0_tcut[yy:] or oldidm in id1_tcut[yy:] or oldidm in id2_tcut[yy:] or oldidm in id3_tcut[yy:]:
+                check=1
+                new_index_list = [np.where(oldidm==id0_tcut[yy:])[0], np.where(oldidm==id1_tcut[yy:])[0],
+                                  np.where(oldidm==id2_tcut[yy:])[0], np.where(oldidm==id3_tcut[yy:])[0]]
+                #print(new_index_list)
+                actual_index_list = []
+                for zz in range(len(new_index_list)):
+                    if new_index_list[zz].size>0:
+                        actual_index_list.append(new_index_list[zz][0])
+
+                new_index = np.min(actual_index_list)
+                #print(new_index)
+
+                newtm = timem_tcut[yy:][new_index]
+                newidm = idm_tcut[yy:][new_index]
+                #print(newidm, newtm)
+                idm_list.append(newidm)
+                tm_list.append(newtm)
+
+            #if new_index==0:
+            #    break
+
+            if not check:
+                break
+            else:
+                oldidm = newidm
+                if new_index==0:
+                    new_index+=1
+                yy=yy+new_index
+                check=0
+
+        #print(idm_list, tm_list)
+        dict_allid[str(int(IDinit_list[xx]))] = dict(zip(tm_list,idm_list, ))
 
     return dict_allid

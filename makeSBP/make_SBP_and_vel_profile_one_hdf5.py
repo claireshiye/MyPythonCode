@@ -15,11 +15,12 @@ import matplotlib.pyplot as plt
 #import extract_observed_prop as OBS
 import random
 import scipy.optimize as opt
+import h5py
 import unit_convert as uc
 
 
 
-sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
+sys.path.insert(1, '/fs/lustre/cita/claireshiye/cmctoolkit')
 import cmctoolkit as cmct
 
 
@@ -153,7 +154,7 @@ def project_and_radially_sort(r3d, PROJ=(0,1)):
     return r2d, ind
 
 
-def make_2D_projection(modelpath, thekey, units, writefilename, dist_sun, themetal, SEEDY=10, PROJ=(0,1)):
+def make_2D_projection(modelpath, filestring, thekey, units, writefilename, dist_sun, themetal, SEEDY=10, PROJ=(0,1)):
     #units = scripts.read_units(filestring)
 
     snapno = read_keys(thekey)[0]; snaptime = float(read_keys(thekey)[1])
@@ -164,7 +165,7 @@ def make_2D_projection(modelpath, thekey, units, writefilename, dist_sun, themet
     t_myr = snaptime*units[0]['t_myr']
 
     #read the snapfile
-    snapfile = cmct.Snapshot(fname=modelpath+'initial.snapshots.h5', 
+    snapfile = cmct.Snapshot(fname=modelpath+filestring+'.snapshots.h5', 
                              snapshot_name=thekey, conv=modelpath+'initial.conv.sh', 
                              dist=dist_sun, # distance to cluster in kpc
                              z=themetal)
@@ -825,18 +826,22 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
     M_total_units = units[0]['m_msun']
     pc = units[0]['l_pc']
 
-    prefix = 'initial'
+    prefix = 'initial11'
     snap_h5 = prefix+'.snapshots.h5'
-    with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
-        snap_keys = snap_hdf.keys()
+    #with pd.HDFStore(sourcepath+snap_h5) as snap_hdf:
+    #    snap_keys = snap_hdf.keys()
+    fsnap = h5py.File(sourcepath+snap_h5, 'r')
+    snap_keys = list(fsnap.keys())
 
+    print(snap_keys)
     t_conv = conv('t', sourcepath+'initial.conv.sh')
 
     snapno = []; snaptime = []
     for ii in range(len(snap_keys)):
         theno = read_keys(snap_keys[ii])[0]; thetime = read_keys(snap_keys[ii])[1]
         snapno.append(int(theno)); snaptime.append(thetime)
-        
+    print(snapno, snaptime)    
+    
     snapno_sort, snaptime_sort = (np.array(t) for t in zip(*sorted(zip(snapno, snaptime))))
     np.savetxt(sourcepath+'snap_keys.txt',
               np.c_[snapno_sort, snaptime_sort], fmt = '%s %s', header = '1.snap_no 2.snap_time', comments = '#')
@@ -873,15 +878,15 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
             break
         try:
             #f = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','r')
-            f = open(sourcepath+'initial.snap'+no_snap+'.2D_SBPLcut12_NCUT-1.dat','r')
+            f = open(sourcepath+prefix+'.snap'+no_snap+'.vel_dispersion_vr_pm_100_0.86.dat','r')
             #f = open(sourcepath+'initial.snap'+no_snap+'.test','r')
             print(no_snap, 'is done')
             continue
         except:
             try:
-                #make_2D_projection(sourcepath, key_snap, units, sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat', thedist, Z)
+                #make_2D_projection(sourcepath, prefix, key_snap, units, sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat', thedist, Z)
                 #os.system('gzip '+sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat')
-                #print('made 2D projection')
+                print('made 2D projection')
 
                 ##### make cluster params file
                 #f2 = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','w')
@@ -951,21 +956,22 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
                 number_density2 = count_obj/(rc**3.)
                 #print 'number_density', number_density
     
+                #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
+                #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
+
                 #print("#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2", file = f2)
-                ##print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
-                ##print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
                 #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
                 #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
 
                 #f2.close()
-                ##f5.close()
+                #f5.close()
                 print('cluster_params done')    
         
                 ###############
                 print('made params file')
                 ##get_sbp_from_2D_projection(path+string, snapno)
                 #get_sbp_from_2D_projection_ncut(sourcepath+string, no_snap, BINNO=50, LCUT=12, NCUT=0.85)
-                get_sbp_from_2D_projection_ncut(sourcepath+prefix, no_snap, BINNO=50, LCUT=12, NCUT=-1)
+                #get_sbp_from_2D_projection_ncut(sourcepath+prefix, no_snap, BINNO=50, LCUT=12, NCUT=-1)
                 print(key_snap, 'made SBP')
                 #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
                 #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
