@@ -872,19 +872,19 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
             print('stop!')
             break
         try:
-            f = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','r')
-            #f = open(sourcepath+'initial.snap'+no_snap+'.vel_dispersion_vr_pm_700_0_updated.dat','r')
+            #f = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','r')
+            f = open(sourcepath+'initial.snap'+no_snap+'.2D_SBPLcut12_NCUT-1.dat','r')
             #f = open(sourcepath+'initial.snap'+no_snap+'.test','r')
             print(no_snap, 'is done')
             continue
         except:
             try:
-                make_2D_projection(sourcepath, key_snap, units, sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat', thedist, Z)
-                os.system('gzip '+sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat')
-                print('made 2D projection')
+                #make_2D_projection(sourcepath, key_snap, units, sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat', thedist, Z)
+                #os.system('gzip '+sourcepath+prefix+'.snap'+no_snap+'.2Dproj.dat')
+                #print('made 2D projection')
 
                 ##### make cluster params file
-                f2 = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','w')
+                #f2 = open(sourcepath+prefix+'.snap'+no_snap+'.cluster_params.dat','w')
                 props = get_obs_props(sourcepath+prefix, no_snap, FAC=1.)
                 print('props=', props)
                 rc = props['rc']
@@ -951,14 +951,14 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
                 number_density2 = count_obj/(rc**3.)
                 #print 'number_density', number_density
     
-                print("#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2", file = f2)
-                #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
-                #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
-                print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
-                print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
+                #print("#time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2", file = f2)
+                ##print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
+                ##print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, MS, G, BH+BHnonBH+2.*BBH, BHnonBH, BBH, NS+NSnonNS+2.*BNS, NSnonNS, BNS, N, Z, rv, rg, file = f2)
+                #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
+                #print(time, number_density, props['Ltot'], props['M/L'], props['Mave'], props['drc'], props['drhl'], props['dsigmac'], props['dvsigmac_rv'], props['rc'], props['rhl'], props['sigmac'],  props['vsigmac_rv'], number_density2, N, Z, rv, rg, file = f2)
 
-                f2.close()
-                #f5.close()
+                #f2.close()
+                ##f5.close()
                 print('cluster_params done')    
         
                 ###############
@@ -970,8 +970,10 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep):  ##tl
                 #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
                 #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
                 #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=700, mcut = 0.85)
-                #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=500, mcut = 0)
-                velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=700, mcut = 0)
+                #velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=700, mcut = 0)
+                #velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=500, mcut = 0)
+                #velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=80, mcut = 0.85)
+                #velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=100, mcut = 0.80)
                 print('Made vel dispersion for',no_snap)
 
             except:
