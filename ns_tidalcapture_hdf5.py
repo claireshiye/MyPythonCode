@@ -15,7 +15,7 @@ import LISA_calculations as lisa
 import ns_history as nh
 import useful_function as uf
 
-sys.path.insert(1, '/fs/lustre/cita/claireshiye/cmctoolkit')
+sys.path.insert(1, '/projects/b1095/syr904/MyCodes/cmctoolkit')
 import cmctoolkit as cmct
 
 yearsc=31557600.

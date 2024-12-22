@@ -136,6 +136,114 @@ def print_Nns_snap(modelpath):
         
 
 
+##Print ns.dat file using the morepulsar outputs instead of the snapshots
+def print_Nns_psrfile(pathlist, start, end, readflag):
+    if readflag == 1:
+        sourcedir=np.genfromtxt(pathlist, dtype='str')
+        status=sourcedir[:,1]; 
+        sourcedir=sourcedir[:,0]
+    else:
+        sourcedir=pathlist
+        status = [1]
+    
+    for i in range(start, end):
+        filepath = sourcedir[i]
+
+        ###In case the model has been restarted
+        psrfiles = glob(filepath+'*.morepulsars.dat')
+        allt = []
+        for xx in range(len(psrfiles)):
+            with open(psrfiles[xx], 'r') as fpsr:
+                next(fpsr)
+                for line in fpsr:
+                    data = line.split()
+                    allt.append(float(data[1]))
+                    break
+
+        psrfiles, allt = (list(t) for t in zip(*sorted(zip(psrfiles, allt))))
+        print(psrfiles, allt)
+
+
+        try:
+           fh = open(filepath+'initial.ns.dat', 'r')
+        except:
+        #if True:
+            print(sourcedir[i])
+            #fhandle=open('/projects/b1095/syr904/projects/WDs/initial.ns'+str(i)+'.dat', 'a+')
+            fhandle=open(filepath+'initial.ns.dat', 'w+')
+            fhandle.write('#1.Totaltime, 2.Nns,tot, 3.Nns,single, 4.Nns,binary, 5.Nns,mtb, 6.Npulsar, 7.Nmsp, 8.Nns-ns, 9.Nns-bh, 10.Nns-wd, 11.Nns-ms, 12.Nns-postms\n')
+            for j in range(len(psrfiles)):
+                N_NS=0; N_NS_SIN=0; N_NS_BIN=0; N_NS_MTB=0; N_PULS=0; N_MSP=0; N_NSNS=0; N_NSBH=0; N_NSWD=0; N_NSMS=0; N_NSPOSTMS=0
+                t_old = allt[j]
+                #print j
+                with open(psrfiles[j], 'r') as fpsr:
+                    next(fpsr)
+                    for line in fpsr:
+                        datapsr=line.split()
+                        #print(datapsr)
+                        t_curr = float(datapsr[1])
+                        if t_curr != t_old:
+                            T = t_old
+                            fhandle.write('%f %d %d %d %d %d %d %d %d %d %d %d\n'%(T, N_NS, N_NS_SIN, N_NS_BIN, N_NS_MTB, N_PULS, N_MSP, N_NSNS, N_NSBH, N_NSWD, N_NSMS, N_NSPOSTMS))
+                            N_NS=0; N_NS_SIN=0; N_NS_BIN=0; N_NS_MTB=0; N_PULS=0; N_MSP=0; N_NSNS=0; N_NSBH=0; N_NSWD=0; N_NSMS=0; N_NSPOSTMS=0
+                            t_old = t_curr
+
+                        if int(datapsr[2])!=1:
+                            if int(datapsr[11])==13: 
+                                N_NS+=1; N_NS_SIN+=1
+                                spin=float(datapsr[9])
+                                deathcut=(spin**2)*(0.17*10**12)
+                                if deathcut<float(datapsr[7]): 
+                                    N_PULS+=1
+                                    if spin<=0.03: N_MSP+=1
+
+                            if int(datapsr[12])==13: 
+                                N_NS+=1; N_NS_SIN+=1
+                                spin=float(datapsr[10])
+                                deathcut=(spin**2)*(0.17*10**12)
+                                if deathcut<float(datapsr[8]): 
+                                    N_PULS+=1
+                                    if spin<=0.03: N_MSP+=1
+
+                        if int(datapsr[2])==1:
+                            if int(datapsr[11])==13:
+                                N_NS+=1; N_NS_BIN+=1
+                                spin0=float(datapsr[9])
+                                deathcut0=(spin0**2)*(0.17*10**12)
+                                if float(datapsr[16])>=1: N_NS_MTB+=1
+                                if deathcut0<float(datapsr[7]): 
+                                    N_PULS+=1   
+                                    if spin0<=0.03: N_MSP+=1
+
+                                if int(datapsr[12])<2: N_NSMS+=1
+                                elif int(datapsr[12])>=10 and int(datapsr[12])<=12: N_NSWD+=1
+                                elif int(datapsr[12])==13: N_NSNS+=1
+                                elif int(datapsr[12])==14: N_NSBH+=1
+                                else: N_NSPOSTMS+=1
+
+                            if int(datapsr[12])==13:
+                                N_NS+=1; N_NS_BIN+=1
+                                spin1=float(datapsr[10])
+                                deathcut1=(spin1**2)*(0.17*10**12)
+                                if float(datapsr[15])>=1: N_NS_MTB+=1
+                                if deathcut1<float(datapsr[8]): 
+                                    N_PULS+=1
+                                    if spin1<=0.03: N_MSP+=1
+
+                                if int(datapsr[11])<2: N_NSMS+=1
+                                elif int(datapsr[11])>=10 and int(datapsr[11])<=12: N_NSWD+=1
+                                elif int(datapsr[11])==13: print('already counted')
+                                elif int(datapsr[11])==14: N_NSBH+=1
+                                else: N_NSPOSTMS+=1
+
+                T = t_old    
+                          
+                fhandle.write('%f %d %d %d %d %d %d %d %d %d %d %d\n'%(T, N_NS, N_NS_SIN, N_NS_BIN, N_NS_MTB, N_PULS, N_MSP, N_NSNS, N_NSBH, N_NSWD, N_NSMS, N_NSPOSTMS))
+                print(j)
+
+            fhandle.close()
+
+
 def get_allpsr_snapshot(snapshot, mspflag):
     id0_snap=[]; id1_snap=[]; m0_snap=[]; m1_snap=[]; 
     k0_snap=[]; k1_snap=[]; B_snap=[]; P_snap=[]; 

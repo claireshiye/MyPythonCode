@@ -976,9 +976,11 @@ def main(sourcepath, N, Z, rv, rg, thedist, tlimlow, tlimhigh, deltastep, prefx)
                 print(key_snap, 'made SBP')
                 #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=700, mcut = 0.85)
                 #velocity_dispersion_hdf5(sourcepath, key_snap, Starinbin=500, mcut = 0)
-                velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=100, mcut = 0.80)
-                #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=500, mcut = 0)
+                #velocity_dispersion_2dsnap(sourcepath, no_snap, Starinbin=700, mcut = 0.85)
                 velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=700, mcut = 0)
+                #velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=500, mcut = 0)
+                #velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=80, mcut = 0.85)
+                velocity_dispersion_2dsnap(sourcepath+prefix, no_snap, Starinbin=100, mcut = 0.80)
                 print('Made vel dispersion for',no_snap)
 
             except:
