@@ -397,9 +397,12 @@ def get_coll_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
     else:
         filepaths=pathlist; status=[1]
 
-    fcoll=open(savepath+'_coll.dat', 'w+')
-    fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
+    #fcoll=open(savepath+'_coll.dat', 'w+')
+    #fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
     for i in range(len(filepaths)):
+        fcoll=open(filepaths[i]+savepath+'_coll.dat', 'w+')
+        fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.model_status 16.COLLTYPE\n')
+
         filestr=filepaths[i]+'initial'
 
         t_conv=dyn.conv('t', filestr+'.conv.sh')
@@ -437,6 +440,18 @@ def get_coll_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
                         fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
 
 
+                if int(line[2])==3:
+                    #starlist=[int(line[13]), int(line[14]), int(line[15])]
+                    if (int(line[13]) in klim1 and int(line[14]) in klim2 and int(line[15]) in klim2) or (int(line[13]) in klim2 and int(line[14]) in klim1 and int(line[15]) in klim2) or (int(line[13]) in klim2 and int(line[14]) in klim2 and int(line[15]) in klim1):
+                        model=i; model_status=int(status[i]); timem=t_conv*float(line[0])
+                        mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                        ktypem=int(line[12]); ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                        idm=int(line[3]); rm=float(line[11])*l_conv
+
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+
+
+
             if line[1]=='binary-binary':   ##Binary-binary collision
                 colltype='BB'
                 if int(line[2])==2:
@@ -448,9 +463,32 @@ def get_coll_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
 
                         fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
 
-        print(i)
 
-    fcoll.close()
+                if int(line[2])==3:
+                    #starlist=[int(line[13]), int(line[14]), int(line[15])]
+                    if (int(line[13]) in klim1 and int(line[14]) in klim2 and int(line[15]) in klim2) or (int(line[13]) in klim2 and int(line[14]) in klim1 and int(line[15]) in klim2) or (int(line[13]) in klim2 and int(line[14]) in klim2 and int(line[15]) in klim1):
+                        model=i; model_status=int(status[i]); timem=t_conv*float(line[0])
+                        mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=-100
+                        ktypem=int(line[12]); ktype0=int(line[13]); ktype1=int(line[14]); ktype2=int(line[15]); ktype3=-100
+                        idm=int(line[3]); rm=float(line[11])*l_conv
+
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+
+
+                if int(line[2])==4:
+                    #starlist=[int(line[15]), int(line[16]), int(line[17]), int(line[18])]
+                    if (int(line[15]) in klim1 and int(line[16]) in klim2 and int(line[17]) in klim2 and int(line[18]) in klim2) or (int(line[15]) in klim2 and int(line[16]) in klim1 and int(line[17]) in klim2 and int(line[18]) in klim2) or (int(line[15]) in klim2 and int(line[16]) in klim2 and int(line[17]) in klim1 and int(line[18]) in klim2) or (int(line[15]) in klim2 and int(line[16]) in klim2 and int(line[17]) in klim2 and int(line[18]) in klim1):
+                        model=i; model_status=int(status[i]); timem=t_conv*float(line[0])
+                        mm=float(line[4]); m0=float(line[6]); m1=float(line[8]); m2=float(line[10]); m3=float(line[12])
+                        ktypem=int(line[14]); ktype0=int(line[15]); ktype1=int(line[16]); ktype2=int(line[17]); ktype3=int(line[18])
+                        idm=int(line[3]); rm=float(line[13])*l_conv
+
+                        fcoll.write('%d %f %d %f %f %f %f %f %f %d %d %d %d %d %d %s\n'%(model, timem, idm, rm, mm, m0, m1, m2, m3, ktypem, ktype0, ktype1, ktype2, ktype3, model_status, colltype))
+
+        print(i)
+        fcoll.close()
+
+    #fcoll.close()
 
 
 ##Find the number of XX-XX mergers in the models
@@ -462,9 +500,12 @@ def get_merger_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
     else:
         filepaths=pathlist; status=[1]
 
-    fmerge=open(savepath+'_merger.dat', 'w+')
-    fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
+    #fmerge=open(savepath+'_merger.dat', 'w+')
+    #fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
     for i in range(len(filepaths)):
+        fmerge=open(filepaths[i]+savepath+'_merger.dat', 'w+')
+        fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.model_status\n')
+
         filestr=filepaths[i]+'initial'
 
         t_conv=dyn.conv('t', filestr+'.conv.sh')
@@ -483,11 +524,12 @@ def get_merger_XXXX(pathlist, start, end, klim1, klim2, savepath, readflag):
             if int(line[1])<3:
                 if int(line[-1]) in klim1 and int(line[-2]) in klim2:
                     fmerge.write('%d %f %d %f %f %f %f %d %d %d %d\n'%(i, t_conv*float(line[0]), 
-                    int(line[2]), float(line[8])*l_conv, float(line[3]), float(line[5]), float(line[7]),int(line[-3]), int(line[-2]), int(line[-1]), status[i]))
+                    int(line[2]), float(line[8])*l_conv, float(line[3]), float(line[5]), float(line[7]),int(line[-3]), int(line[-2]), int(line[-1]), int(status[i])))
 
         print(i)
+        fmerge.close()
 
-    fmerge.close()
+    #fmerge.close()
 
             
 ##Find the number of collisions in the models where the product is XX
@@ -503,7 +545,7 @@ def get_XX_collproduct(pathlist, start, end, startype, savepath, readflag):
     #fcoll=open(savepath+'_collproduct_all.dat', 'w+')
     #fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.id0 16.id1 17.id2 18.id3 19.model_status 20.COLLTYPE\n')
     for i in range(start, end):
-        fcoll=open(filepaths[i]+'ns_collproduct_all.dat', 'w+')
+        fcoll=open(filepaths[i]+'bh_collproduct_all.dat', 'w+')
         fcoll.write('#1.Model 2.Time(Myr) 3.IDcoll 4.Radius(pc) 5.Mcoll 6.M0 7.M1 8.M2 9.M3 10.kcoll 11.k0 12.k1 13.k2 14.k3 15.id0 16.id1 17.id2 18.id3 19.model_status 20.COLLTYPE\n')
 
         filestr=filepaths[i]+'initial'
@@ -601,11 +643,10 @@ def get_XX_mergerproduct(pathlist, start, end, startype, savepath, readflag):
         filepaths=sourcedir[:,0]; status=sourcedir[:,1]
     else:
         filepaths=pathlist; status=[1]
-
     #fmerge=open(savepath+'_mergerproduct_all.dat', 'w+')
     #fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.id0 12.id1 13.model_status\n')
     for i in range(start, end):
-        fmerge=open(filepaths[i]+'ns_mergerproduct_all.dat', 'w+')
+        fmerge=open(filepaths[i]+'bh_mergerproduct_all.dat', 'w+')
         fmerge.write('#1.Model 2.Time(Myr) 3.IDmerg 4.Radius(pc) 5.Mmerg 6.M0 7.M1 8.kmerg 9.k0 10.k1 11.id0 12.id1 13.model_status\n')
 
         filestr=filepaths[i]+'initial'
@@ -812,5 +853,248 @@ def coll_merger_hist(modelpath, IDinit_list, Tinit_list, startype):
 
         #print(idm_list, tm_list)
         dict_allid[str(int(IDinit_list[xx]))] = dict(zip(tm_list,idm_list, ))
+
+    return dict_allid
+
+
+def coll_merger_hist_previous(modelpath, IDinit_list, Tinit_list, startype):
+    '''Input initial IDs, output the coll/mer history (IDs, time of coll/mer)'''
+    '''Tinit_list is in code unit'''
+
+    filestr=modelpath+'initial'
+
+    t_conv=dyn.conv('t', filestr+'.conv.sh')
+
+    collfile=filestr+'.collision.log'
+    collfile2=filestr+'2.collision.log'
+    colldata=scripts1.readcollfile(collfile)
+    if os.path.isfile(collfile2) and os.path.getsize(collfile2) > 0:
+        colldata2=scripts1.readcollfile(collfile2)
+        colldata=colldata+colldata2
+     
+    timem = []; idm = []; ids = [[],[],[],[]]; ks = [[],[],[],[]]; ms = [[],[],[],[]]
+    for jj in range(len(colldata)):
+        line=colldata[jj].split()
+        if line[1]=='single-single':  ##Single-single star collision
+                colltype='SS'
+                list_star=[int(line[11]), int(line[12])]
+                if int(line[10]) in startype:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(-100); ids[3].append(-100)
+                    ks[0].append(int(line[11])); ks[1].append(int(line[12]))
+                    ks[2].append(-100); ks[3].append(-100)
+                    ms[0].append(float(line[6])); ms[1].append(float(line[8]))
+                    ms[2].append(-100); ms[3].append(-100)
+
+
+        if line[1]=='binary-single':   ##Binary-single collision
+            colltype='BS'
+            if int(line[2])==2:
+                list_star=[int(line[11]), int(line[12])]
+                num_star=Counter(list_star)
+                if int(line[10]) in startype:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(-100); ids[3].append(-100)
+                    ks[0].append(int(line[11])); ks[1].append(int(line[12]))
+                    ks[2].append(-100); ks[3].append(-100)
+                    ms[0].append(float(line[6])); ms[1].append(float(line[8]))
+                    ms[2].append(-100); ms[3].append(-100)
+
+
+            if int(line[2])==3:
+                list_star=[int(line[13]), int(line[14]), int(line[15])]
+                num_star=Counter(list_star)
+                if int(line[12]) in startype:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(int(line[9])); ids[3].append(-100)
+                    ks[0].append(int(line[13])); ks[1].append(int(line[14]))
+                    ks[2].append(int(line[15])); ks[3].append(-100)
+                    ms[0].append(float(line[6])); ms[1].append(float(line[8]))
+                    ms[2].append(float(line[10])); ms[3].append(-100)
+
+
+        if line[1]=='binary-binary':   ##Binary-binary collision
+            colltype='BB'
+            if int(line[2])==2:
+                list_star=[int(line[11]), int(line[12])]
+                num_star=Counter(list_star)
+                if int(line[10]) in startype:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(-100); ids[3].append(-100)
+                    ks[0].append(int(line[11])); ks[1].append(int(line[12]))
+                    ks[2].append(-100); ks[3].append(-100)
+                    ms[0].append(float(line[6])); ms[1].append(float(line[8]))
+                    ms[2].append(-100); ms[3].append(-100)
+                    
+
+
+            if int(line[2])==3:
+                list_star=[int(line[13]), int(line[14]), int(line[15])]
+                num_star=Counter(list_star)
+                if int(line[12]) in startype:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(int(line[9])); ids[3].append(-100)
+                    ks[0].append(int(line[13])); ks[1].append(int(line[14]))
+                    ks[2].append(int(line[15])); ks[3].append(-100)
+                    ms[0].append(float(line[6])); ms[1].append(float(line[8]))
+                    ms[2].append(float(line[10])); ms[3].append(-100)
+
+
+            if int(line[2])==4:
+                list_star=[int(line[15]), int(line[16]), int(line[17]), int(line[18])]
+                num_star=Counter(list_star)
+                if int(line[14]) in startype:
+                    #print(line)
+                    timem.append(float(line[0]))
+                    idm.append(int(line[3]))
+                    ids[0].append(int(line[5])); ids[1].append(int(line[7]))
+                    ids[2].append(int(line[9])); ids[3].append(int(line[11]))
+                    ks[0].append(int(line[15])); ks[1].append(int(line[16]))
+                    ks[2].append(int(line[17])); ks[3].append(int(line[18]))
+                    ms[0].append(float(line[6])); ms[1].append(float(line[8]))
+                    ms[2].append(float(line[10])); ms[3].append(float(line[12]))
+
+
+    semergefile = filestr+'.semergedisrupt.log'
+    semergefile2 = filestr+'2.semergedisrupt.log'
+    semergedata=scripts2.readmergefile(semergefile)
+    if os.path.isfile(semergefile2) and os.path.getsize(semergefile2)>0:
+        semergedata2=scripts2.readmergefile(semergefile2)
+        semergedata=semergedata+semergedata2
+
+    for kk in range(len(semergedata)):
+        line=semergedata[kk].split()
+        if int(line[1])<3:
+            list_star=[int(line[-2]),int(line[-1])]
+            num_star=Counter(list_star)
+            if int(line[-3]) in startype:
+                #print(line)
+                timem.append(float(line[0]))
+                idm.append(int(line[2]))
+                ids[0].append(int(line[4])); ids[1].append(int(line[6]))
+                ids[2].append(-100); ids[3].append(-100)
+                ks[0].append(int(line[-2])); ks[1].append(int(line[-1]))
+                ks[2].append(-100); ks[3].append(-100)
+                ms[0].append(float(line[5])); ms[1].append(float(line[7]))
+                ms[2].append(-100); ms[3].append(-100)
+
+    #print(modelpath, 'done extracting data')
+
+    timem = np.array(timem)
+    idm = np.array(idm)
+    ids[0] = np.array(ids[0]); ids[1] = np.array(ids[1])
+    ids[2] = np.array(ids[2]); ids[3] = np.array(ids[3])
+    ks[0] = np.array(ks[0]); ks[1] = np.array(ks[1])
+    ks[2] = np.array(ks[2]); ks[3] = np.array(ks[3])
+    ms[0] = np.array(ms[0]); ms[1] = np.array(ms[1])
+    ms[2] = np.array(ms[2]); ms[3] = np.array(ms[3])
+    
+    tindex_sort = np.argsort(timem)
+    timem_sort = timem[tindex_sort]
+    idm_sort = idm[tindex_sort]
+    id0_sort = ids[0][tindex_sort]
+    id1_sort = ids[1][tindex_sort]
+    id2_sort = ids[2][tindex_sort]
+    id3_sort = ids[3][tindex_sort]
+    k0_sort = ks[0][tindex_sort]
+    k1_sort = ks[1][tindex_sort]
+    k2_sort = ks[2][tindex_sort]
+    k3_sort = ks[3][tindex_sort]
+    m0_sort = ms[0][tindex_sort]
+    m1_sort = ms[1][tindex_sort]
+    m2_sort = ms[2][tindex_sort]
+    m3_sort = ms[3][tindex_sort]
+
+    dict_allid = {}
+    for xx in range(len(IDinit_list)):
+        if IDinit_list[xx]==-100 or IDinit_list[xx]==0:
+            continue
+            
+        #print(xx, IDinit_list[xx])
+
+        oldidm = IDinit_list[xx]
+        oldtime = Tinit_list[xx]
+
+        timem_tcut = timem_sort[timem_sort<=oldtime]
+        idm_tcut = idm_sort[timem_sort<=oldtime]
+        id0_tcut = id0_sort[timem_sort<=oldtime]
+        id1_tcut = id1_sort[timem_sort<=oldtime]
+        id2_tcut = id2_sort[timem_sort<=oldtime]
+        id3_tcut = id3_sort[timem_sort<=oldtime]
+        k0_tcut = k0_sort[timem_sort<=oldtime]
+        k1_tcut = k1_sort[timem_sort<=oldtime]
+        k2_tcut = k2_sort[timem_sort<=oldtime]
+        k3_tcut = k3_sort[timem_sort<=oldtime]
+        m0_tcut = m0_sort[timem_sort<=oldtime]
+        m1_tcut = m1_sort[timem_sort<=oldtime]
+        m2_tcut = m2_sort[timem_sort<=oldtime]
+        m3_tcut = m3_sort[timem_sort<=oldtime]
+
+        #print(timem_tcut, idm_tcut)
+
+        yy=len(timem_tcut)
+        tm_list = []; idm_list = []; m_list = []; k_list = []
+        check = 0
+        while yy > 0:
+            #print(yy)
+            if oldidm in idm_tcut[:yy]:
+                check=1
+                new_index = np.where(oldidm==idm_tcut[:yy])[0][-1]
+
+                #print('new index', new_index)
+
+                newtm = timem_tcut[:yy][new_index]
+                new_m_list = np.array([m0_tcut[:yy][new_index], m1_tcut[:yy][new_index],
+                              m2_tcut[:yy][new_index], m3_tcut[:yy][new_index]])
+                new_k_list = np.array([k0_tcut[:yy][new_index], k1_tcut[:yy][new_index],
+                              k2_tcut[:yy][new_index], k3_tcut[:yy][new_index]])
+                new_id_list = np.array([id0_tcut[:yy][new_index], id1_tcut[:yy][new_index],
+                              id2_tcut[:yy][new_index], id3_tcut[:yy][new_index]])
+
+                if len(new_m_list[new_k_list==np.max(new_k_list)])==1:
+                    newidm = new_id_list[new_k_list==np.max(new_k_list)][0]
+                    newm = new_m_list[new_k_list==np.max(new_k_list)][0]
+                else:
+                    for aa in range(len(new_m_list[new_k_list==np.max(new_k_list)])):
+                        #print(new_k_list)
+                        if new_m_list[new_k_list==np.max(new_k_list)][aa]==np.max(new_m_list[new_k_list==np.max(new_k_list)]):
+                            newidm = new_id_list[new_k_list==np.max(new_k_list)][aa]
+                            newm = new_m_list[new_k_list==np.max(new_k_list)][aa]
+                            break
+
+                idm_list.append(newidm)
+                tm_list.append(newtm)
+                m_list.append(newm)
+                k_list.append([k0_tcut[:yy][new_index], k1_tcut[:yy][new_index],
+                              k2_tcut[:yy][new_index], k3_tcut[:yy][new_index]])
+
+            #if new_index==0:
+            #    break
+
+            if not check:
+                #print('no previous coll/mer?', oldidm)
+                break
+            else:
+                oldidm = newidm
+                yy=new_index
+                check=0
+
+        #print(idm_list, tm_list)
+        dict_allid[str(int(IDinit_list[xx]))] = {'time': tm_list, 'ids': idm_list,'ms': m_list, 'ks':k_list}
 
     return dict_allid
